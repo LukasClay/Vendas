@@ -77,8 +77,10 @@ export const sales = mysqlTable("sales", {
   attachmentUrl: text("attachmentUrl"),
   attachmentKey: varchar("attachmentKey", { length: 512 }),
   attachmentMime: varchar("attachmentMime", { length: 64 }),
-  // Workflow
-  completedAt: timestamp("completedAt"),  // null = pendente, preenchido = concluído
+  // Workflow de 3 etapas da consultora
+  workStatus: mysqlEnum("workStatus", ["para_escrever", "pendente", "feito"]).default("para_escrever").notNull(),
+  writtenAt: timestamp("writtenAt"),    // quando passou de para_escrever → pendente
+  completedAt: timestamp("completedAt"), // quando passou de pendente → feito
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

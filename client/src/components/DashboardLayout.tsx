@@ -15,7 +15,9 @@ const sellerMenuItems = [
 ];
 
 const consultoraMenuItems = [
-  { icon: Sparkles, label: "Trabalhos Pendentes", path: "/consultora" },
+  { icon: Sparkles, label: "Trabalhos", path: "/consultora" },
+  { icon: PlusCircle, label: "Nova Venda", path: "/consultora/venda" },
+  { icon: FileText, label: "Minhas Vendas", path: "/consultora/minhas-vendas" },
 ];
 
 const adminMenuItems = [
@@ -149,10 +151,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     <p className="text-sm font-semibold" style={{ color: "oklch(0.92 0.01 65)" }}>{firstName}</p>
                     <span className="text-xs px-2 py-0.5 rounded-full"
                       style={{
-                        background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
-                        color: isAdmin ? "oklch(0.75 0.10 65)" : "oklch(0.65 0.12 160)",
+                        background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : isConsultora ? "oklch(0.55 0.15 280 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
+                        color: isAdmin ? "oklch(0.75 0.10 65)" : isConsultora ? "oklch(0.65 0.12 280)" : "oklch(0.65 0.12 160)",
                       }}>
-                      {isAdmin ? "Administrador" : "Vendedor"}
+                      {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
                     </span>
                   </div>
                 </div>
@@ -231,10 +233,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="px-4 py-3">
           <span className="text-xs font-medium px-2 py-1 rounded-full"
             style={{
-              background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
-              color: isAdmin ? "oklch(0.75 0.10 65)" : "oklch(0.65 0.12 160)",
+              background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : isConsultora ? "oklch(0.55 0.15 280 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
+              color: isAdmin ? "oklch(0.75 0.10 65)" : isConsultora ? "oklch(0.65 0.12 280)" : "oklch(0.65 0.12 160)",
             }}>
-            {isAdmin ? "Administrador" : "Vendedor"}
+            {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
           </span>
         </div>
 

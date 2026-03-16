@@ -75,9 +75,16 @@ function Router() {
         <AuthGuard><MinhasVendas /></AuthGuard>
       </Route>
 
-      {/* Consultora route */}
+      {/* Consultora routes */}
       <Route path="/consultora">
         <AuthGuard consultoraOnly><ConsultoraPage /></AuthGuard>
+      </Route>
+      {/* Consultora also has access to sales form and history */}
+      <Route path="/consultora/venda">
+        <AuthGuard consultoraOnly><NovaVenda /></AuthGuard>
+      </Route>
+      <Route path="/consultora/minhas-vendas">
+        <AuthGuard consultoraOnly><MinhasVendas /></AuthGuard>
       </Route>
 
       {/* Admin routes */}

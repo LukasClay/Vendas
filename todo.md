@@ -82,3 +82,15 @@
 - [x] Painel admin: separar cadastro de Vendedor e Consultora
 - [x] Rotas protegidas por role (consultora só acessa tela dela)
 - [x] Otimização de performance mobile (celulares antigos)
+
+## Reestruturação Painel Consultora
+- [x] Schema: campo workStatus (para_escrever, pendente, feito) na tabela sales
+- [x] Backend: cálculo de prazo 7 dias úteis (seg-sex) a partir do dia seguinte à venda
+- [x] Backend: endpoints de transição de status (escrever→pendente, pendente→feito, feito→pendente)
+- [x] Consultora: acesso ao formulário de vendas (igual vendedor)
+- [x] Consultora: 3 abas com badges de contagem (Para Escrever, Pendentes, Feitos)
+- [x] Consultora: aba Feitos mostra mais recentes no topo para fácil reversão
+- [x] Consultora: botão "Copiar Tudo" na aba Para Escrever
+- [x] Consultora: confirmação antes de marcar como feito
+- [x] Corrigir redirecionamento inicial da consultora para tela correta
+- [x] Corrigir label "Vendedor" para "Consultora" no painel da consultora (DashboardLayout)
