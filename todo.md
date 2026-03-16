@@ -106,5 +106,5 @@
 - [x] Painel Funcionários: botão "Novo Admin" para criar outros administradores
 
 ## Gestão de Vendas (Admin)
-- [ ] Painel admin: botão "Editar" venda (alterar qualquer campo)
-- [ ] Painel admin: botão "Excluir" venda (com confirmação)
+- [x] Painel admin: botão "Editar" venda (alterar qualquer campo)
+- [x] Painel admin: botão "Excluir" venda (com confirmação)

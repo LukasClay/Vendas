@@ -190,6 +190,18 @@ export async function getSalesBySeller(sellerId: number) {
   return db.select().from(sales).where(eq(sales.sellerId, sellerId)).orderBy(desc(sales.saleDate));
 }
 
+export async function updateSale(id: number, data: Partial<InsertSale>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(sales).set(data).where(eq(sales.id, id));
+}
+
+export async function deleteSale(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(sales).where(eq(sales.id, id));
+}
+
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
 export async function getReportSummary(startDate?: Date, endDate?: Date) {

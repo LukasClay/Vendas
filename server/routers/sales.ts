@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createSale, getSaleById, getSales, getSalesBySeller, upsertClient } from "../db";
+import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
@@ -105,5 +105,41 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return getSaleById(input.id);
+    }),
+
+  // Admin edita uma venda
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      clientName: z.string().min(1).optional(),
+      clientBirthDate: z.string().optional(),
+      clientPhone: z.string().optional(),
+      productName: z.string().min(1).optional(),
+      saleDate: z.string().optional(),
+      amount: z.number().positive().optional(),
+      notes: z.string().optional(),
+      sellerId: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...fields } = input;
+      const data: Record<string, unknown> = {};
+      if (fields.clientName !== undefined) data.clientName = fields.clientName;
+      if (fields.clientBirthDate !== undefined) data.clientBirthDate = fields.clientBirthDate ? new Date(fields.clientBirthDate) : null;
+      if (fields.clientPhone !== undefined) data.clientPhone = fields.clientPhone;
+      if (fields.productName !== undefined) data.productName = fields.productName;
+      if (fields.saleDate !== undefined) data.saleDate = new Date(fields.saleDate);
+      if (fields.amount !== undefined) data.amount = String(fields.amount);
+      if (fields.notes !== undefined) data.notes = fields.notes;
+      if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
+      await updateSale(id, data as any);
+      return { success: true };
+    }),
+
+  // Admin exclui uma venda
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteSale(input.id);
+      return { success: true };
     }),
 });
