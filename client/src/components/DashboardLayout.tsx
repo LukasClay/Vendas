@@ -25,7 +25,7 @@ const adminMenuItems = [
   { icon: BarChart3, label: "Relatórios", path: "/admin/relatorios" },
   { icon: FileText, label: "Todas as Vendas", path: "/admin/vendas" },
   { icon: Package, label: "Trabalhos", path: "/admin/produtos" },
-  { icon: Users, label: "Vendedores", path: "/admin/vendedores" },
+  { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
 ];
 

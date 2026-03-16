@@ -33,13 +33,13 @@ export default function AdminVendedores() {
   });
 
   const deactivateUser = trpc.users.deactivate.useMutation({
-    onSuccess: () => { toast.success("Vendedor desativado."); utils.users.listAll.invalidate(); },
+    onSuccess: () => { toast.success("Funcionário desativado."); utils.users.listAll.invalidate(); },
     onError: (err) => toast.error(err.message),
   });
 
   const createSeller = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
-      toast.success("Vendedor criado com sucesso!");
+      toast.success("Funcionário criado com sucesso!");
       utils.users.listAll.invalidate();
       setShowCreateForm(false);
       setNewSeller({ name: "", email: "", password: "", phone: "", role: "user" });
@@ -205,10 +205,10 @@ export default function AdminVendedores() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-              Vendedores
+              Funcionários
             </h1>
             <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-              Gerencie os vendedores do sistema
+              Gerencie os funcionários do sistema
             </p>
           </div>
           <div className="flex gap-2">
@@ -217,7 +217,7 @@ export default function AdminVendedores() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
               style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
               <Plus className="w-4 h-4" />
-              Novo Vendedor
+              Novo Funcionário
             </button>
             <button
               onClick={() => { setCreateRole("consultora"); setShowCreateForm(true); setNewSeller({ name: "", email: "", password: "", phone: "", role: "consultora" }); }}
@@ -233,7 +233,7 @@ export default function AdminVendedores() {
         {showCreateForm && (
           <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
-              {createRole === "consultora" ? "Cadastrar Nova Consultora" : "Cadastrar Novo Vendedor"}
+              {createRole === "consultora" ? "Cadastrar Nova Consultora" : "Cadastrar Novo Funcionário"}
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -242,7 +242,7 @@ export default function AdminVendedores() {
                   type="text"
                   value={newSeller.name}
                   onChange={e => setNewSeller(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nome do vendedor"
+                  placeholder="Nome do funcionário"
                   className="w-full px-4 py-3 rounded-xl outline-none"
                   style={inputStyle}
                 />
@@ -293,7 +293,7 @@ export default function AdminVendedores() {
                 disabled={!newSeller.name || !newSeller.email || newSeller.password.length < 6 || createSeller.isPending}
                 className="px-6 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-                {createSeller.isPending ? "Criando..." : createRole === "consultora" ? "Criar Consultora" : "Criar Vendedor"}
+                {createSeller.isPending ? "Criando..." : createRole === "consultora" ? "Criar Consultora" : "Criar Funcionário"}
               </button>
               <button onClick={() => setShowCreateForm(false)}
                 className="px-6 py-3 rounded-xl font-semibold transition-all"
@@ -327,11 +327,11 @@ export default function AdminVendedores() {
               </div>
             )}
 
-            {/* Vendedores */}
+            {/* Funcionários */}
             <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
               <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
                 <Users className="w-4 h-4" style={{ color: "oklch(0.50 0.18 250)" }} />
-                <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Vendedores</h2>
+                <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Funcionários</h2>
                 <span className="ml-auto text-sm px-3 py-1 rounded-full"
                   style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>
                   {sellers.length}
@@ -340,9 +340,9 @@ export default function AdminVendedores() {
               {sellers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4">
                   <Users className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
-                  <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum vendedor cadastrado</p>
+                  <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum funcionário cadastrado</p>
                   <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
-                    Clique em "Novo Vendedor" para cadastrar o primeiro vendedor.
+                    Clique em "Novo Funcionário" para cadastrar o primeiro funcionário.
                   </p>
                 </div>
               ) : (

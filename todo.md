@@ -94,3 +94,8 @@
 - [x] Consultora: confirmação antes de marcar como feito
 - [x] Corrigir redirecionamento inicial da consultora para tela correta
 - [x] Corrigir label "Vendedor" para "Consultora" no painel da consultora (DashboardLayout)
+
+## Melhorias Painel Admin
+- [x] Renomear "Vendedores" para "Funcionários" em todo o sistema (menu, páginas, labels, rotas)
+- [x] Adicionar seção de dias restantes/urgência das vendas no painel admin (similar ao painel da consultora)
+- [x] Otimizar painel admin para desktop: layout mais amplo, tabelas completas, colunas lado a lado
