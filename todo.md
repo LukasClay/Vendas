@@ -64,3 +64,8 @@
 
 ## Melhorias de Validação
 - [x] Tornar data de nascimento e telefone obrigatórios no formulário de nova venda
+
+## Responsividade Mobile
+- [x] DashboardLayout: sidebar como menu hamburguer no mobile
+- [x] Formulário de nova venda: otimizado para celular (inputs grandes, teclado numérico, UX simples)
+- [x] Painel admin: dashboard, vendas, produtos e vendedores responsivos no mobile

@@ -1,43 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  BarChart3,
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  Package,
-  PanelLeft,
-  PlusCircle,
-  Settings,
-  Users,
+  BarChart3, FileText, LayoutDashboard, LogOut, Package,
+  PlusCircle, Settings, Users, Menu, X, ChevronRight,
 } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
-import { Button } from "./ui/button";
 
-// Menu items por role
 const sellerMenuItems = [
   { icon: PlusCircle, label: "Nova Venda", path: "/venda" },
   { icon: FileText, label: "Minhas Vendas", path: "/minhas-vendas" },
@@ -52,21 +23,8 @@ const adminMenuItems = [
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
 ];
 
-const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 260;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 400;
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-  });
   const { loading, user } = useAuth();
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
 
   if (loading) return <DashboardLayoutSkeleton />;
 
@@ -87,200 +45,240 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-sm text-center" style={{ color: "oklch(0.75 0.01 65)" }}>
             Faça login para acessar o sistema
           </p>
-          <Button
-            onClick={() => { window.location.href = getLoginUrl(); }}
-            size="lg"
-            className="w-full py-4 text-base font-semibold"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", color: "white" }}>
+          <button
+            onClick={() => { window.location.href = "/"; }}
+            className="w-full py-4 rounded-xl text-base font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
             Entrar no Sistema
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
-  );
+  return <DashboardLayoutContent>{children}</DashboardLayoutContent>;
 }
 
-function DashboardLayoutContent({
-  children,
-  setSidebarWidth,
-}: {
-  children: React.ReactNode;
-  setSidebarWidth: (width: number) => void;
-}) {
-  const { user, logout } = useAuth();
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => { window.location.href = "/"; },
+  });
   const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const isAdmin = user?.role === "admin";
   const menuItems = isAdmin ? adminMenuItems : sellerMenuItems;
-  const activeMenuItem = menuItems.find(item => item.path === location);
-
-  useEffect(() => {
-    if (isCollapsed) setIsResizing(false);
-  }, [isCollapsed]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) setSidebarWidth(newWidth);
-    };
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing, setSidebarWidth]);
+  const activeMenuItem = menuItems.find(item =>
+    item.path === location || (item.path !== "/" && location.startsWith(item.path))
+  );
 
   const displayName = user?.name || user?.email || "Usuário";
+  const firstName = displayName.split(" ")[0];
   const initials = displayName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
 
-  return (
-    <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
-          {/* Header */}
-          <SidebarHeader className="h-16 justify-center border-b" style={{ borderColor: "oklch(0.22 0.03 265)" }}>
-            <div className="flex items-center gap-3 px-3">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors focus:outline-none shrink-0"
-                style={{ color: "oklch(0.70 0.06 65)" }}
-                aria-label="Toggle navigation">
-                <PanelLeft className="h-4 w-4" />
-              </button>
-              {!isCollapsed && (
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" }}>
-                    <svg width="12" height="12" viewBox="0 0 40 40" fill="none">
-                      <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" />
-                    </svg>
+  // Fecha menu ao navegar
+  const navigate = (path: string) => {
+    setLocation(path);
+    setMenuOpen(false);
+  };
+
+  // Bloqueia scroll do body quando menu mobile está aberto
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  // ─── MOBILE LAYOUT ───────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: "oklch(0.97 0.006 65)" }}>
+
+        {/* Header fixo mobile */}
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 shadow-sm"
+          style={{ background: "oklch(0.14 0.025 265)", borderBottom: "1px solid oklch(0.22 0.03 265)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" }}>
+              <svg width="14" height="14" viewBox="0 0 40 40" fill="none">
+                <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" />
+              </svg>
+            </div>
+            <span className="font-semibold text-sm" style={{ color: "oklch(0.92 0.01 65)", fontFamily: "'Playfair Display', serif" }}>
+              {activeMenuItem?.label ?? "Gestão de Vendas"}
+            </span>
+          </div>
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="w-10 h-10 flex items-center justify-center rounded-xl"
+            style={{ color: "oklch(0.75 0.06 65)" }}
+            aria-label="Abrir menu">
+            <Menu className="w-6 h-6" />
+          </button>
+        </header>
+
+        {/* Drawer menu mobile */}
+        {menuOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
+
+            {/* Drawer */}
+            <div className="relative ml-auto w-72 h-full flex flex-col shadow-2xl"
+              style={{ background: "oklch(0.14 0.025 265)" }}>
+
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b"
+                style={{ borderColor: "oklch(0.22 0.03 265)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm"
+                    style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))", color: "white" }}>
+                    {initials}
                   </div>
-                  <span className="font-semibold text-sm truncate" style={{ color: "oklch(0.92 0.01 65)", fontFamily: "'Playfair Display', serif" }}>
-                    Gestão de Vendas
-                  </span>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "oklch(0.92 0.01 65)" }}>{firstName}</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full"
+                      style={{
+                        background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
+                        color: isAdmin ? "oklch(0.75 0.10 65)" : "oklch(0.65 0.12 160)",
+                      }}>
+                      {isAdmin ? "Administrador" : "Vendedor"}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-          </SidebarHeader>
+                <button onClick={() => setMenuOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-xl"
+                  style={{ color: "oklch(0.60 0.01 65)" }}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-          {/* Role badge */}
-          {!isCollapsed && (
-            <div className="px-4 py-3">
-              <span className="text-xs font-medium px-2 py-1 rounded-full"
-                style={{
-                  background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
-                  color: isAdmin ? "oklch(0.75 0.10 65)" : "oklch(0.65 0.12 160)",
-                }}>
-                {isAdmin ? "Administrador" : "Vendedor"}
-              </span>
-            </div>
-          )}
-
-          {/* Menu */}
-          <SidebarContent className="gap-0 pt-1">
-            <SidebarMenu className="px-2 gap-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className="h-11 transition-all rounded-xl"
+              {/* Menu items */}
+              <nav className="flex-1 overflow-y-auto py-3 px-3">
+                {menuItems.map(item => {
+                  const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => navigate(item.path)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl mb-1 transition-all text-left"
                       style={isActive ? {
                         background: "oklch(0.22 0.03 265)",
                         borderLeft: "3px solid oklch(0.60 0.13 65)",
                         color: "oklch(0.92 0.01 65)",
-                      } : { color: "oklch(0.70 0.01 65)" }}>
-                      <item.icon className="h-4 w-4 shrink-0" style={isActive ? { color: "oklch(0.60 0.13 65)" } : {}} />
-                      <span className="font-medium">{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarContent>
+                      } : { color: "oklch(0.65 0.01 65)" }}>
+                      <item.icon className="w-5 h-5 shrink-0" style={isActive ? { color: "oklch(0.60 0.13 65)" } : {}} />
+                      <span className="font-medium text-sm">{item.label}</span>
+                      {isActive && <ChevronRight className="w-4 h-4 ml-auto" style={{ color: "oklch(0.60 0.13 65)" }} />}
+                    </button>
+                  );
+                })}
+              </nav>
 
-          {/* Footer */}
-          <SidebarFooter className="p-3 border-t" style={{ borderColor: "oklch(0.22 0.03 265)" }}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors w-full text-left focus:outline-none"
-                  style={{ color: "oklch(0.80 0.01 65)" }}>
-                  <Avatar className="h-9 w-9 shrink-0" style={{ border: "2px solid oklch(0.60 0.13 65 / 0.5)" }}>
-                    <AvatarFallback className="text-xs font-semibold"
-                      style={{ background: "oklch(0.22 0.03 265)", color: "oklch(0.75 0.10 65)" }}>
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!isCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate leading-none" style={{ color: "oklch(0.92 0.01 65)" }}>
-                        {displayName}
-                      </p>
-                      <p className="text-xs truncate mt-1" style={{ color: "oklch(0.55 0.01 65)" }}>
-                        {user?.email || ""}
-                      </p>
-                    </div>
-                  )}
+              {/* Logout */}
+              <div className="p-4 border-t" style={{ borderColor: "oklch(0.22 0.03 265)" }}>
+                <button
+                  onClick={() => logoutMutation.mutate()}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                  style={{ color: "oklch(0.65 0.18 25)", background: "oklch(0.65 0.18 25 / 0.08)" }}>
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium text-sm">Sair do Sistema</span>
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sair</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-
-        {/* Resize handle */}
-        <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize transition-colors hover:bg-primary/30 ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => { if (!isCollapsed) setIsResizing(true); }}
-          style={{ zIndex: 50 }}
-        />
-      </div>
-
-      <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between px-4 sticky top-0 z-40"
-            style={{ background: "oklch(0.98 0.006 65)", borderColor: "oklch(0.88 0.012 65)" }}>
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="h-9 w-9 rounded-lg" />
-              <span className="font-medium text-sm">{activeMenuItem?.label ?? "Menu"}</span>
+              </div>
             </div>
           </div>
         )}
-        <main className="flex-1 p-6">{children}</main>
-      </SidebarInset>
-    </>
+
+        {/* Conteúdo principal mobile */}
+        <main className="flex-1 pt-14 pb-4">
+          <div className="px-4 py-5">{children}</div>
+        </main>
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ──────────────────────────────────────────────
+  return (
+    <div className="flex min-h-screen" style={{ background: "oklch(0.97 0.006 65)" }}>
+
+      {/* Sidebar desktop */}
+      <aside className="w-64 shrink-0 flex flex-col sticky top-0 h-screen"
+        style={{ background: "oklch(0.14 0.025 265)", borderRight: "1px solid oklch(0.22 0.03 265)" }}>
+
+        {/* Logo */}
+        <div className="h-16 flex items-center gap-3 px-5 border-b" style={{ borderColor: "oklch(0.22 0.03 265)" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" }}>
+            <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
+              <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" />
+            </svg>
+          </div>
+          <span className="font-semibold text-sm" style={{ color: "oklch(0.92 0.01 65)", fontFamily: "'Playfair Display', serif" }}>
+            Gestão de Vendas
+          </span>
+        </div>
+
+        {/* Role badge */}
+        <div className="px-4 py-3">
+          <span className="text-xs font-medium px-2 py-1 rounded-full"
+            style={{
+              background: isAdmin ? "oklch(0.60 0.13 65 / 0.2)" : "oklch(0.55 0.15 160 / 0.2)",
+              color: isAdmin ? "oklch(0.75 0.10 65)" : "oklch(0.65 0.12 160)",
+            }}>
+            {isAdmin ? "Administrador" : "Vendedor"}
+          </span>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          {menuItems.map(item => {
+            const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                style={isActive ? {
+                  background: "oklch(0.22 0.03 265)",
+                  borderLeft: "3px solid oklch(0.60 0.13 65)",
+                  color: "oklch(0.92 0.01 65)",
+                } : { color: "oklch(0.65 0.01 65)" }}>
+                <item.icon className="w-4 h-4 shrink-0" style={isActive ? { color: "oklch(0.60 0.13 65)" } : {}} />
+                <span className="font-medium text-sm">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-3 border-t" style={{ borderColor: "oklch(0.22 0.03 265)" }}>
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl mb-1"
+            style={{ color: "oklch(0.80 0.01 65)" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-xs shrink-0"
+              style={{ background: "oklch(0.22 0.03 265)", color: "oklch(0.75 0.10 65)", border: "2px solid oklch(0.60 0.13 65 / 0.5)" }}>
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: "oklch(0.92 0.01 65)" }}>{displayName}</p>
+              <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 65)" }}>{user?.email || ""}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => logoutMutation.mutate()}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all text-sm"
+            style={{ color: "oklch(0.65 0.18 25)" }}>
+            <LogOut className="w-4 h-4" />
+            Sair
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content desktop */}
+      <main className="flex-1 min-w-0 p-6 overflow-y-auto">{children}</main>
+    </div>
   );
 }

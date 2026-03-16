@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div>
             <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
               Dashboard
@@ -48,26 +48,26 @@ export default function AdminDashboard() {
             </p>
           </div>
           {/* Filtro de datas */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="date"
               value={dateFilter.startDate}
               onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
-              className="px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2"
+              className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
               style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
             />
-            <span className="text-sm" style={{ color: "oklch(0.52 0.015 260)" }}>até</span>
+            <span className="text-sm shrink-0" style={{ color: "oklch(0.52 0.015 260)" }}>até</span>
             <input
               type="date"
               value={dateFilter.endDate}
               onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
-              className="px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2"
+              className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
               style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
             />
             {(dateFilter.startDate || dateFilter.endDate) && (
               <button
                 onClick={() => setDateFilter({ startDate: "", endDate: "" })}
-                className="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+                className="px-3 py-2.5 rounded-xl text-sm font-medium transition-colors shrink-0"
                 style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
                 Limpar
               </button>
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {[
             {
               icon: DollarSign,
@@ -107,14 +107,14 @@ export default function AdminDashboard() {
               bg: "oklch(0.93 0.04 30)",
             },
           ].map((card, i) => (
-            <div key={i} className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: card.bg }}>
-                  <card.icon className="w-5 h-5" style={{ color: card.color }} />
+            <div key={i} className="rounded-2xl p-4 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: card.bg }}>
+                  <card.icon className="w-4 h-4" style={{ color: card.color }} />
                 </div>
-                <span className="text-xs font-medium" style={{ color: "oklch(0.52 0.015 260)" }}>{card.label}</span>
+                <span className="text-xs font-medium leading-tight" style={{ color: "oklch(0.52 0.015 260)" }}>{card.label}</span>
               </div>
-              <p className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+              <p className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
                 {card.value}
               </p>
             </div>
@@ -122,14 +122,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Gráfico + Ranking */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           {/* Gráfico mensal */}
-          <div className="lg:col-span-2 rounded-2xl p-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+          <div className="xl:col-span-2 rounded-2xl p-4 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-5 flex items-center gap-2" style={{ color: "oklch(0.15 0.02 260)" }}>
               <TrendingUp className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
               Vendas por Mês — {currentYear}
             </h2>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.008 65)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "oklch(0.52 0.015 260)" }} axisLine={false} tickLine={false} />
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Top Clientes + Vendas Recentes */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top Clientes */}
           <div className="rounded-2xl p-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "oklch(0.15 0.02 260)" }}>
