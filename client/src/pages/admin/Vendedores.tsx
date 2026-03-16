@@ -8,7 +8,7 @@ import {
   Plus, Eye, EyeOff, KeyRound, Shield
 } from "lucide-react";
 
-type NewSellerForm = { name: string; email: string; password: string; phone: string; role: "user" | "consultora" };
+type NewSellerForm = { name: string; email: string; password: string; phone: string; role: "user" | "consultora" | "admin" };
 type ResetForm = { newPassword: string };
 
 export default function AdminVendedores() {
@@ -19,7 +19,7 @@ export default function AdminVendedores() {
   const [editForm, setEditForm] = useState({ displayName: "", phone: "" });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createRole, setCreateRole] = useState<"user" | "consultora">("user");
+  const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
   const [newSeller, setNewSeller] = useState<NewSellerForm>({ name: "", email: "", password: "", phone: "", role: "user" });
   const [showNewPassword, setShowNewPassword] = useState(false);
 
@@ -39,7 +39,8 @@ export default function AdminVendedores() {
 
   const createSeller = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
-      toast.success("Funcionário criado com sucesso!");
+      const label = createRole === "admin" ? "Administrador" : createRole === "consultora" ? "Consultora" : "Funcionário";
+      toast.success(`${label} criado com sucesso!`);
       utils.users.listAll.invalidate();
       setShowCreateForm(false);
       setNewSeller({ name: "", email: "", password: "", phone: "", role: "user" });
@@ -211,7 +212,7 @@ export default function AdminVendedores() {
               Gerencie os funcionários do sistema
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { setCreateRole("user"); setShowCreateForm(true); setNewSeller({ name: "", email: "", password: "", phone: "", role: "user" }); }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
@@ -226,6 +227,13 @@ export default function AdminVendedores() {
               <Plus className="w-4 h-4" />
               Nova Consultora
             </button>
+            <button
+              onClick={() => { setCreateRole("admin"); setShowCreateForm(true); setNewSeller({ name: "", email: "", password: "", phone: "", role: "admin" }); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
+              style={{ background: "linear-gradient(135deg, oklch(0.35 0.10 65), oklch(0.45 0.12 70))" }}>
+              <Shield className="w-4 h-4" />
+              Novo Admin
+            </button>
           </div>
         </div>
 
@@ -233,7 +241,7 @@ export default function AdminVendedores() {
         {showCreateForm && (
           <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
-              {createRole === "consultora" ? "Cadastrar Nova Consultora" : "Cadastrar Novo Funcionário"}
+             {createRole === "admin" ? "Novo Administrador" : createRole === "consultora" ? "Nova Consultora" : "Novo Funcionário"}
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -293,7 +301,7 @@ export default function AdminVendedores() {
                 disabled={!newSeller.name || !newSeller.email || newSeller.password.length < 6 || createSeller.isPending}
                 className="px-6 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-                {createSeller.isPending ? "Criando..." : createRole === "consultora" ? "Criar Consultora" : "Criar Funcionário"}
+                {createSeller.isPending ? "Criando..." : createRole === "admin" ? "Criar Administrador" : createRole === "consultora" ? "Criar Consultora" : "Criar Funcionário"}
               </button>
               <button onClick={() => setShowCreateForm(false)}
                 className="px-6 py-3 rounded-xl font-semibold transition-all"

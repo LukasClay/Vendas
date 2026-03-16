@@ -74,7 +74,7 @@ export const ownAuthRouter = router({
       email: z.string().email("Email inválido"),
       password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
       phone: z.string().optional(),
-      role: z.enum(["user", "consultora"]).default("user"),
+      role: z.enum(["user", "consultora", "admin"]).default("user"),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();

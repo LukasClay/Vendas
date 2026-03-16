@@ -99,3 +99,12 @@
 - [x] Renomear "Vendedores" para "Funcionários" em todo o sistema (menu, páginas, labels, rotas)
 - [x] Adicionar seção de dias restantes/urgência das vendas no painel admin (similar ao painel da consultora)
 - [x] Otimizar painel admin para desktop: layout mais amplo, tabelas completas, colunas lado a lado
+
+## Segurança e Controle de Acesso
+- [x] Frontend: guard de rota /admin bloqueia vendedor e consultora com redirecionamento imediato
+- [x] Backend: adminProcedure revisada em todos os routers (products, users, reports, sales admin)
+- [x] Painel Funcionários: botão "Novo Admin" para criar outros administradores
+
+## Gestão de Vendas (Admin)
+- [ ] Painel admin: botão "Editar" venda (alterar qualquer campo)
+- [ ] Painel admin: botão "Excluir" venda (com confirmação)
