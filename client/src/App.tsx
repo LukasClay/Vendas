@@ -17,26 +17,30 @@ import AdminVendas from "./pages/admin/Vendas";
 import AdminProdutos from "./pages/admin/Produtos";
 import AdminVendedores from "./pages/admin/Vendedores";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
+import ConsultoraPage from "./pages/Consultora";
 
 // Route guard: redirects unauthenticated users to login
-function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
+function AuthGuard({ children, adminOnly = false, consultoraOnly = false }: { children: React.ReactNode; adminOnly?: boolean; consultoraOnly?: boolean }) {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      navigate("/login");
+    if (!user) { navigate("/login"); return; }
+    if (adminOnly && user.role !== "admin") {
+      if (user.role === "consultora") navigate("/consultora");
+      else navigate("/venda");
       return;
     }
-    if (adminOnly && user.role !== "admin") {
+    if (consultoraOnly && user.role !== "consultora" && user.role !== "admin") {
       navigate("/venda");
     }
-  }, [user, loading, adminOnly, navigate]);
+  }, [user, loading, adminOnly, consultoraOnly, navigate]);
 
   if (loading) return null;
   if (!user) return null;
   if (adminOnly && user.role !== "admin") return null;
+  if (consultoraOnly && user.role !== "consultora" && user.role !== "admin") return null;
 
   return <>{children}</>;
 }
@@ -49,7 +53,9 @@ function HomeRedirect() {
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/login"); return; }
-    if (user.role === "admin") { navigate("/admin"); } else { navigate("/venda"); }
+    if (user.role === "admin") { navigate("/admin"); }
+    else if (user.role === "consultora") { navigate("/consultora"); }
+    else { navigate("/venda"); }
   }, [user, loading, navigate]);
 
   return null;
@@ -67,6 +73,11 @@ function Router() {
       </Route>
       <Route path="/minhas-vendas">
         <AuthGuard><MinhasVendas /></AuthGuard>
+      </Route>
+
+      {/* Consultora route */}
+      <Route path="/consultora">
+        <AuthGuard consultoraOnly><ConsultoraPage /></AuthGuard>
       </Route>
 
       {/* Admin routes */}

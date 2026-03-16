@@ -67,13 +67,14 @@ export const ownAuthRouter = router({
       return { success: true, role: user.role };
     }),
 
-  // Admin cria novo vendedor com senha
+  // Admin cria novo vendedor ou consultora com senha
   createSeller: adminProcedure
     .input(z.object({
       name: z.string().min(1, "Nome obrigatório"),
       email: z.string().email("Email inválido"),
       password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
       phone: z.string().optional(),
+      role: z.enum(["user", "consultora"]).default("user"),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -94,7 +95,7 @@ export const ownAuthRouter = router({
         name: input.name,
         email: input.email,
         loginMethod: "email_password",
-        role: "user",
+        role: input.role,
         active: true,
         phone: input.phone ?? null,
         passwordHash,

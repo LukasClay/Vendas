@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { Sparkles } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,7 +8,7 @@ import {
   Plus, Eye, EyeOff, KeyRound, Shield
 } from "lucide-react";
 
-type NewSellerForm = { name: string; email: string; password: string; phone: string };
+type NewSellerForm = { name: string; email: string; password: string; phone: string; role: "user" | "consultora" };
 type ResetForm = { newPassword: string };
 
 export default function AdminVendedores() {
@@ -18,7 +19,8 @@ export default function AdminVendedores() {
   const [editForm, setEditForm] = useState({ displayName: "", phone: "" });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newSeller, setNewSeller] = useState<NewSellerForm>({ name: "", email: "", password: "", phone: "" });
+  const [createRole, setCreateRole] = useState<"user" | "consultora">("user");
+  const [newSeller, setNewSeller] = useState<NewSellerForm>({ name: "", email: "", password: "", phone: "", role: "user" });
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [resetId, setResetId] = useState<number | null>(null);
@@ -40,7 +42,7 @@ export default function AdminVendedores() {
       toast.success("Vendedor criado com sucesso!");
       utils.users.listAll.invalidate();
       setShowCreateForm(false);
-      setNewSeller({ name: "", email: "", password: "", phone: "" });
+      setNewSeller({ name: "", email: "", password: "", phone: "", role: "user" });
     },
     onError: (err) => toast.error(err.message),
   });
@@ -55,6 +57,7 @@ export default function AdminVendedores() {
   });
 
   const sellers = users.filter(u => u.role === "user");
+  const consultoras = users.filter(u => u.role === "consultora");
   const admins = users.filter(u => u.role === "admin");
 
   const inputStyle = {
@@ -208,19 +211,30 @@ export default function AdminVendedores() {
               Gerencie os vendedores do sistema
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-            <Plus className="w-4 h-4" />
-            Novo Vendedor
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setCreateRole("user"); setShowCreateForm(true); setNewSeller({ name: "", email: "", password: "", phone: "", role: "user" }); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
+              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+              <Plus className="w-4 h-4" />
+              Novo Vendedor
+            </button>
+            <button
+              onClick={() => { setCreateRole("consultora"); setShowCreateForm(true); setNewSeller({ name: "", email: "", password: "", phone: "", role: "consultora" }); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
+              style={{ background: "linear-gradient(135deg, oklch(0.45 0.18 290), oklch(0.55 0.20 295))" }}>
+              <Plus className="w-4 h-4" />
+              Nova Consultora
+            </button>
+          </div>
         </div>
 
         {/* Formulário de criação */}
         {showCreateForm && (
           <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
-            <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>Cadastrar Novo Vendedor</h2>
+            <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
+              {createRole === "consultora" ? "Cadastrar Nova Consultora" : "Cadastrar Novo Vendedor"}
+            </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Nome completo *</label>
@@ -275,11 +289,11 @@ export default function AdminVendedores() {
             </div>
             <div className="flex gap-3 mt-5">
               <button
-                onClick={() => createSeller.mutate({ name: newSeller.name, email: newSeller.email, password: newSeller.password, phone: newSeller.phone || undefined })}
+                onClick={() => createSeller.mutate({ name: newSeller.name, email: newSeller.email, password: newSeller.password, phone: newSeller.phone || undefined, role: createRole })}
                 disabled={!newSeller.name || !newSeller.email || newSeller.password.length < 6 || createSeller.isPending}
                 className="px-6 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-                {createSeller.isPending ? "Criando..." : "Criar Vendedor"}
+                {createSeller.isPending ? "Criando..." : createRole === "consultora" ? "Criar Consultora" : "Criar Vendedor"}
               </button>
               <button onClick={() => setShowCreateForm(false)}
                 className="px-6 py-3 rounded-xl font-semibold transition-all"
@@ -334,6 +348,31 @@ export default function AdminVendedores() {
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
                   {sellers.map(u => <UserCard key={u.id} user={u} />)}
+                </div>
+              )}
+            </div>
+
+            {/* Consultoras */}
+            <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+              <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+                <Sparkles className="w-4 h-4" style={{ color: "oklch(0.50 0.18 290)" }} />
+                <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Consultoras</h2>
+                <span className="ml-auto text-sm px-3 py-1 rounded-full"
+                  style={{ background: "oklch(0.93 0.04 290)", color: "oklch(0.40 0.18 290)" }}>
+                  {consultoras.length}
+                </span>
+              </div>
+              {consultoras.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4">
+                  <Sparkles className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 290)" }} />
+                  <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhuma consultora cadastrada</p>
+                  <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
+                    Clique em "Nova Consultora" para cadastrar.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
+                  {consultoras.map(u => <UserCard key={u.id} user={u} />)}
                 </div>
               )}
             </div>

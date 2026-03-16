@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   BarChart3, FileText, LayoutDashboard, LogOut, Package,
-  PlusCircle, Settings, Users, Menu, X, ChevronRight,
+  PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -12,6 +12,10 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 const sellerMenuItems = [
   { icon: PlusCircle, label: "Nova Venda", path: "/venda" },
   { icon: FileText, label: "Minhas Vendas", path: "/minhas-vendas" },
+];
+
+const consultoraMenuItems = [
+  { icon: Sparkles, label: "Trabalhos Pendentes", path: "/consultora" },
 ];
 
 const adminMenuItems = [
@@ -69,7 +73,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
 
   const isAdmin = user?.role === "admin";
-  const menuItems = isAdmin ? adminMenuItems : sellerMenuItems;
+  const isConsultora = user?.role === "consultora";
+  const menuItems = isAdmin ? adminMenuItems : isConsultora ? consultoraMenuItems : sellerMenuItems;
   const activeMenuItem = menuItems.find(item =>
     item.path === location || (item.path !== "/" && location.startsWith(item.path))
   );

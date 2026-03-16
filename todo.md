@@ -69,3 +69,16 @@
 - [x] DashboardLayout: sidebar como menu hamburguer no mobile
 - [x] Formulário de nova venda: otimizado para celular (inputs grandes, teclado numérico, UX simples)
 - [x] Painel admin: dashboard, vendas, produtos e vendedores responsivos no mobile
+
+## Perfil Consultora
+- [x] Role "consultora" no schema e migration
+- [x] Backend: endpoint de trabalhos pendentes por prioridade (7 dias úteis) para consultora
+- [x] Backend: endpoint de histórico de compras por nome do cliente
+- [x] Tela da Consultora: lista de trabalhos por prioridade, busca por nome do trabalho
+- [x] Tela da Consultora: botões de copiar dados (nome, data nascimento, telefone, observação)
+- [x] Tela da Consultora: sem acesso ao valor da venda
+- [x] Tela da Consultora: histórico de compras do cliente (quantas vezes comprou)
+- [x] Tela da Consultora: marcar trabalho como concluído
+- [x] Painel admin: separar cadastro de Vendedor e Consultora
+- [x] Rotas protegidas por role (consultora só acessa tela dela)
+- [x] Otimização de performance mobile (celulares antigos)

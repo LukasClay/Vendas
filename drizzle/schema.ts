@@ -18,7 +18,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "consultora"]).default("user").notNull(),
   // Extra fields for seller profile
   displayName: varchar("displayName", { length: 128 }),
   phone: varchar("phone", { length: 32 }),
@@ -77,6 +77,8 @@ export const sales = mysqlTable("sales", {
   attachmentUrl: text("attachmentUrl"),
   attachmentKey: varchar("attachmentKey", { length: 512 }),
   attachmentMime: varchar("attachmentMime", { length: 64 }),
+  // Workflow
+  completedAt: timestamp("completedAt"),  // null = pendente, preenchido = concluído
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
