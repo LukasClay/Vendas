@@ -50,3 +50,6 @@
 
 ## Deploy
 - [ ] Instruções para Railway (a fazer após publicação)
+
+## Bugs
+- [x] Corrigir erro na query getSalesByMonth (MONTH/YEAR com alias no TiDB)
