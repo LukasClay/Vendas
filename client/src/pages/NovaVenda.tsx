@@ -94,6 +94,8 @@ export default function NovaVenda() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.clientName.trim()) { toast.error("Nome do cliente é obrigatório."); return; }
+    if (!form.clientBirthDate) { toast.error("Data de nascimento é obrigatória."); return; }
+    if (!form.clientPhone.replace(/\D/g, "")) { toast.error("Telefone é obrigatório."); return; }
     if (!form.productName) { toast.error("Selecione o trabalho espiritual."); return; }
     if (!form.amountFormatted) { toast.error("Informe o valor do trabalho."); return; }
 
@@ -221,7 +223,7 @@ export default function NovaVenda() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
-                    Data de Nascimento
+                    Data de Nascimento <span style={{ color: "oklch(0.58 0.22 25)" }}>*</span>
                   </label>
                   <input
                     type="date"
@@ -229,11 +231,12 @@ export default function NovaVenda() {
                     onChange={e => setForm(f => ({ ...f, clientBirthDate: e.target.value }))}
                     className="w-full px-4 py-3 rounded-xl text-base transition-all focus:outline-none focus:ring-2"
                     style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
-                    Telefone
+                    Telefone <span style={{ color: "oklch(0.58 0.22 25)" }}>*</span>
                   </label>
                   <input
                     type="tel"
@@ -243,6 +246,7 @@ export default function NovaVenda() {
                     maxLength={15}
                     className="w-full px-4 py-3 rounded-xl text-base transition-all focus:outline-none focus:ring-2"
                     style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+                    required
                   />
                 </div>
               </div>

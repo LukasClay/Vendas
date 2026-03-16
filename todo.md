@@ -61,3 +61,6 @@
 - [x] Frontend: tela de login com email/senha e "Lembrar de mim"
 - [x] Frontend: painel de vendedores com criação e edição de senha
 - [x] Remover botão "Promover a Admin" da interface
+
+## Melhorias de Validação
+- [x] Tornar data de nascimento e telefone obrigatórios no formulário de nova venda
