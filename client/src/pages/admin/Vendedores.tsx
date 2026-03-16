@@ -2,7 +2,13 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Users, Pencil, Check, X, Loader2, Crown, UserCheck, UserX } from "lucide-react";
+import {
+  Users, Pencil, Check, X, Loader2, UserCheck, UserX,
+  Plus, Eye, EyeOff, KeyRound, Shield
+} from "lucide-react";
+
+type NewSellerForm = { name: string; email: string; password: string; phone: string };
+type ResetForm = { newPassword: string };
 
 export default function AdminVendedores() {
   const utils = trpc.useUtils();
@@ -11,147 +17,179 @@ export default function AdminVendedores() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ displayName: "", phone: "" });
 
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newSeller, setNewSeller] = useState<NewSellerForm>({ name: "", email: "", password: "", phone: "" });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [resetId, setResetId] = useState<number | null>(null);
+  const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
   const updateUser = trpc.users.update.useMutation({
-    onSuccess: () => {
-      toast.success("Usuário atualizado!");
-      utils.users.listAll.invalidate();
-      setEditingId(null);
-    },
+    onSuccess: () => { toast.success("Usuário atualizado!"); utils.users.listAll.invalidate(); setEditingId(null); },
     onError: (err) => toast.error(err.message),
   });
 
   const deactivateUser = trpc.users.deactivate.useMutation({
+    onSuccess: () => { toast.success("Vendedor desativado."); utils.users.listAll.invalidate(); },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const createSeller = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
-      toast.success("Usuário desativado.");
+      toast.success("Vendedor criado com sucesso!");
       utils.users.listAll.invalidate();
+      setShowCreateForm(false);
+      setNewSeller({ name: "", email: "", password: "", phone: "" });
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const promoteUser = trpc.users.promoteToAdmin.useMutation({
+  const resetPassword = trpc.ownAuth.resetPassword.useMutation({
     onSuccess: () => {
-      toast.success("Usuário promovido a administrador!");
-      utils.users.listAll.invalidate();
+      toast.success("Senha redefinida com sucesso!");
+      setResetId(null);
+      setResetForm({ newPassword: "" });
     },
     onError: (err) => toast.error(err.message),
   });
-
-  const startEdit = (user: any) => {
-    setEditingId(user.id);
-    setEditForm({ displayName: user.displayName ?? "", phone: user.phone ?? "" });
-  };
 
   const sellers = users.filter(u => u.role === "user");
   const admins = users.filter(u => u.role === "admin");
 
+  const inputStyle = {
+    background: "oklch(0.97 0.005 260)",
+    border: "2px solid oklch(0.88 0.012 65)",
+    color: "oklch(0.15 0.02 260)",
+    fontSize: "15px",
+  };
+
   const UserCard = ({ user }: { user: any }) => (
-    <div className="flex items-center gap-4 px-6 py-4 transition-colors"
-      style={{ opacity: user.active ? 1 : 0.5 }}
+    <div className="px-6 py-4 transition-colors" style={{ opacity: user.active ? 1 : 0.55 }}
       onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-      {/* Avatar */}
-      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
-        style={{
-          background: user.role === "admin" ? "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" : "oklch(0.22 0.03 265)",
-          color: "white",
-        }}>
-        {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
-      </div>
 
-      {/* Info */}
-      {editingId === user.id ? (
-        <div className="flex-1 flex items-center gap-2 flex-wrap">
-          <input
-            type="text"
-            value={editForm.displayName}
-            onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
-            placeholder="Nome de exibição"
-            className="px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-2 flex-1 min-w-32"
-            style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-          />
-          <input
-            type="tel"
-            value={editForm.phone}
-            onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-            placeholder="Telefone"
-            className="px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-2 w-36"
-            style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-          />
-          <button
-            onClick={() => updateUser.mutate({ id: user.id, displayName: editForm.displayName || undefined, phone: editForm.phone || undefined })}
-            className="p-2 rounded-lg text-white"
-            style={{ background: "oklch(0.55 0.15 160)" }}>
-            <Check className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setEditingId(null)}
-            className="p-2 rounded-lg"
-            style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
-            <X className="w-4 h-4" />
-          </button>
+      <div className="flex items-center gap-4">
+        {/* Avatar */}
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
+          style={{
+            background: user.role === "admin"
+              ? "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))"
+              : "oklch(0.22 0.03 265)",
+            color: "white",
+          }}>
+          {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
         </div>
-      ) : (
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
-              {user.displayName || user.name || "Sem nome"}
+
+        {/* Info / Edit inline */}
+        {editingId === user.id ? (
+          <div className="flex-1 flex items-center gap-2 flex-wrap">
+            <input
+              type="text"
+              value={editForm.displayName}
+              onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
+              placeholder="Nome de exibição"
+              className="px-3 py-1.5 rounded-lg text-sm outline-none flex-1 min-w-32"
+              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+            />
+            <input
+              type="tel"
+              value={editForm.phone}
+              onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+              placeholder="Telefone"
+              className="px-3 py-1.5 rounded-lg text-sm outline-none w-36"
+              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+            />
+            <button onClick={() => updateUser.mutate({ id: user.id, displayName: editForm.displayName || undefined, phone: editForm.phone || undefined })}
+              className="p-2 rounded-lg text-white" style={{ background: "oklch(0.55 0.15 160)" }}>
+              <Check className="w-4 h-4" />
+            </button>
+            <button onClick={() => setEditingId(null)} className="p-2 rounded-lg"
+              style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
+                {user.displayName || user.name || "Sem nome"}
+              </p>
+              {user.role === "admin" && (
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                  <Shield className="w-3 h-3" /> Admin
+                </span>
+              )}
+              {!user.active && (
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: "oklch(0.93 0.04 30)", color: "oklch(0.55 0.20 30)" }}>
+                  Inativo
+                </span>
+              )}
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
+              {user.email || "Sem email"}{user.phone && ` · ${user.phone}`}
             </p>
-            {user.role === "admin" && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
-                <Crown className="w-3 h-3" />
-                Admin
-              </span>
+          </div>
+        )}
+
+        {/* Actions */}
+        {editingId !== user.id && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => { setEditingId(user.id); setEditForm({ displayName: user.displayName ?? "", phone: user.phone ?? "" }); }}
+              className="p-2 rounded-lg hover:bg-blue-50 transition-colors" style={{ color: "oklch(0.50 0.18 250)" }} title="Editar nome">
+              <Pencil className="w-4 h-4" />
+            </button>
+            {user.role === "user" && (
+              <button onClick={() => { setResetId(user.id); setResetForm({ newPassword: "" }); }}
+                className="p-2 rounded-lg hover:bg-yellow-50 transition-colors" style={{ color: "oklch(0.60 0.13 65)" }} title="Redefinir senha">
+                <KeyRound className="w-4 h-4" />
+              </button>
             )}
-            {!user.active && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.93 0.04 30)", color: "oklch(0.55 0.20 30)" }}>
-                Inativo
-              </span>
+            {user.active ? (
+              <button onClick={() => deactivateUser.mutate({ id: user.id })}
+                className="p-2 rounded-lg hover:bg-red-50 transition-colors" style={{ color: "oklch(0.58 0.22 25)" }} title="Desativar acesso">
+                <UserX className="w-4 h-4" />
+              </button>
+            ) : (
+              <button onClick={() => updateUser.mutate({ id: user.id, active: true })}
+                className="p-2 rounded-lg transition-colors" style={{ color: "oklch(0.55 0.15 160)" }} title="Reativar acesso">
+                <UserCheck className="w-4 h-4" />
+              </button>
             )}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
-            {user.email || "Sem email"}
-            {user.phone && ` · ${user.phone}`}
-          </p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Actions */}
-      {editingId !== user.id && (
-        <div className="flex items-center gap-1 shrink-0">
+      {/* Reset password inline */}
+      {resetId === user.id && (
+        <div className="mt-3 ml-14 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <input
+              type={showResetPassword ? "text" : "password"}
+              value={resetForm.newPassword}
+              onChange={e => setResetForm({ newPassword: e.target.value })}
+              placeholder="Nova senha (mín. 6 caracteres)"
+              className="w-full px-3 py-2 pr-10 rounded-lg text-sm outline-none"
+              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.97 0.005 260)", color: "oklch(0.15 0.02 260)" }}
+            />
+            <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "oklch(0.52 0.015 260)" }}>
+              {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
           <button
-            onClick={() => startEdit(user)}
-            className="p-2 rounded-lg transition-colors hover:bg-blue-50"
-            style={{ color: "oklch(0.50 0.18 250)" }}
-            title="Editar">
-            <Pencil className="w-4 h-4" />
+            onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
+            disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
+            style={{ background: "oklch(0.60 0.13 65)" }}>
+            {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
           </button>
-          {user.role === "user" && user.active && (
-            <button
-              onClick={() => promoteUser.mutate({ id: user.id })}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: "oklch(0.60 0.13 65)" }}
-              title="Promover a Admin">
-              <Crown className="w-4 h-4" />
-            </button>
-          )}
-          {user.active ? (
-            <button
-              onClick={() => deactivateUser.mutate({ id: user.id })}
-              className="p-2 rounded-lg transition-colors hover:bg-red-50"
-              style={{ color: "oklch(0.58 0.22 25)" }}
-              title="Desativar">
-              <UserX className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={() => updateUser.mutate({ id: user.id, active: true })}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: "oklch(0.55 0.15 160)" }}
-              title="Reativar">
-              <UserCheck className="w-4 h-4" />
-            </button>
-          )}
+          <button onClick={() => setResetId(null)} className="px-3 py-2 rounded-lg text-sm"
+            style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+            Cancelar
+          </button>
         </div>
       )}
     </div>
@@ -161,27 +199,96 @@ export default function AdminVendedores() {
     <DashboardLayout>
       <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-            Gestão de Usuários
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-            Gerencie vendedores e administradores do sistema
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+              Vendedores
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+              Gerencie os vendedores do sistema
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+            <Plus className="w-4 h-4" />
+            Novo Vendedor
+          </button>
         </div>
 
-        {/* Info box */}
-        <div className="rounded-xl p-4 mb-6 flex items-start gap-3"
-          style={{ background: "oklch(0.94 0.02 65)", border: "1px solid oklch(0.88 0.012 65)" }}>
-          <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-            style={{ background: "oklch(0.60 0.13 65)" }}>
-            <span className="text-white text-xs font-bold">i</span>
+        {/* Formulário de criação */}
+        {showCreateForm && (
+          <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
+            <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>Cadastrar Novo Vendedor</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Nome completo *</label>
+                <input
+                  type="text"
+                  value={newSeller.name}
+                  onChange={e => setNewSeller(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Nome do vendedor"
+                  className="w-full px-4 py-3 rounded-xl outline-none"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Email *</label>
+                <input
+                  type="email"
+                  value={newSeller.email}
+                  onChange={e => setNewSeller(f => ({ ...f, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                  className="w-full px-4 py-3 rounded-xl outline-none"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Senha *</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newSeller.password}
+                    onChange={e => setNewSeller(f => ({ ...f, password: e.target.value }))}
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full px-4 py-3 pr-12 rounded-xl outline-none"
+                    style={inputStyle}
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Telefone (opcional)</label>
+                <input
+                  type="tel"
+                  value={newSeller.phone}
+                  onChange={e => setNewSeller(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="(00) 00000-0000"
+                  className="w-full px-4 py-3 rounded-xl outline-none"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => createSeller.mutate({ name: newSeller.name, email: newSeller.email, password: newSeller.password, phone: newSeller.phone || undefined })}
+                disabled={!newSeller.name || !newSeller.email || newSeller.password.length < 6 || createSeller.isPending}
+                className="px-6 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+                {createSeller.isPending ? "Criando..." : "Criar Vendedor"}
+              </button>
+              <button onClick={() => setShowCreateForm(false)}
+                className="px-6 py-3 rounded-xl font-semibold transition-all"
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                Cancelar
+              </button>
+            </div>
           </div>
-          <p className="text-sm" style={{ color: "oklch(0.35 0.02 260)" }}>
-            Os vendedores são adicionados automaticamente ao sistema quando fazem login pela primeira vez.
-            Aqui você pode editar o nome de exibição, promover a administrador ou desativar o acesso.
-          </p>
-        </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
@@ -193,7 +300,7 @@ export default function AdminVendedores() {
             {admins.length > 0 && (
               <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
                 <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-                  <Crown className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
+                  <Shield className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
                   <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Administradores</h2>
                   <span className="ml-auto text-sm px-3 py-1 rounded-full"
                     style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
@@ -201,7 +308,7 @@ export default function AdminVendedores() {
                   </span>
                 </div>
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {admins.map(user => <UserCard key={user.id} user={user} />)}
+                  {admins.map(u => <UserCard key={u.id} user={u} />)}
                 </div>
               </div>
             )}
@@ -221,12 +328,12 @@ export default function AdminVendedores() {
                   <Users className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
                   <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum vendedor cadastrado</p>
                   <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
-                    Os vendedores aparecem aqui após fazerem login pela primeira vez.
+                    Clique em "Novo Vendedor" para cadastrar o primeiro vendedor.
                   </p>
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {sellers.map(user => <UserCard key={user.id} user={user} />)}
+                  {sellers.map(u => <UserCard key={u.id} user={u} />)}
                 </div>
               )}
             </div>

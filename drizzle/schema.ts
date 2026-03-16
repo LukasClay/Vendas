@@ -23,6 +23,8 @@ export const users = mysqlTable("users", {
   displayName: varchar("displayName", { length: 128 }),
   phone: varchar("phone", { length: 32 }),
   active: boolean("active").default(true).notNull(),
+  // Own auth (email/password login)
+  passwordHash: varchar("passwordHash", { length: 256 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

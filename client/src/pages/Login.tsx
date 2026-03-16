@@ -1,90 +1,193 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { Eye, EyeOff, LogIn } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(1, "Senha obrigatória"),
+  rememberMe: z.boolean(),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const { isAuthenticated, user, loading } = useAuth();
   const [, navigate] = useLocation();
+  const { user, loading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/venda");
-      }
+    if (loading) return;
+    if (user) {
+      navigate(user.role === "admin" ? "/admin" : "/venda");
     }
-  }, [isAuthenticated, user, loading, navigate]);
+  }, [user, loading, navigate]);
 
-  const handleLogin = () => {
-    window.location.href = getLoginUrl();
-  };
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "", rememberMe: false },
+  });
+
+  const loginMutation = trpc.ownAuth.login.useMutation({
+    onSuccess: (data) => {
+      toast.success("Login realizado com sucesso!");
+      setTimeout(() => {
+        window.location.href = data.role === "admin" ? "/admin" : "/venda";
+      }, 300);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Email ou senha incorretos.");
+    },
+  });
+
+  if (loading || user) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: "linear-gradient(135deg, oklch(0.14 0.025 265) 0%, oklch(0.20 0.04 265) 50%, oklch(0.14 0.025 265) 100%)" }}>
-
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "linear-gradient(135deg, oklch(0.12 0.02 260) 0%, oklch(0.18 0.04 260) 50%, oklch(0.14 0.03 50) 100%)" }}
+    >
       {/* Decorative orbs */}
-      <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-10"
+      <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-10 pointer-events-none"
         style={{ background: "radial-gradient(circle, oklch(0.60 0.13 65), transparent)" }} />
-      <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-5"
+      <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-5 pointer-events-none"
         style={{ background: "radial-gradient(circle, oklch(0.60 0.13 65), transparent)" }} />
 
-      {/* Card central */}
-      <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="rounded-2xl p-10 shadow-2xl"
-          style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.012 65)" }}>
+      <div className="w-full max-w-md relative z-10">
+        <div className="rounded-3xl p-8 shadow-2xl" style={{ background: "white" }}>
 
-          {/* Logo / Ícone */}
+          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg"
-              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" }}>
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z"
-                  fill="white" opacity="0.9" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
+              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+              <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" opacity="0.95" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-center" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1 className="text-2xl font-bold text-center"
+              style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
               Gestão de Vendas
             </h1>
-            <p className="text-sm mt-2 text-center" style={{ color: "oklch(0.52 0.015 260)" }}>
-              Sistema de controle e acompanhamento
+            <p className="text-sm mt-1 text-center" style={{ color: "oklch(0.52 0.015 260)" }}>
+              Entre com seu email e senha para acessar
             </p>
           </div>
 
-          {/* Divider dourado */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="flex-1 h-px" style={{ background: "oklch(0.88 0.012 65)" }} />
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px" style={{ background: "oklch(0.90 0.010 65)" }} />
             <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.60 0.13 65)" }} />
-            <div className="flex-1 h-px" style={{ background: "oklch(0.88 0.012 65)" }} />
+            <div className="flex-1 h-px" style={{ background: "oklch(0.90 0.010 65)" }} />
           </div>
 
-          {/* Botão de login */}
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full py-4 px-6 rounded-xl text-white font-semibold text-lg transition-all duration-200 hover:opacity-90 active:scale-[0.98] shadow-lg disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Carregando...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
-                </svg>
-                Entrar no Sistema
-              </span>
-            )}
-          </button>
+          {/* Form */}
+          <form onSubmit={handleSubmit((d: LoginForm) => loginMutation.mutate(d))} className="space-y-5">
 
-          <p className="text-xs text-center mt-6" style={{ color: "oklch(0.65 0.01 260)" }}>
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: "oklch(0.25 0.02 260)" }}>
+                Email
+              </label>
+              <input
+                {...register("email")}
+                type="email"
+                placeholder="seu@email.com"
+                autoComplete="email"
+                className="w-full px-4 py-3 rounded-xl outline-none transition-all"
+                style={{
+                  background: "oklch(0.97 0.005 260)",
+                  border: `2px solid ${errors.email ? "oklch(0.55 0.20 25)" : "oklch(0.88 0.012 65)"}`,
+                  color: "oklch(0.15 0.02 260)",
+                  fontSize: "16px",
+                }}
+              />
+              {errors.email && (
+                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.email.message}</p>
+              )}
+            </div>
+
+            {/* Senha */}
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: "oklch(0.25 0.02 260)" }}>
+                Senha
+              </label>
+              <div className="relative">
+                <input
+                  {...register("password")}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="w-full px-4 py-3 pr-12 rounded-xl outline-none transition-all"
+                  style={{
+                    background: "oklch(0.97 0.005 260)",
+                    border: `2px solid ${errors.password ? "oklch(0.55 0.20 25)" : "oklch(0.88 0.012 65)"}`,
+                    color: "oklch(0.15 0.02 260)",
+                    fontSize: "16px",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                  style={{ color: "oklch(0.52 0.015 260)" }}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Lembrar de mim */}
+            <div className="flex items-center gap-3">
+              <input
+                {...register("rememberMe")}
+                type="checkbox"
+                id="rememberMe"
+                className="w-5 h-5 rounded cursor-pointer"
+                style={{ accentColor: "oklch(0.60 0.13 65)" } as React.CSSProperties}
+              />
+              <label htmlFor="rememberMe" className="text-sm cursor-pointer select-none"
+                style={{ color: "oklch(0.35 0.02 260)" }}>
+                Lembrar de mim por 1 ano
+              </label>
+            </div>
+
+            {/* Botão entrar */}
+            <button
+              type="submit"
+              disabled={loginMutation.isPending}
+              className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+              style={{
+                background: loginMutation.isPending
+                  ? "oklch(0.75 0.08 65)"
+                  : "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))",
+                fontSize: "16px",
+                cursor: loginMutation.isPending ? "not-allowed" : "pointer",
+                boxShadow: "0 4px 16px oklch(0.60 0.13 65 / 0.35)",
+              }}
+            >
+              {loginMutation.isPending ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Entrar no Sistema
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-xs mt-6" style={{ color: "oklch(0.65 0.01 260)" }}>
             Acesso restrito a usuários autorizados
           </p>
         </div>
