@@ -20,7 +20,7 @@ function fmtBirth(d: string | Date | null | undefined): string {
 // Gera opções de horário em intervalos de 15 min
 function generateTimeOptions(): string[] {
   const times: string[] = [];
-  for (let h = 0; h < 24; h++) {
+  for (let h = 7; h < 20; h++) {
     for (let m = 0; m < 60; m += 15) {
       times.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
