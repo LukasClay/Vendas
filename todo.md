@@ -167,3 +167,8 @@
 - [x] Frontend Consultora: aba "Cartas Canceladas" (somente visualização)
 - [x] Frontend ADM: aba "Cartas Canceladas" com botão Restaurar
 - [x] Testes: 25 testes passando (12 novos para consultationSlots)
+
+## Liberar Horário Cancelado
+- [x] Backend: procedure deleteCancelled (somente ADM) — apaga slot cancelado do banco
+- [x] Frontend ADM: botão "Liberar Horário" na aba Canceladas (ao lado de Restaurar)
+- [x] Testes: 28 testes passando (3 novos para deleteCancelled)

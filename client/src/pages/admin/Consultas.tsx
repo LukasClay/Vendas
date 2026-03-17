@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import {
   Calendar, Clock, Plus, Trash2, Loader2, User, Phone,
-  CalendarDays, CheckCircle2, ClipboardList, XCircle, RotateCcw, Ban,
+  CalendarDays, CheckCircle2, ClipboardList, XCircle, RotateCcw, Ban, Unlock,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,15 +58,19 @@ function ConsultaCard({
   showDate = true,
   onCancel,
   onRestore,
+  onDelete,
   cancelling = false,
   restoring = false,
+  deleting = false,
 }: {
   slot: SlotItem;
   showDate?: boolean;
   onCancel?: () => void;
   onRestore?: () => void;
+  onDelete?: () => void;
   cancelling?: boolean;
   restoring?: boolean;
+  deleting?: boolean;
 }) {
   const sellerDisplay = slot.sellerName || slot.sellerUsername || null;
   const isCancelled = slot.effectiveStatus === "cancelada";
@@ -131,6 +135,19 @@ function ConsultaCard({
               Restaurar
             </button>
           )}
+          {/* Botão Liberar Horário (apenas para canceladas — ADM) */}
+          {onDelete && isCancelled && (
+            <button
+              onClick={onDelete}
+              disabled={deleting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.015 260)", border: "1px solid oklch(0.85 0.012 65)" }}
+              title="Liberar horário (apagar permanentemente)"
+            >
+              {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlock className="w-3 h-3" />}
+              Liberar
+            </button>
+          )}
         </div>
       </div>
 
@@ -192,6 +209,7 @@ export default function AdminConsultas() {
   const [newTime, setNewTime] = useState("");
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -238,6 +256,18 @@ export default function AdminConsultas() {
     },
   });
 
+  const deleteCancelledSlot = trpc.consultationSlots.deleteCancelled.useMutation({
+    onSuccess: () => {
+      toast.success("Horário liberado. Pode ser recadastrado agora.");
+      setDeletingId(null);
+      invalidateAll();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erro ao liberar horário.");
+      setDeletingId(null);
+    },
+  });
+
   const restoreSlot = trpc.consultationSlots.restore.useMutation({
     onSuccess: () => {
       toast.success("Consulta restaurada para pendente.");
@@ -266,6 +296,12 @@ export default function AdminConsultas() {
     if (!window.confirm("Restaurar esta consulta para pendente?")) return;
     setRestoringId(id);
     restoreSlot.mutate({ id });
+  };
+
+  const handleDeleteCancelled = (id: number) => {
+    if (!window.confirm("Liberar este horário permanentemente?\nO slot será apagado e poderá ser recadastrado depois.")) return;
+    setDeletingId(id);
+    deleteCancelledSlot.mutate({ id });
   };
 
   // Agrupa por data
@@ -456,6 +492,8 @@ export default function AdminConsultas() {
                           showDate={false}
                           onRestore={() => handleRestore(slot.id)}
                           restoring={restoringId === slot.id}
+                          onDelete={() => handleDeleteCancelled(slot.id)}
+                          deleting={deletingId === slot.id}
                         />
                       ))}
                     </div>

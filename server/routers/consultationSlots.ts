@@ -233,6 +233,30 @@ export const consultationSlotsRouter = router({
       return { success: true };
     }),
 
+  // Apaga permanentemente um slot cancelado, liberando o horário para recadastro (somente ADM)
+  deleteCancelled: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem liberar horários cancelados." });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+
+      const slot = await withRetry(() =>
+        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+      );
+      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
+      if (slot[0].status !== "cancelada") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas horários cancelados podem ser liberados." });
+      }
+
+      await withRetry(() =>
+        db.delete(consultationSlots).where(eq(consultationSlots.id, input.id))
+      );
+      return { success: true };
+    }),
+
   // Cria novo slot de consulta (ADM ou consultora)
   create: protectedProcedure
     .input(z.object({

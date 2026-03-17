@@ -106,6 +106,26 @@ describe("consultationSlots.restore (permissão)", () => {
   });
 });
 
+describe("consultationSlots.deleteCancelled (permissão)", () => {
+  it("bloqueia consultora de liberar horário cancelado", async () => {
+    const ctx = createContext("consultora");
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(/FORBIDDEN|administradores/i);
+  });
+
+  it("bloqueia usuário comum de liberar horário cancelado", async () => {
+    const ctx = createContext("user");
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow();
+  });
+
+  it("retorna NOT_FOUND para slot inexistente (admin)", async () => {
+    const ctx = createContext("admin");
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(/NOT_FOUND|não encontrado/i);
+  });
+});
+
 describe("consultationSlots.listAvailable (público)", () => {
   it("retorna lista de slots disponíveis para qualquer usuário autenticado", async () => {
     const ctx = createContext("user");
