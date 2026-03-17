@@ -117,7 +117,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </svg>
             </div>
             <span className="font-semibold text-sm" style={{ color: "oklch(0.92 0.01 65)", fontFamily: "'Playfair Display', serif" }}>
-              {activeMenuItem?.label ?? "Gestão de Vendas"}
+              {activeMenuItem?.label ?? "Mundo Da Magia"}
             </span>
           </div>
           <button
@@ -225,7 +225,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </svg>
           </div>
           <span className="font-semibold text-sm" style={{ color: "oklch(0.92 0.01 65)", fontFamily: "'Playfair Display', serif" }}>
-            Gestão de Vendas
+            Mundo Da Magia
           </span>
         </div>
 
@@ -271,7 +271,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate" style={{ color: "oklch(0.92 0.01 65)" }}>{displayName}</p>
-              <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 65)" }}>{user?.email || ""}</p>
+              <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 65)" }}>{(user as any)?.username || user?.email || ""}</p>
             </div>
           </div>
           <button

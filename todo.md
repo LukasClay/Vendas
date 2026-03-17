@@ -114,3 +114,17 @@
 
 ## Bugs
 - [x] Erro de login ao acordar da hibernação: implementar retry automático de conexão com o banco
+
+## Melhorias Formulário e Sistema
+- [ ] Adicionar campo Observação no formulário de vendas (vendedor/consultora)
+- [x] Renomear sistema para "Mundo Da Magia LTDA" (login, cabeçalho, título)
+  - [x] Gestão completa de funcionários pelo ADM: editar nome, email, senha e tipo de qualquer usuário
+
+## Login por Nome de Usuário
+- [x] Adicionar campo username único no schema (migration)
+- [x] Backend: login por username + senha (sem email)
+- [x] Backend: criar funcionário com username + senha + tipo
+- [x] Frontend: tela de login com campo "Usuário" em vez de email
+- [x] Frontend: unificar cadastro em "Novo Funcionário" com seleção de tipo
+- [x] Frontend: gestão completa (editar nome, username, senha, tipo) pelo ADM
+- [x] Renomear sistema para "Mundo Da Magia LTDA"

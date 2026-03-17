@@ -4,7 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb, withRetry } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -20,10 +20,10 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 export const ownAuthRouter = router({
-  // Login com email e senha
+  // Login com username e senha (sem email)
   login: publicProcedure
     .input(z.object({
-      email: z.string().email("Email inválido"),
+      username: z.string().min(1, "Usuário obrigatório"),
       password: z.string().min(1, "Senha obrigatória"),
       rememberMe: z.boolean().default(false),
     }))
@@ -31,14 +31,19 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
-      // Busca usuário pelo email com retry automático (para reconexão após hibernação)
+      // Busca por username OU email (compatibilidade com contas antigas)
       const result = await withRetry(() =>
-        db.select().from(users).where(eq(users.email, input.email)).limit(1)
+        db.select().from(users).where(
+          or(
+            eq(users.username, input.username),
+            eq(users.email, input.username)
+          )
+        ).limit(1)
       );
       const user = result[0];
 
       if (!user || !user.passwordHash) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Email ou senha incorretos." });
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       if (!user.active) {
@@ -47,13 +52,13 @@ export const ownAuthRouter = router({
 
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Email ou senha incorretos." });
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       // Gera JWT de sessão usando o SDK existente
       const expiresInMs = input.rememberMe ? REMEMBER_ME_MS : SESSION_MS;
       const token = await sdk.signSession(
-        { openId: user.openId, appId: ENV.appId, name: user.name ?? user.email ?? "" },
+        { openId: user.openId, appId: ENV.appId, name: user.name ?? user.username ?? user.email ?? "" },
         { expiresInMs }
       );
 
@@ -69,11 +74,11 @@ export const ownAuthRouter = router({
       return { success: true, role: user.role };
     }),
 
-  // Admin cria novo vendedor ou consultora com senha
+  // Admin cria novo funcionário (vendedor, consultora ou admin) com username e senha
   createSeller: adminProcedure
     .input(z.object({
       name: z.string().min(1, "Nome obrigatório"),
-      email: z.string().email("Email inválido"),
+      username: z.string().min(3, "Usuário deve ter no mínimo 3 caracteres").regex(/^[a-zA-Z0-9_]+$/, "Usuário só pode conter letras, números e _"),
       password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
       phone: z.string().optional(),
       role: z.enum(["user", "consultora", "admin"]).default("user"),
@@ -82,21 +87,20 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
-      // Verifica se email já existe
-      const existing = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+      // Verifica se username já existe
+      const existing = await db.select().from(users).where(eq(users.username, input.username)).limit(1);
       if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "Já existe um usuário com este email." });
+        throw new TRPCError({ code: "CONFLICT", message: "Já existe um usuário com este nome de usuário." });
       }
 
       const passwordHash = await bcrypt.hash(input.password, 12);
-      // openId único para usuários locais
       const openId = `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
       await db.insert(users).values({
         openId,
         name: input.name,
-        email: input.email,
-        loginMethod: "email_password",
+        username: input.username,
+        loginMethod: "username_password",
         role: input.role,
         active: true,
         phone: input.phone ?? null,
@@ -107,7 +111,39 @@ export const ownAuthRouter = router({
       return { success: true };
     }),
 
-  // Admin reseta senha de um vendedor
+  // Admin edita dados de qualquer funcionário
+  updateUser: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      name: z.string().min(1).optional(),
+      username: z.string().min(3).regex(/^[a-zA-Z0-9_]+$/).optional(),
+      role: z.enum(["user", "consultora", "admin"]).optional(),
+      active: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Verifica conflito de username
+      if (input.username) {
+        const existing = await db.select().from(users)
+          .where(eq(users.username, input.username)).limit(1);
+        if (existing.length > 0 && existing[0].id !== input.userId) {
+          throw new TRPCError({ code: "CONFLICT", message: "Este nome de usuário já está em uso." });
+        }
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.username !== undefined) updateData.username = input.username;
+      if (input.role !== undefined) updateData.role = input.role;
+      if (input.active !== undefined) updateData.active = input.active;
+
+      await db.update(users).set(updateData).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  // Admin reseta senha de qualquer funcionário
   resetPassword: adminProcedure
     .input(z.object({
       userId: z.number(),
@@ -119,6 +155,36 @@ export const ownAuthRouter = router({
 
       const passwordHash = await bcrypt.hash(input.newPassword, 12);
       await db.update(users).set({ passwordHash }).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  // Admin lista todos os funcionários
+  listUsers: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const result = await db.select({
+      id: users.id,
+      name: users.name,
+      username: users.username,
+      email: users.email,
+      role: users.role,
+      active: users.active,
+      createdAt: users.createdAt,
+      lastSignedIn: users.lastSignedIn,
+    }).from(users).orderBy(users.createdAt);
+
+    return result;
+  }),
+
+  // Admin exclui funcionário
+  deleteUser: adminProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await db.delete(users).where(eq(users.id, input.userId));
       return { success: true };
     }),
 });

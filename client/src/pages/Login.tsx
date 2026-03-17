@@ -9,7 +9,7 @@ import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
+  username: z.string().min(1, "Usuário obrigatório"),
   password: z.string().min(1, "Senha obrigatória"),
   rememberMe: z.boolean(),
 });
@@ -30,7 +30,7 @@ export default function Login() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "", rememberMe: false },
+    defaultValues: { username: "", password: "", rememberMe: false },
   });
 
   const loginMutation = trpc.ownAuth.login.useMutation({
@@ -41,7 +41,7 @@ export default function Login() {
       }, 300);
     },
     onError: (err) => {
-      toast.error(err.message || "Email ou senha incorretos.");
+      toast.error(err.message || "Usuário ou senha incorretos.");
     },
   });
 
@@ -71,10 +71,10 @@ export default function Login() {
             </div>
             <h1 className="text-2xl font-bold text-center"
               style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-              Gestão de Vendas
+              Mundo Da Magia LTDA
             </h1>
             <p className="text-sm mt-1 text-center" style={{ color: "oklch(0.52 0.015 260)" }}>
-              Entre com seu email e senha para acessar
+              Entre com seu usuário e senha para acessar
             </p>
           </div>
 
@@ -88,26 +88,29 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleSubmit((d: LoginForm) => loginMutation.mutate(d))} className="space-y-5">
 
-            {/* Email */}
+            {/* Username */}
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: "oklch(0.25 0.02 260)" }}>
-                Email
+                Usuário
               </label>
               <input
-                {...register("email")}
-                type="email"
-                placeholder="seu@email.com"
-                autoComplete="email"
+                {...register("username")}
+                type="text"
+                placeholder="seu_usuario"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="w-full px-4 py-3 rounded-xl outline-none transition-all"
                 style={{
                   background: "oklch(0.97 0.005 260)",
-                  border: `2px solid ${errors.email ? "oklch(0.55 0.20 25)" : "oklch(0.88 0.012 65)"}`,
+                  border: `2px solid ${errors.username ? "oklch(0.55 0.20 25)" : "oklch(0.88 0.012 65)"}`,
                   color: "oklch(0.15 0.02 260)",
                   fontSize: "16px",
                 }}
               />
-              {errors.email && (
-                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.email.message}</p>
+              {errors.username && (
+                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.username.message}</p>
               )}
             </div>
 
