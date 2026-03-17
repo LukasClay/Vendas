@@ -25,6 +25,7 @@ const adminMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/relatorios" },
   { icon: FileText, label: "Todas as Vendas", path: "/admin/vendas" },
+  { icon: PlusCircle, label: "Nova Venda", path: "/admin/nova-venda" },
   { icon: Package, label: "Trabalhos", path: "/admin/produtos" },
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },

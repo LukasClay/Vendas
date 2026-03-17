@@ -114,6 +114,9 @@ function Router() {
       <Route path="/admin/consultas">
         <AuthGuard adminOnly><AdminConsultas /></AuthGuard>
       </Route>
+      <Route path="/admin/nova-venda">
+        <AuthGuard adminOnly><NovaVenda /></AuthGuard>
+      </Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

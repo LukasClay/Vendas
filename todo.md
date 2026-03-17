@@ -172,3 +172,7 @@
 - [x] Backend: procedure deleteCancelled (somente ADM) — apaga slot cancelado do banco
 - [x] Frontend ADM: botão "Liberar Horário" na aba Canceladas (ao lado de Restaurar)
 - [x] Testes: 28 testes passando (3 novos para deleteCancelled)
+
+## Nova Venda para ADM
+- [x] Menu lateral ADM: adicionar item "Nova Venda"
+- [x] Rota /admin/nova-venda protegida (adminOnly) usando o mesmo formulário NovaVenda
