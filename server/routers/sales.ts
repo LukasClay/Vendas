@@ -4,8 +4,8 @@ import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, update
 import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
-import { consultationSlots } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { consultationSlots, sales } from "../../drizzle/schema";
+import { eq, and, like, ne, desc } from "drizzle-orm";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
@@ -171,5 +171,49 @@ export const salesRouter = router({
     .mutation(async ({ input }) => {
       await deleteSale(input.id);
       return { success: true };
+    }),
+
+  // Histórico de uma cliente (ADM) — trabalhos normais + consultas separadas
+  clientHistory: adminProcedure
+    .input(z.object({ clientName: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Trabalhos normais (excluindo Consulta Cartas)
+      const purchases = await withRetry(() =>
+        db.select({
+          id: sales.id,
+          productName: sales.productName,
+          saleDate: sales.saleDate,
+          workStatus: sales.workStatus,
+          amount: sales.amount,
+        }).from(sales)
+          .where(and(like(sales.clientName, `%${input.clientName}%`), ne(sales.productName, "Consulta Cartas")))
+          .orderBy(desc(sales.saleDate))
+          .limit(50)
+      );
+
+      // Consultas Cartas desta cliente (via consultation_slots)
+      const consultaRows = await withRetry(() =>
+        db.select({
+          id: consultationSlots.id,
+          consultationDate: consultationSlots.consultationDate,
+          consultationTime: consultationSlots.consultationTime,
+          status: consultationSlots.status,
+          saleDate: sales.saleDate,
+        }).from(consultationSlots)
+          .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+          .where(and(like(sales.clientName, `%${input.clientName}%`), eq(consultationSlots.sold, true)))
+          .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
+          .limit(20)
+      );
+
+      return {
+        totalPurchases: purchases.length,
+        totalConsultas: consultaRows.length,
+        purchases,
+        consultas: consultaRows,
+      };
     }),
 });

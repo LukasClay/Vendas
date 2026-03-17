@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 function formatCurrency(value: string | number) {
@@ -44,6 +44,13 @@ export default function AdminVendas() {
 
   // Estado de confirmação de exclusão
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+  // Estado do modal de histórico de cliente
+  const [historyClientName, setHistoryClientName] = useState<string | null>(null);
+  const { data: clientHistory, isLoading: loadingHistory } = trpc.sales.clientHistory.useQuery(
+    { clientName: historyClientName! },
+    { enabled: !!historyClientName }
+  );
 
   const updateSale = trpc.sales.update.useMutation({
     onSuccess: () => {
@@ -170,6 +177,94 @@ export default function AdminVendas() {
         </div>
 
         {/* Tabela */}
+        {/* Modal de Histórico de Cliente */}
+        {historyClientName && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+            style={{ background: "rgba(0,0,0,0.5)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setHistoryClientName(null); }}>
+            <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
+              style={{ background: "white" }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+                <div>
+                  <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+                    Histórico da Cliente
+                  </h2>
+                  <p className="text-sm" style={{ color: "oklch(0.52 0.015 260)" }}>{historyClientName}</p>
+                </div>
+                <button onClick={() => setHistoryClientName(null)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  style={{ color: "oklch(0.52 0.015 260)" }}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="px-6 py-5">
+                {loadingHistory ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Trabalhos */}
+                    {clientHistory && clientHistory.totalPurchases > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                          Trabalhos ({clientHistory.totalPurchases})
+                        </h3>
+                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.012 65)" }}>
+                          {clientHistory.purchases.map((p: any, i: number) => (
+                            <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-2"
+                              style={{ borderBottom: i < clientHistory.purchases.length - 1 ? "1px solid oklch(0.93 0.008 65)" : "none" }}>
+                              <div>
+                                <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{p.productName}</p>
+                                <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
+                              </div>
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
+                                background: p.workStatus === "feito" ? "oklch(0.92 0.04 160)" : p.workStatus === "pendente" ? "oklch(0.94 0.03 65)" : "oklch(0.92 0.04 250)",
+                                color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : p.workStatus === "pendente" ? "oklch(0.45 0.10 65)" : "oklch(0.40 0.14 250)",
+                              }}>
+                                {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Consultas */}
+                    {clientHistory && clientHistory.totalConsultas > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                          Consultas de Cartas ({clientHistory.totalConsultas})
+                        </h3>
+                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.015 280)" }}>
+                          {clientHistory.consultas.map((c: any, i: number) => (
+                            <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-2"
+                              style={{ borderBottom: i < clientHistory.consultas.length - 1 ? "1px solid oklch(0.92 0.01 280)" : "none" }}>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.50 0.14 280)" }} />
+                                <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>Consulta Cartas</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
+                                  {c.consultationDate ? c.consultationDate.slice(8,10)+"/"+c.consultationDate.slice(5,7)+"/"+c.consultationDate.slice(0,4) : ""} às {c.consultationTime}
+                                </span>
+                                {c.status === "cancelada" && (
+                                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.18 25)" }}>Cancelada</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {clientHistory && clientHistory.totalPurchases === 0 && clientHistory.totalConsultas === 0 && (
+                      <p className="text-sm text-center py-6" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum histórico encontrado.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -214,7 +309,12 @@ export default function AdminVendas() {
                             {formatDate(sale.saleDate)}
                           </td>
                           <td className="px-4 py-3.5">
-                            <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{sale.clientName}</p>
+                            <button
+                              onClick={() => setHistoryClientName(sale.clientName)}
+                              className="text-left hover:underline"
+                              title="Ver histórico desta cliente">
+                              <p className="text-sm font-medium" style={{ color: "oklch(0.35 0.15 250)" }}>{sale.clientName}</p>
+                            </button>
                             {sale.clientPhone && <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{sale.clientPhone}</p>}
                           </td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>{sale.productName}</td>
@@ -290,7 +390,12 @@ export default function AdminVendas() {
                       <p className="text-xs mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
                         {sale.productName} · {seller?.displayName || seller?.name || ""} · {formatDate(sale.saleDate)}
                       </p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button onClick={() => setHistoryClientName(sale.clientName)}
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
+                          style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.35 0.15 280)" }}>
+                          <History className="w-3 h-3" /> Histórico
+                        </button>
                         {sale.attachmentUrl && (
                           <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"

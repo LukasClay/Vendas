@@ -160,7 +160,7 @@ export default function AdminProdutos() {
               Trabalhos Cadastrados
             </h2>
             <span className="text-sm px-3 py-1 rounded-full" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
-              {products.filter(p => p.active).length} ativos
+              {products.filter(p => p.active && p.name !== "Consulta Cartas").length} ativos
             </span>
           </div>
 
@@ -183,7 +183,7 @@ export default function AdminProdutos() {
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-              {products.map(product => (
+              {products.filter(p => p.name !== "Consulta Cartas").map(product => (
                 <div key={product.id} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-colors"
                   style={{ opacity: product.active ? 1 : 0.5 }}
                   onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}

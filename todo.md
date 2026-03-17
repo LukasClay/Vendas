@@ -176,3 +176,11 @@
 ## Nova Venda para ADM
 - [x] Menu lateral ADM: adicionar item "Nova Venda"
 - [x] Rota /admin/nova-venda protegida (adminOnly) usando o mesmo formulário NovaVenda
+
+## Itens Pendentes (solicitados pelo usuário)
+- [x] Remover "Consulta Cartas" da aba de Trabalhos do ADM
+- [x] Remover "Consulta Cartas" do painel de trabalhos da Consultora (já estava filtrado no backend)
+- [x] Adicionar seção de Consultas no histórico de compras de uma cliente (ADM e Consultora)
+- [x] Verificar bug dados cliente/vendedor nos cards de consulta (backend já retorna corretamente)
+- [x] Procedure clientHistory para ADM (sales.clientHistory)
+- [x] Modal de histórico de cliente na tela Todas as Vendas do ADM (botão no nome da cliente)
