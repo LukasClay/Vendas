@@ -1,14 +1,10 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { FileText, TrendingUp, DollarSign, ShoppingBag, ExternalLink } from "lucide-react";
+import { formatDate } from "@/lib/dateUtils";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(date: Date | string | null) {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("pt-BR");
 }
 
 export default function MinhasVendas() {

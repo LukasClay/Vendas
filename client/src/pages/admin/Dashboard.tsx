@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { formatDate } from "@/lib/dateUtils";
 
 // Calcula dias úteis (seg-sex) a partir do dia seguinte à venda
 function calcBusinessDays(saleDateRaw: string | Date): { daysRemaining: number; isOverdue: boolean; isUrgent: boolean } {
@@ -30,11 +31,6 @@ function calcBusinessDays(saleDateRaw: string | Date): { daysRemaining: number; 
 
 function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(date: Date | string | null) {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("pt-BR");
 }
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -281,7 +277,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</td>
                         <td className="px-4 py-3" style={{ color: "oklch(0.40 0.02 260)" }}>{w.productName}</td>
-                        <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{new Date(w.saleDate).toLocaleDateString("pt-BR")}</td>
+                        <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</td>
                         <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>—</td>
                         <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>—</td>
                       </tr>
@@ -289,7 +285,8 @@ export default function AdminDashboard() {
                     {[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10).map((w: any) => {
                       const { daysRemaining, isOverdue, isUrgent } = calcBusinessDays(w.saleDate);
                       const deadlineDate = (() => {
-                        const d = new Date(w.saleDate);
+                        const saleDateStr = String(w.saleDate).slice(0, 10);
+                        const d = new Date(saleDateStr + "T12:00:00");
                         d.setDate(d.getDate() + 1);
                         let count = 0;
                         while (count < 7) {
@@ -297,7 +294,7 @@ export default function AdminDashboard() {
                           if (day !== 0 && day !== 6) count++;
                           if (count < 7) d.setDate(d.getDate() + 1);
                         }
-                        return d.toLocaleDateString("pt-BR");
+                        return formatDate(d);
                       })();
                       return (
                         <tr key={w.id} className="border-t" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
@@ -313,7 +310,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</td>
                           <td className="px-4 py-3" style={{ color: "oklch(0.40 0.02 260)" }}>{w.productName}</td>
-                          <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{new Date(w.saleDate).toLocaleDateString("pt-BR")}</td>
+                          <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</td>
                           <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{deadlineDate}</td>
                           <td className="px-4 py-3">
                             <span className="font-semibold" style={{ color: isOverdue ? "oklch(0.45 0.18 25)" : isUrgent ? "oklch(0.50 0.14 55)" : "oklch(0.40 0.15 160)" }}>
@@ -334,7 +331,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>Para Escrever</span>
-                      <span className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>{new Date(w.saleDate).toLocaleDateString("pt-BR")}</span>
+                      <span className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</span>
                     </div>
                     <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</p>
                     <p className="text-xs" style={{ color: "oklch(0.40 0.02 260)" }}>{w.productName}</p>
@@ -343,7 +340,8 @@ export default function AdminDashboard() {
                 {[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10).map((w: any) => {
                   const { daysRemaining, isOverdue, isUrgent } = calcBusinessDays(w.saleDate);
                   const deadlineDate = (() => {
-                    const d = new Date(w.saleDate);
+                    const saleDateStr = String(w.saleDate).slice(0, 10);
+                    const d = new Date(saleDateStr + "T12:00:00");
                     d.setDate(d.getDate() + 1);
                     let count = 0;
                     while (count < 7) {
@@ -351,7 +349,7 @@ export default function AdminDashboard() {
                       if (day !== 0 && day !== 6) count++;
                       if (count < 7) d.setDate(d.getDate() + 1);
                     }
-                    return d.toLocaleDateString("pt-BR");
+                    return formatDate(d);
                   })();
                   return (
                     <div key={`m-${w.id}`} className="px-4 py-3">

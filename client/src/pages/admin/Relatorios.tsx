@@ -4,14 +4,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check } from "lucide-react";
 import * as XLSX from "xlsx";
+import { formatDate } from "@/lib/dateUtils";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(date: Date | string | null) {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("pt-BR");
 }
 
 const FREQ_LABELS: Record<string, string> = {

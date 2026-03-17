@@ -184,3 +184,6 @@
 - [x] Verificar bug dados cliente/vendedor nos cards de consulta (backend já retorna corretamente)
 - [x] Procedure clientHistory para ADM (sales.clientHistory)
 - [x] Modal de histórico de cliente na tela Todas as Vendas do ADM (botão no nome da cliente)
+
+## Bug: Data errada nas vendas
+- [x] Corrigir data de venda exibida com 2 dias a menos (ex: venda feita em 17/03 aparece como 15/03) — criado dateUtils.ts com formatDate sem timezone offset, aplicado em todos os arquivos

@@ -187,7 +187,9 @@ export async function upsertClient(data: InsertClient) {
     }
   }
   const result = await db.insert(clients).values(data);
-  return (result as any).insertId as number;
+  const rawC = (result as any);
+  const rawCId = Array.isArray(rawC) ? rawC[0]?.insertId : rawC.insertId;
+  return parseInt(String(rawCId), 10);
 }
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
@@ -205,8 +207,11 @@ export async function createSale(data: InsertSale) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(sales).values(data);
-  // insertId pode ser bigint no MySQL2 — converter para number via parseInt
-  return parseInt(String((result as any).insertId), 10);
+  // O drizzle com mysql2 retorna [ResultSetHeader, fields] — insertId está em result[0].insertId
+  // Pode ser bigint, number ou string dependendo da versão do driver
+  const raw = (result as any);
+  const rawId = Array.isArray(raw) ? raw[0]?.insertId : raw.insertId;
+  return parseInt(String(rawId), 10);
 }
 
 export async function getSales(filters: SaleFilters = {}) {

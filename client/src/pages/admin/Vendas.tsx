@@ -3,14 +3,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/dateUtils";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function formatDate(date: Date | string | null) {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("pt-BR");
 }
 
 function toInputDate(date: Date | string | null) {

@@ -8,22 +8,13 @@ import {
   ShoppingBag, X, Pencil, Hourglass, BookCheck, ClipboardList,
   RotateCcw, Loader2
 } from "lucide-react";
+import { formatDate } from "@/lib/dateUtils";
 
 type Tab = "para_escrever" | "pendente" | "feito";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatDate(d: Date | string | null | undefined): string {
-  if (!d) return "—";
-  const date = d instanceof Date ? d : new Date(String(d));
-  if (isNaN(date.getTime())) return String(d);
-  return date.toLocaleDateString("pt-BR");
-}
-
 function formatBirthDate(d: Date | string | null | undefined): string {
-  if (!d) return "—";
-  const date = d instanceof Date ? d : new Date(String(d));
-  const local = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-  return local.toLocaleDateString("pt-BR");
+  return formatDate(d);
 }
 
 // Hook de cópia com fallback para celulares antigos
