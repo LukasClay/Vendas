@@ -105,27 +105,25 @@ export default function AdminVendas() {
     border: "1.5px solid oklch(0.88 0.012 65)",
     background: "oklch(0.97 0.005 260)",
     color: "oklch(0.15 0.02 260)",
-    fontSize: "14px",
+    fontSize: "16px",
   };
 
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-              Todas as Vendas
-            </h1>
-            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-              {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
-              {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
-            </p>
-          </div>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            Todas as Vendas
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+            {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
+            {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
+          </p>
         </div>
 
         {/* Filtros */}
-        <div className="rounded-2xl p-5 mb-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+        <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
             <h2 className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>Filtros</h2>
@@ -338,10 +336,10 @@ export default function AdminVendas() {
 
       {/* Modal de Edição */}
       {editSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
           style={{ background: "rgba(0,0,0,0.5)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setEditSale(null); }}>
-          <div className="w-full max-w-lg rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
+          <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh] sm:max-h-[90vh]"
             style={{ background: "white" }}>
             {/* Header do modal */}
             <div className="flex items-center justify-between px-6 py-4 border-b"
@@ -357,7 +355,7 @@ export default function AdminVendas() {
             </div>
 
             {/* Formulário */}
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-4 sm:px-6 py-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
@@ -433,17 +431,17 @@ export default function AdminVendas() {
             </div>
 
             {/* Footer do modal */}
-            <div className="flex gap-3 px-6 py-4 border-t" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+            <div className="flex gap-3 px-4 sm:px-6 py-4 border-t pb-6 sm:pb-4" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
               <button
                 onClick={handleUpdate}
                 disabled={updateSale.isPending}
-                className="flex-1 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+                className="flex-1 py-4 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
+                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
                 {updateSale.isPending ? "Salvando..." : "Salvar Alterações"}
               </button>
               <button onClick={() => setEditSale(null)}
-                className="px-5 py-3 rounded-xl font-semibold transition-all"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                className="px-5 py-4 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
                 Cancelar
               </button>
             </div>

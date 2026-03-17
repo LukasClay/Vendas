@@ -164,20 +164,20 @@ export default function AdminRelatorios() {
               Análise detalhada de performance e exportação de dados
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportExcel}
               disabled={exportLoading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ background: "oklch(0.55 0.15 160)", color: "white" }}>
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
+              style={{ background: "oklch(0.55 0.15 160)", color: "white", fontSize: "16px" }}>
               {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               Excel
             </button>
             <button
               onClick={handleExportPDF}
               disabled={exportLoading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ background: "oklch(0.58 0.22 25)", color: "white" }}>
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
+              style={{ background: "oklch(0.58 0.22 25)", color: "white", fontSize: "16px" }}>
               {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               PDF
             </button>
@@ -187,7 +187,7 @@ export default function AdminRelatorios() {
         {/* Filtro de período */}
         <div className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
           <h2 className="font-semibold text-sm mb-3" style={{ color: "oklch(0.15 0.02 260)" }}>Período de Análise</h2>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <input
               type="date"
               value={dateFilter.startDate}
@@ -308,8 +308,8 @@ export default function AdminRelatorios() {
 
           {/* Form */}
           {showScheduleForm && (
-            <div className="px-6 py-5 border-b" style={{ borderColor: "oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)" }}>
-              <div className="flex items-end gap-3 flex-wrap">
+            <div className="px-4 sm:px-6 py-5 border-b" style={{ borderColor: "oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)" }}>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Frequência</label>
                   <select
@@ -333,22 +333,22 @@ export default function AdminRelatorios() {
                     style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       if (!scheduleForm.recipientEmail) { toast.error("Informe o email."); return; }
                       createSchedule.mutate(scheduleForm);
                     }}
                     disabled={createSchedule.isPending}
-                    className="flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white"
-                    style={{ background: "oklch(0.55 0.15 160)" }}>
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-xl font-medium text-white active:scale-95"
+                    style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}>
                     {createSchedule.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     Salvar
                   </button>
                   <button
                     onClick={() => setShowScheduleForm(false)}
-                    className="px-3 py-2.5 rounded-xl text-sm font-medium"
-                    style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                    className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl font-medium active:scale-95"
+                    style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
                     Cancelar
                   </button>
                 </div>

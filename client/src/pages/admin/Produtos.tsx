@@ -70,9 +70,9 @@ export default function AdminProdutos() {
     <DashboardLayout>
       <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
               Trabalhos Espirituais
             </h1>
             <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
@@ -81,8 +81,8 @@ export default function AdminProdutos() {
           </div>
           <button
             onClick={() => { setShowForm(true); setEditingId(null); setForm({ name: "", description: "" }); }}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-95 shadow-md"
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             <Plus className="w-4 h-4" />
             Novo Trabalho
           </button>
@@ -90,7 +90,7 @@ export default function AdminProdutos() {
 
         {/* Formulário */}
         {showForm && (
-          <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "1.5px solid oklch(0.60 0.13 65 / 0.3)" }}>
+          <div className="rounded-2xl p-4 sm:p-6 mb-6 shadow-sm" style={{ background: "white", border: "1.5px solid oklch(0.60 0.13 65 / 0.3)" }}>
             <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
               {editingId ? "Editar Trabalho" : "Adicionar Novo Trabalho"}
             </h2>
@@ -184,7 +184,7 @@ export default function AdminProdutos() {
           ) : (
             <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
               {products.map(product => (
-                <div key={product.id} className="flex items-center gap-4 px-6 py-4 transition-colors"
+                <div key={product.id} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-colors"
                   style={{ opacity: product.active ? 1 : 0.5 }}
                   onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -201,7 +201,7 @@ export default function AdminProdutos() {
                       <span className="text-xs" style={{ color: "oklch(0.58 0.22 25)" }}>Inativo</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {/* Toggle ativo/inativo */}
                     <button
                       onClick={() => updateProduct.mutate({ id: product.id, active: !product.active })}

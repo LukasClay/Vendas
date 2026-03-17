@@ -90,7 +90,7 @@ export default function AdminVendedores() {
     background: "oklch(0.97 0.005 260)",
     border: "2px solid oklch(0.88 0.012 65)",
     color: "oklch(0.15 0.02 260)",
-    fontSize: "15px",
+    fontSize: "16px",
   };
 
   const selectStyle = {
@@ -101,11 +101,11 @@ export default function AdminVendedores() {
   const UserCard = ({ user }: { user: any }) => {
     const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.user;
     return (
-      <div className="px-6 py-4 transition-colors" style={{ opacity: user.active ? 1 : 0.55 }}
+      <div className="px-4 sm:px-6 py-4 transition-colors" style={{ opacity: user.active ? 1 : 0.55 }}
         onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
             style={{
@@ -122,36 +122,34 @@ export default function AdminVendedores() {
           {/* Info / Edit inline */}
           {editingId === user.id ? (
             <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nome completo"
-                  className="px-3 py-1.5 rounded-lg text-sm outline-none flex-1 min-w-32"
-                  style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-                />
-                <input
-                  type="text"
-                  value={editForm.username}
-                  onChange={e => setEditForm(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
-                  placeholder="nome_usuario"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  className="px-3 py-1.5 rounded-lg text-sm outline-none w-36"
-                  style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-                />
-                <select
-                  value={editForm.role}
-                  onChange={e => setEditForm(f => ({ ...f, role: e.target.value as "user" | "consultora" | "admin" }))}
-                  className="px-3 py-1.5 rounded-lg text-sm outline-none"
-                  style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-                >
-                  <option value="user">Funcionário</option>
-                  <option value="consultora">Consultora</option>
-                  <option value="admin">Administrador</option>
-                </select>
-              </div>
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Nome completo"
+                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
+              />
+              <input
+                type="text"
+                value={editForm.username}
+                onChange={e => setEditForm(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
+                placeholder="nome_usuario"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
+              />
+              <select
+                value={editForm.role}
+                onChange={e => setEditForm(f => ({ ...f, role: e.target.value as "user" | "consultora" | "admin" }))}
+                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
+              >
+                <option value="user">Funcionário</option>
+                <option value="consultora">Consultora</option>
+                <option value="admin">Administrador</option>
+              </select>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateUserMutation.mutate({
@@ -161,12 +159,12 @@ export default function AdminVendedores() {
                     role: editForm.role,
                   })}
                   disabled={updateUserMutation.isPending}
-                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white flex items-center gap-1 disabled:opacity-50"
-                  style={{ background: "oklch(0.55 0.15 160)" }}>
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50 active:scale-95"
+                  style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}>
                   <Check className="w-3.5 h-3.5" /> Salvar
                 </button>
-                <button onClick={() => setEditingId(null)} className="px-3 py-1.5 rounded-lg text-sm"
-                  style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                <button onClick={() => setEditingId(null)} className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm active:scale-95"
+                  style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
                   Cancelar
                 </button>
               </div>
@@ -196,7 +194,7 @@ export default function AdminVendedores() {
 
           {/* Actions */}
           {editingId !== user.id && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
               <button
                 onClick={() => {
                   setEditingId(user.id);
@@ -207,25 +205,25 @@ export default function AdminVendedores() {
                     active: user.active ?? true,
                   });
                 }}
-                className="p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                className="p-2.5 sm:p-2 rounded-lg hover:bg-blue-50 transition-colors"
                 style={{ color: "oklch(0.50 0.18 250)" }} title="Editar funcionário">
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={() => { setResetId(user.id); setResetForm({ newPassword: "" }); }}
-                className="p-2 rounded-lg hover:bg-yellow-50 transition-colors"
+                className="p-2.5 sm:p-2 rounded-lg hover:bg-yellow-50 transition-colors"
                 style={{ color: "oklch(0.60 0.13 65)" }} title="Redefinir senha">
                 <KeyRound className="w-4 h-4" />
               </button>
               {user.active ? (
                 <button onClick={() => deactivateUser.mutate({ id: user.id })}
-                  className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                  className="p-2.5 sm:p-2 rounded-lg hover:bg-red-50 transition-colors"
                   style={{ color: "oklch(0.58 0.22 25)" }} title="Desativar acesso">
                   <UserX className="w-4 h-4" />
                 </button>
               ) : (
                 <button onClick={() => reactivateUser.mutate({ id: user.id, active: true })}
-                  className="p-2 rounded-lg transition-colors"
+                  className="p-2.5 sm:p-2 rounded-lg transition-colors"
                   style={{ color: "oklch(0.55 0.15 160)" }} title="Reativar acesso">
                   <UserCheck className="w-4 h-4" />
                 </button>
@@ -236,32 +234,34 @@ export default function AdminVendedores() {
 
         {/* Reset password inline */}
         {resetId === user.id && (
-          <div className="mt-3 ml-14 flex items-center gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-48">
+          <div className="mt-3 ml-0 sm:ml-14 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1">
               <input
                 type={showResetPassword ? "text" : "password"}
                 value={resetForm.newPassword}
                 onChange={e => setResetForm({ newPassword: e.target.value })}
                 placeholder="Nova senha (mín. 6 caracteres)"
-                className="w-full px-3 py-2 pr-10 rounded-lg text-sm outline-none"
-                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.97 0.005 260)", color: "oklch(0.15 0.02 260)" }}
+                className="w-full px-3 py-2.5 pr-10 rounded-lg outline-none"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.97 0.005 260)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
               />
               <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1" style={{ color: "oklch(0.52 0.015 260)" }}>
                 {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <button
-              onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
-              disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
-              style={{ background: "oklch(0.60 0.13 65)" }}>
-              {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
-            </button>
-            <button onClick={() => setResetId(null)} className="px-3 py-2 rounded-lg text-sm"
-              style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
-              Cancelar
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
+                disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
+                style={{ background: "oklch(0.60 0.13 65)", fontSize: "16px" }}>
+                {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
+              </button>
+              <button onClick={() => setResetId(null)} className="flex-1 sm:flex-none px-3 py-2.5 rounded-lg active:scale-95"
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -272,9 +272,9 @@ export default function AdminVendedores() {
     <DashboardLayout>
       <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
               Funcionários
             </h1>
             <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
@@ -287,8 +287,8 @@ export default function AdminVendedores() {
               setShowCreateForm(true);
               setNewEmployee({ name: "", username: "", password: "", phone: "" });
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             <Plus className="w-4 h-4" />
             Novo Funcionário
           </button>
@@ -296,7 +296,7 @@ export default function AdminVendedores() {
 
         {/* Formulário de criação */}
         {showCreateForm && (
-          <div className="rounded-2xl p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
+          <div className="rounded-2xl p-4 sm:p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
               Novo Funcionário
             </h2>
@@ -384,7 +384,7 @@ export default function AdminVendedores() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5">
+            <div className="flex flex-col sm:flex-row gap-3 mt-5">
               <button
                 onClick={() => createEmployee.mutate({
                   name: newEmployee.name,
@@ -399,14 +399,14 @@ export default function AdminVendedores() {
                   newEmployee.password.length < 6 ||
                   createEmployee.isPending
                 }
-                className="px-6 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+                className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
+                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
                 {createEmployee.isPending ? "Criando..." : `Criar ${ROLE_LABELS[createRole]}`}
               </button>
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-6 py-3 rounded-xl font-semibold transition-all"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
                 Cancelar
               </button>
             </div>

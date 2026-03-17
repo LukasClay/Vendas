@@ -128,3 +128,11 @@
 - [x] Frontend: unificar cadastro em "Novo Funcionário" com seleção de tipo
 - [x] Frontend: gestão completa (editar nome, username, senha, tipo) pelo ADM
 - [x] Renomear sistema para "Mundo Da Magia LTDA"
+
+## Responsividade Mobile do Painel Admin (uso emergencial)
+- [x] Verificar e corrigir edição de vendas (modal) no celular
+- [x] Verificar e corrigir tabela de vendas no celular (scroll horizontal ou layout adaptado)
+- [x] Verificar e corrigir gestão de funcionários no celular (edição inline, reset senha)
+- [x] Verificar e corrigir gestão de produtos no celular
+- [x] Verificar e corrigir dashboard (filtros, gráficos, cards) no celular
+- [x] Verificar e corrigir exportação (Excel/PDF) no celular
