@@ -92,8 +92,9 @@ export type InsertSale = typeof sales.$inferInsert;
 // ─── Consultation Slots (Consulta Cartas) ───────────────────────────────────
 export const consultationSlots = mysqlTable("consultation_slots", {
   id: int("id").autoincrement().primaryKey(),
-  consultationDate: date("consultationDate").notNull(),  // ex: 2026-03-20
-  consultationTime: varchar("consultationTime", { length: 5 }).notNull(), // ex: "09:00"
+  // varchar em vez de date para evitar conversão de fuso horário pelo MySQL/Drizzle
+  consultationDate: varchar("consultationDate", { length: 10 }).notNull(), // ex: "2026-03-24"
+  consultationTime: varchar("consultationTime", { length: 5 }).notNull(),  // ex: "09:00"
   sold: boolean("sold").default(false).notNull(),        // true quando vendido
   saleId: int("saleId"),                                 // FK → sales.id (null = disponível)
   createdBy: int("createdBy").notNull(),                 // FK → users.id (quem criou)

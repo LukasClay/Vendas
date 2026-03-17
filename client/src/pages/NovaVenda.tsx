@@ -8,17 +8,9 @@ import { useIsMobile } from "@/hooks/useMobile";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
-// Formata qualquer valor de data para "DD/MM/AAAA" usando fuso local
-function fmtDate(d: string | Date | null | undefined): string {
+// Formata string "YYYY-MM-DD" para "DD/MM/AAAA"
+function fmtDate(d: string | null | undefined): string {
   if (!d) return "";
-  if (d instanceof Date) {
-    // Usa métodos locais para evitar deslocamento de fuso
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
-  // String: extrai YYYY-MM-DD via regex
   const match = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return String(d);
   return `${match[3]}/${match[2]}/${match[1]}`;
@@ -63,19 +55,9 @@ export default function NovaVenda() {
     { enabled: isConsultaCartas }
   );
 
-  // Agrupa slots por data para exibição usando fuso local
+  // Agrupa slots por data (consultationDate é string "YYYY-MM-DD")
   const slotsByDate = availableSlots.reduce<Record<string, typeof availableSlots>>((acc, slot) => {
-    const d = slot.consultationDate;
-    let key: string;
-    if (d instanceof Date) {
-      // Usa métodos locais (getFullYear/getMonth/getDate) para evitar deslocamento de fuso
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      key = `${y}-${m}-${day}`;
-    } else {
-      key = String(d).match(/(\d{4}-\d{2}-\d{2})/)?.[1] ?? String(d).slice(0, 10);
-    }
+    const key = String(slot.consultationDate).slice(0, 10);
     if (!acc[key]) acc[key] = [];
     acc[key].push(slot);
     return acc;

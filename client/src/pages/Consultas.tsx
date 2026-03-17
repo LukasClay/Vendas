@@ -8,12 +8,14 @@ import { Calendar, Clock, Plus, Trash2, Loader2, User, Phone, CalendarDays, Chec
 
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
+  // Se for objeto Date (campos date do MySQL como saleDate/clientBirthDate), usa métodos locais
   if (d instanceof Date) {
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   }
+  // Se for string (consultationDate como varchar ou qualquer ISO), extrai via regex
   const match = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return String(d);
   return `${match[3]}/${match[2]}/${match[1]}`;

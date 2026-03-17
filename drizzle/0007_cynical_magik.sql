@@ -1,0 +1,1 @@
+ALTER TABLE `consultation_slots` MODIFY COLUMN `consultationDate` varchar(10) NOT NULL;
