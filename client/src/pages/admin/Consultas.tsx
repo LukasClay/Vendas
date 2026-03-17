@@ -11,8 +11,13 @@ import {
 
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
-  const iso = typeof d === "string" ? d : d.toISOString();
-  const match = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (d instanceof Date) {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+  const match = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return String(d);
   return `${match[3]}/${match[2]}/${match[1]}`;
 }
