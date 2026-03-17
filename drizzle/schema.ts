@@ -89,6 +89,21 @@ export const sales = mysqlTable("sales", {
 export type Sale = typeof sales.$inferSelect;
 export type InsertSale = typeof sales.$inferInsert;
 
+// ─── Consultation Slots (Consulta Cartas) ───────────────────────────────────
+export const consultationSlots = mysqlTable("consultation_slots", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationDate: date("consultationDate").notNull(),  // ex: 2026-03-20
+  consultationTime: varchar("consultationTime", { length: 5 }).notNull(), // ex: "09:00"
+  sold: boolean("sold").default(false).notNull(),        // true quando vendido
+  saleId: int("saleId"),                                 // FK → sales.id (null = disponível)
+  createdBy: int("createdBy").notNull(),                 // FK → users.id (quem criou)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultationSlot = typeof consultationSlots.$inferSelect;
+export type InsertConsultationSlot = typeof consultationSlots.$inferInsert;
+
 // ─── Email Report Schedule ────────────────────────────────────────────────────
 export const reportSchedules = mysqlTable("report_schedules", {
   id: int("id").autoincrement().primaryKey(),

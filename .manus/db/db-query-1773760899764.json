@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `consultation_slots` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`consultationDate` date NOT NULL,\n\t`consultationTime` varchar(5) NOT NULL,\n\t`sold` boolean NOT NULL DEFAULT false,\n\t`saleId` int,\n\t`createdBy` int NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `consultation_slots_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute CREATE TABLE `consultation_slots` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`consultationDate` date NOT NULL,\n\t`consultationTime` varchar(5) NOT NULL,\n\t`sold` boolean NOT NULL DEFAULT false,\n\t`saleId` int,\n\t`createdBy` int NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `consultation_slots_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 290
+}

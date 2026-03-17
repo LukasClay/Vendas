@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, name, username, email, role, active FROM users ORDER BY role, id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, username, email, role, active FROM users ORDER BY role, id;",
+  "rows": [
+    {
+      "id": "108",
+      "name": "Bruna",
+      "username": "bru",
+      "email": "Bru@gmail.com",
+      "role": "user",
+      "active": "1"
+    },
+    {
+      "id": "1",
+      "name": "prime gaming",
+      "username": "primelucasgaming",
+      "email": "primelucasgaming@gmail.com",
+      "role": "admin",
+      "active": "1"
+    },
+    {
+      "id": "30023",
+      "name": "Wilson",
+      "username": "ktnwilsonktn",
+      "email": "ktnwilsonktn@gmail.com",
+      "role": "admin",
+      "active": "1"
+    },
+    {
+      "id": "30026",
+      "name": "Lucas",
+      "username": "lucascattani2112",
+      "email": "lucascattani2112@gmail.com",
+      "role": "admin",
+      "active": "1"
+    },
+    {
+      "id": "224",
+      "name": "Lucy",
+      "username": "lucy",
+      "email": "lucy@gmail.com",
+      "role": "consultora",
+      "active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tusername\temail\trole\tactive\n108\tBruna\tbru\tBru@gmail.com\tuser\t1\n1\tprime gaming\tprimelucasgaming\tprimelucasgaming@gmail.com\tadmin\t1\n30023\tWilson\tktnwilsonktn\tktnwilsonktn@gmail.com\tadmin\t1\n30026\tLucas\tlucascattani2112\tlucascattani2112@gmail.com\tadmin\t1\n224\tLucy\tlucy\tlucy@gmail.com\tconsultora\t1\n",
+  "stderr": "",
+  "execution_time_ms": 49
+}

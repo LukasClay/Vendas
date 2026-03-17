@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   BarChart3, FileText, LayoutDashboard, LogOut, Package,
-  PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles,
+  PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles, Calendar,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -18,6 +18,7 @@ const consultoraMenuItems = [
   { icon: Sparkles, label: "Trabalhos", path: "/consultora" },
   { icon: PlusCircle, label: "Nova Venda", path: "/consultora/venda" },
   { icon: FileText, label: "Minhas Vendas", path: "/consultora/minhas-vendas" },
+  { icon: Calendar, label: "Consultas", path: "/consultora/consultas" },
 ];
 
 const adminMenuItems = [
@@ -25,6 +26,7 @@ const adminMenuItems = [
   { icon: BarChart3, label: "Relatórios", path: "/admin/relatorios" },
   { icon: FileText, label: "Todas as Vendas", path: "/admin/vendas" },
   { icon: Package, label: "Trabalhos", path: "/admin/produtos" },
+  { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
 ];

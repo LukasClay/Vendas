@@ -110,13 +110,13 @@
 - [x] Painel admin: botão "Excluir" venda (com confirmação)
 
 ## Bugs
-- [ ] Corrigir erro "Failed query" ao fazer login com email/senha
+- [x] Corrigir erro "Failed query" ao fazer login com email/senha
 
 ## Bugs
 - [x] Erro de login ao acordar da hibernação: implementar retry automático de conexão com o banco
 
 ## Melhorias Formulário e Sistema
-- [ ] Adicionar campo Observação no formulário de vendas (vendedor/consultora)
+- [x] Adicionar campo Observação no formulário de vendas (vendedor/consultora)
 - [x] Renomear sistema para "Mundo Da Magia LTDA" (login, cabeçalho, título)
   - [x] Gestão completa de funcionários pelo ADM: editar nome, email, senha e tipo de qualquer usuário
 
@@ -136,3 +136,15 @@
 - [x] Verificar e corrigir gestão de produtos no celular
 - [x] Verificar e corrigir dashboard (filtros, gráficos, cards) no celular
 - [x] Verificar e corrigir exportação (Excel/PDF) no celular
+
+## Funcionalidade Consulta Cartas
+- [x] Schema: tabela consultation_slots (data, hora, vendida, sale_id)
+- [x] Backend: seed automático do trabalho "Consulta Cartas" no banco
+- [x] Backend: procedures tRPC para consulta_slots (listar disponíveis, criar, deletar)
+- [x] Backend: procedure de venda com consultation_slot_id quando trabalho = Consulta Cartas
+- [x] Formulário Nova Venda: campo horário de consulta condicional ao selecionar Consulta Cartas
+- [x] Formulário Nova Venda (Consultora): igual ao vendedor + botão adicionar nova data/horário
+- [x] Aba "Consultas" no painel da Consultora: Pendentes e Realizadas
+- [x] Consultora: adicionar datas/horários de consulta diretamente no painel
+- [x] Aba "Consultas" no painel do ADM (dentro de Trabalhos): visão geral + gerenciar datas
+- [x] ADM: adicionar/remover datas e horários de consulta

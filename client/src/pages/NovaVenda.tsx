@@ -3,8 +3,18 @@ import { trpc } from "@/lib/trpc";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
+
+const CONSULTA_CARTAS = "Consulta Cartas";
+
+// Formata data "YYYY-MM-DD" → "DD/MM/AAAA"
+function fmtDate(d: string | Date | null | undefined): string {
+  if (!d) return "";
+  const s = typeof d === "string" ? d : d.toISOString().slice(0, 10);
+  const [y, m, day] = s.slice(0, 10).split("-");
+  return `${day}/${m}/${y}`;
+}
 
 function parseCurrencyToNumber(formatted: string): number {
   const clean = formatted.replace(/[R$\s.]/g, "").replace(",", ".");
@@ -35,6 +45,23 @@ export default function NovaVenda() {
     amountFormatted: "",
     notes: "",
   });
+  const [consultationSlotId, setConsultationSlotId] = useState<number | null>(null);
+
+  const isConsultaCartas = form.productName === CONSULTA_CARTAS;
+
+  // Busca slots disponíveis apenas quando Consulta Cartas estiver selecionado
+  const { data: availableSlots = [], isLoading: loadingSlots } = trpc.consultationSlots.listAvailable.useQuery(
+    undefined,
+    { enabled: isConsultaCartas }
+  );
+
+  // Agrupa slots por data para exibição
+  const slotsByDate = availableSlots.reduce<Record<string, typeof availableSlots>>((acc, slot) => {
+    const key = String(slot.consultationDate).slice(0, 10);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(slot);
+    return acc;
+  }, {});
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -118,6 +145,11 @@ export default function NovaVenda() {
       attachmentName = file.name;
     }
 
+    if (isConsultaCartas && !consultationSlotId) {
+      toast.error("Selecione o horário da consulta.");
+      return;
+    }
+
     await createSale.mutateAsync({
       clientName: form.clientName.trim(),
       clientBirthDate: form.clientBirthDate || undefined,
@@ -126,6 +158,7 @@ export default function NovaVenda() {
       saleDate: form.saleDate,
       amount: parseCurrencyToNumber(form.amountFormatted),
       notes: form.notes || undefined,
+      consultationSlotId: consultationSlotId ?? undefined,
       attachmentBase64,
       attachmentMime,
       attachmentName,
@@ -144,6 +177,7 @@ export default function NovaVenda() {
     });
     setFile(null);
     setFilePreview(null);
+    setConsultationSlotId(null);
     setSuccess(false);
   };
 
@@ -313,6 +347,61 @@ export default function NovaVenda() {
                   required
                 />
               </div>
+
+              {/* Horário da Consulta — exibido apenas para Consulta Cartas */}
+              {isConsultaCartas && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4" style={{ color: "oklch(0.55 0.18 280)" }} />
+                      Horário da Consulta {requiredStar}
+                    </span>
+                  </label>
+                  {loadingSlots ? (
+                    <div className="flex items-center gap-2 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Carregando horários...</span>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="rounded-xl p-4 text-center" style={{ background: "oklch(0.96 0.01 65)", border: "1.5px solid oklch(0.88 0.012 65)" }}>
+                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: "oklch(0.60 0.01 260)" }} />
+                      <p className="text-sm font-medium" style={{ color: "oklch(0.40 0.02 260)" }}>Nenhum horário disponível</p>
+                      <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {Object.entries(slotsByDate).map(([dateKey, slots]) => (
+                        <div key={dateKey}>
+                          <p className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: "oklch(0.55 0.18 280)" }}>
+                            <Calendar className="w-3.5 h-3.5" />
+                            {fmtDate(dateKey)}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {slots.map(slot => (
+                              <button
+                                key={slot.id}
+                                type="button"
+                                onClick={() => setConsultationSlotId(consultationSlotId === slot.id ? null : slot.id)}
+                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 ${
+                                  consultationSlotId === slot.id
+                                    ? "text-white border-transparent"
+                                    : "border-transparent"
+                                }`}
+                                style={consultationSlotId === slot.id
+                                  ? { background: "oklch(0.55 0.18 280)", color: "white" }
+                                  : { background: "oklch(0.94 0.02 280)", color: "oklch(0.35 0.15 280)", border: "1.5px solid oklch(0.80 0.08 280)" }
+                                }>
+                                <Clock className="w-3.5 h-3.5 inline mr-1" />
+                                {slot.consultationTime}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Valor */}
               <div>

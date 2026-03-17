@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, name, username, email, role, active, loginMethod FROM users WHERE role = 'user' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, username, email, role, active, loginMethod FROM users WHERE role = 'user' ORDER BY id;",
+  "rows": [
+    {
+      "id": "108",
+      "name": "Bruna",
+      "username": "bru",
+      "email": "Bru@gmail.com",
+      "role": "user",
+      "active": "1",
+      "loginMethod": "email_password"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tusername\temail\trole\tactive\tloginMethod\n108\tBruna\tbru\tBru@gmail.com\tuser\t1\temail_password\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

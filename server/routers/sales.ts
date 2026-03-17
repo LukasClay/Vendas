@@ -1,9 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient } from "../db";
+import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
+import { consultationSlots } from "../../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
@@ -21,6 +23,7 @@ export const salesRouter = router({
       saleDate: z.string().min(1, "Data da venda é obrigatória"),
       amount: z.number().positive("Valor deve ser positivo"),
       notes: z.string().optional(),
+      consultationSlotId: z.number().optional(), // Para Consulta Cartas
       // Attachment: base64 encoded file
       attachmentBase64: z.string().optional(),
       attachmentMime: z.string().optional(),
@@ -57,6 +60,20 @@ export const salesRouter = router({
         // Non-critical: continue without clientId
       }
 
+      // Se for Consulta Cartas, valida e reserva o slot
+      if (input.consultationSlotId) {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+        const slot = await withRetry(() =>
+          db.select().from(consultationSlots)
+            .where(and(eq(consultationSlots.id, input.consultationSlotId!), eq(consultationSlots.sold, false)))
+            .limit(1)
+        );
+        if (!slot[0]) {
+          throw new TRPCError({ code: "CONFLICT", message: "Este horário já foi reservado ou não existe. Atualize a página e tente novamente." });
+        }
+      }
+
       const saleId = await createSale({
         sellerId: ctx.user.id,
         clientId: clientId ?? undefined,
@@ -71,6 +88,18 @@ export const salesRouter = router({
         attachmentKey,
         attachmentMime,
       });
+
+      // Marca o slot como vendido
+      if (input.consultationSlotId) {
+        const db = await getDb();
+        if (db) {
+          await withRetry(() =>
+            db.update(consultationSlots)
+              .set({ sold: true, saleId })
+              .where(eq(consultationSlots.id, input.consultationSlotId!))
+          );
+        }
+      }
 
       return { success: true, saleId };
     }),

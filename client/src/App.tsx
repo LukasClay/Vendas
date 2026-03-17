@@ -17,7 +17,9 @@ import AdminVendas from "./pages/admin/Vendas";
 import AdminProdutos from "./pages/admin/Produtos";
 import AdminVendedores from "./pages/admin/Vendedores";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
+import AdminConsultas from "./pages/admin/Consultas";
 import ConsultoraPage from "./pages/Consultora";
+import ConsultasPage from "./pages/Consultas";
 
 // Route guard: redirects unauthenticated users to login
 function AuthGuard({ children, adminOnly = false, consultoraOnly = false }: { children: React.ReactNode; adminOnly?: boolean; consultoraOnly?: boolean }) {
@@ -86,6 +88,9 @@ function Router() {
       <Route path="/consultora/minhas-vendas">
         <AuthGuard consultoraOnly><MinhasVendas /></AuthGuard>
       </Route>
+      <Route path="/consultora/consultas">
+        <AuthGuard consultoraOnly><ConsultasPage /></AuthGuard>
+      </Route>
 
       {/* Admin routes */}
       <Route path="/admin">
@@ -105,6 +110,9 @@ function Router() {
       </Route>
       <Route path="/admin/configuracoes">
         <AuthGuard adminOnly><AdminConfiguracoes /></AuthGuard>
+      </Route>
+      <Route path="/admin/consultas">
+        <AuthGuard adminOnly><AdminConsultas /></AuthGuard>
       </Route>
 
       <Route path="/404" component={NotFound} />

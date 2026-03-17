@@ -43,6 +43,13 @@
       "when": 1773757921074,
       "tag": "0005_fixed_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773760881718,
+      "tag": "0006_nappy_madrox",
+      "breakpoints": true
     }
   ]
 }
