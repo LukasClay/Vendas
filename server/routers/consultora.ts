@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { sales } from "../../drizzle/schema";
-import { and, asc, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, desc, eq, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 
 // Apenas consultoras e admins podem acessar estes endpoints
@@ -55,9 +55,10 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const all = await db.select({ workStatus: sales.workStatus }).from(sales);
+      const all = await db.select({ workStatus: sales.workStatus, productName: sales.productName }).from(sales);
       const counts = { para_escrever: 0, pendente: 0, feito: 0 };
       for (const row of all) {
+        if (row.productName === "Consulta Cartas") continue; // Consultas ficam na aba própria
         if (row.workStatus in counts) counts[row.workStatus as keyof typeof counts]++;
       }
       return counts;
@@ -70,7 +71,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "para_escrever")];
+      const conditions = [eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas")];
       if (input?.search) {
         conditions.push(
           or(
@@ -103,7 +104,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "pendente")];
+      const conditions = [eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas")];
       if (input?.search) {
         conditions.push(
           or(
@@ -141,7 +142,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "feito")];
+      const conditions = [eq(sales.workStatus, "feito"), ne(sales.productName, "Consulta Cartas")];
       if (input?.search) {
         conditions.push(
           or(
@@ -212,19 +213,35 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
+      // Trabalhos normais (excluindo Consulta Cartas)
       const rows = await db.select({
         id: sales.id,
         productName: sales.productName,
         saleDate: sales.saleDate,
         workStatus: sales.workStatus,
       }).from(sales)
-        .where(like(sales.clientName, `%${input.clientName}%`))
+        .where(and(like(sales.clientName, `%${input.clientName}%`), ne(sales.productName, "Consulta Cartas")))
         .orderBy(desc(sales.saleDate))
         .limit(50);
 
+      // Consultas Cartas desta cliente (via consultation_slots)
+      const { consultationSlots: csTable } = await import("../../drizzle/schema");
+      const consultaRows = await db.select({
+        id: csTable.id,
+        consultationDate: csTable.consultationDate,
+        consultationTime: csTable.consultationTime,
+        saleDate: sales.saleDate,
+      }).from(csTable)
+        .leftJoin(sales, eq(csTable.saleId, sales.id))
+        .where(and(like(sales.clientName, `%${input.clientName}%`), eq(csTable.sold, true)))
+        .orderBy(desc(csTable.consultationDate), desc(csTable.consultationTime))
+        .limit(20);
+
       return {
         totalPurchases: rows.length,
+        totalConsultas: consultaRows.length,
         purchases: rows,
+        consultas: consultaRows,
       };
     }),
 });

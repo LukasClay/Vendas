@@ -150,6 +150,9 @@
 - [x] ADM: adicionar/remover datas e horários de consulta
 
 ## Melhorias Consulta Cartas - Dados da Venda
-- [ ] Backend: retornar dados da venda (vendedor, cliente, nascimento, telefone) junto com slot vendido
-- [ ] Frontend ADM: exibir dados completos da venda nos horários vendidos
-- [ ] Frontend Consultora: exibir dados completos da venda nos horários vendidos
+- [x] Backend: retornar dados da venda (vendedor, cliente, nascimento, telefone) junto com slot vendido
+- [ ] Frontend ADM: corrigir bug - cards de consulta não mostram dados da cliente/vendedor
+- [ ] Frontend Consultora: corrigir bug - cards de consulta não mostram dados da cliente/vendedor
+- [ ] Remover "Consulta Cartas" da aba de Trabalhos do ADM
+- [ ] Remover "Consulta Cartas" do painel de trabalhos da Consultora
+- [ ] Adicionar seção de Consultas no histórico de compras de uma cliente (separado dos trabalhos)

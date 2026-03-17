@@ -1,0 +1,24 @@
+{
+  "query": "\nSELECT cs.id as slot_id, cs.sold, cs.saleId, cs.consultationDate, cs.consultationTime,\n       s.id as sale_id_in_sales, s.clientName, s.clientPhone, s.clientBirthDate, s.sellerId,\n       u.displayName as seller_name, u.username\nFROM consultation_slots cs\nLEFT JOIN sales s ON cs.saleId = s.id\nLEFT JOIN users u ON s.sellerId = u.id\nWHERE cs.sold = true\nLIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nSELECT cs.id as slot_id, cs.sold, cs.saleId, cs.consultationDate, cs.consultationTime,\n       s.id as sale_id_in_sales, s.clientName, s.clientPhone, s.clientBirthDate, s.sellerId,\n       u.displayName as seller_name, u.username\nFROM consultation_slots cs\nLEFT JOIN sales s ON cs.saleId = s.id\nLEFT JOIN users u ON s.sellerId = u.id\nWHERE cs.sold = true\nLIMIT 10;\n",
+  "rows": [
+    {
+      "slot_id": "4",
+      "sold": "1",
+      "saleId": "NULL",
+      "consultationDate": "2026-03-24",
+      "consultationTime": "10:00",
+      "sale_id_in_sales": "NULL",
+      "clientName": "NULL",
+      "clientPhone": "NULL",
+      "clientBirthDate": "NULL",
+      "sellerId": "NULL",
+      "seller_name": "NULL",
+      "username": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "slot_id\tsold\tsaleId\tconsultationDate\tconsultationTime\tsale_id_in_sales\tclientName\tclientPhone\tclientBirthDate\tsellerId\tseller_name\tusername\n4\t1\tNULL\t2026-03-24\t10:00\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

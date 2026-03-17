@@ -93,9 +93,10 @@ export const salesRouter = router({
       if (input.consultationSlotId) {
         const db = await getDb();
         if (db) {
+          const numericSaleId = Number(saleId);
           await withRetry(() =>
             db.update(consultationSlots)
-              .set({ sold: true, saleId })
+              .set({ sold: true, saleId: numericSaleId })
               .where(eq(consultationSlots.id, input.consultationSlotId!))
           );
         }

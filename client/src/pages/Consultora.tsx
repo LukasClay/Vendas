@@ -189,22 +189,40 @@ function ToWriteCard({ item, onMarkWritten }: {
             {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
           {showHistory && history && (
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.90 0.008 65)" }}>
-              <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "oklch(0.96 0.015 65)", borderBottom: "1px solid oklch(0.90 0.008 65)" }}>
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.30 0.02 260)" }}>{history.totalPurchases} compra{history.totalPurchases !== 1 ? "s" : ""} no total</span>
-              </div>
-              {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
-                <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.94 0.005 65)" }}>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "oklch(0.20 0.02 260)" }}>{p.productName}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
-                    style={{ background: p.workStatus === "feito" ? "oklch(0.92 0.06 160)" : "oklch(0.94 0.02 65)", color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : "oklch(0.50 0.10 65)" }}>
-                    {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
-                  </span>
+            <div className="space-y-2">
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.90 0.008 65)" }}>
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "oklch(0.96 0.015 65)", borderBottom: "1px solid oklch(0.90 0.008 65)" }}>
+                  <span className="text-xs font-semibold" style={{ color: "oklch(0.30 0.02 260)" }}>{history.totalPurchases} trabalho{history.totalPurchases !== 1 ? "s" : ""} no total</span>
                 </div>
-              ))}
+                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum trabalho registrado</p>}
+                {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
+                  <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.94 0.005 65)" }}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: "oklch(0.20 0.02 260)" }}>{p.productName}</p>
+                      <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: p.workStatus === "feito" ? "oklch(0.92 0.06 160)" : "oklch(0.94 0.02 65)", color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : "oklch(0.50 0.10 65)" }}>
+                      {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {(history as any).totalConsultas > 0 && (
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.015 280)" }}>
+                  <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "oklch(0.94 0.02 280)", borderBottom: "1px solid oklch(0.88 0.015 280)" }}>
+                    <span className="text-xs font-semibold" style={{ color: "oklch(0.35 0.12 280)" }}>📅 {(history as any).totalConsultas} consulta{(history as any).totalConsultas !== 1 ? "s" : ""} de cartas</span>
+                  </div>
+                  {(history as any).consultas.map((c: { id: number; consultationDate: string; consultationTime: string }) => (
+                    <div key={c.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.92 0.01 280)" }}>
+                      <p className="text-xs font-medium" style={{ color: "oklch(0.20 0.02 260)" }}>Consulta Cartas</p>
+                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
+                        {c.consultationDate ? c.consultationDate.slice(8,10)+"/"+c.consultationDate.slice(5,7)+"/"+c.consultationDate.slice(0,4) : ""} às {c.consultationTime}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -345,22 +363,40 @@ function PendingCard({ item, onMarkDone }: {
             {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
           {showHistory && history && (
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.90 0.008 65)" }}>
-              <div className="px-4 py-2.5" style={{ background: "oklch(0.96 0.015 65)", borderBottom: "1px solid oklch(0.90 0.008 65)" }}>
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.30 0.02 260)" }}>{history.totalPurchases} compra{history.totalPurchases !== 1 ? "s" : ""} no total</span>
-              </div>
-              {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
-                <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.94 0.005 65)" }}>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "oklch(0.20 0.02 260)" }}>{p.productName}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
-                    style={{ background: p.workStatus === "feito" ? "oklch(0.92 0.06 160)" : "oklch(0.94 0.02 65)", color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : "oklch(0.50 0.10 65)" }}>
-                    {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
-                  </span>
+            <div className="space-y-2">
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.90 0.008 65)" }}>
+                <div className="px-4 py-2.5" style={{ background: "oklch(0.96 0.015 65)", borderBottom: "1px solid oklch(0.90 0.008 65)" }}>
+                  <span className="text-xs font-semibold" style={{ color: "oklch(0.30 0.02 260)" }}>{history.totalPurchases} trabalho{history.totalPurchases !== 1 ? "s" : ""} no total</span>
                 </div>
-              ))}
+                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum trabalho registrado</p>}
+                {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
+                  <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.94 0.005 65)" }}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: "oklch(0.20 0.02 260)" }}>{p.productName}</p>
+                      <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: p.workStatus === "feito" ? "oklch(0.92 0.06 160)" : "oklch(0.94 0.02 65)", color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : "oklch(0.50 0.10 65)" }}>
+                      {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {(history as any).totalConsultas > 0 && (
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.015 280)" }}>
+                  <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "oklch(0.94 0.02 280)", borderBottom: "1px solid oklch(0.88 0.015 280)" }}>
+                    <span className="text-xs font-semibold" style={{ color: "oklch(0.35 0.12 280)" }}>📅 {(history as any).totalConsultas} consulta{(history as any).totalConsultas !== 1 ? "s" : ""} de cartas</span>
+                  </div>
+                  {(history as any).consultas.map((c: { id: number; consultationDate: string; consultationTime: string }) => (
+                    <div key={c.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid oklch(0.92 0.01 280)" }}>
+                      <p className="text-xs font-medium" style={{ color: "oklch(0.20 0.02 260)" }}>Consulta Cartas</p>
+                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
+                        {c.consultationDate ? c.consultationDate.slice(8,10)+"/"+c.consultationDate.slice(5,7)+"/"+c.consultationDate.slice(0,4) : ""} às {c.consultationTime}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
