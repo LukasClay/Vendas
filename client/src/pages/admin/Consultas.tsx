@@ -4,21 +4,19 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import {
   Calendar, Clock, Plus, Trash2, Loader2, User, Phone,
-  CalendarDays, CheckCircle2, ClipboardList,
+  CalendarDays, CheckCircle2, ClipboardList, XCircle, RotateCcw, Ban,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
-  // Se for objeto Date (campos date do MySQL), usa métodos locais
   if (d instanceof Date) {
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   }
-  // Se for string (consultationDate como varchar), extrai via regex
   const match = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return String(d);
   return `${match[3]}/${match[2]}/${match[1]}`;
@@ -35,7 +33,7 @@ function generateTimeOptions(): string[] {
 }
 const TIME_OPTIONS = generateTimeOptions();
 
-// ─── Card de Consulta ─────────────────────────────────────────────────────────
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type SlotItem = {
   id: number;
@@ -49,20 +47,50 @@ type SlotItem = {
   sold?: boolean;
   sellerName?: string | null;
   sellerUsername?: string | null;
+  cancelledAt?: Date | null;
+  effectiveStatus?: string;
 };
 
-function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: boolean }) {
+// ─── Card de Consulta ─────────────────────────────────────────────────────────
+
+function ConsultaCard({
+  slot,
+  showDate = true,
+  onCancel,
+  onRestore,
+  cancelling = false,
+  restoring = false,
+}: {
+  slot: SlotItem;
+  showDate?: boolean;
+  onCancel?: () => void;
+  onRestore?: () => void;
+  cancelling?: boolean;
+  restoring?: boolean;
+}) {
   const sellerDisplay = slot.sellerName || slot.sellerUsername || null;
+  const isCancelled = slot.effectiveStatus === "cancelada";
+
   return (
-    <div className="rounded-xl p-4" style={{ background: "oklch(0.97 0.006 65)", border: "1px solid oklch(0.90 0.010 65)" }}>
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: isCancelled ? "oklch(0.97 0.005 25)" : "oklch(0.97 0.006 65)",
+        border: `1px solid ${isCancelled ? "oklch(0.88 0.015 25)" : "oklch(0.90 0.010 65)"}`,
+        opacity: isCancelled ? 0.85 : 1,
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.92 0.04 280)" }}>
-            <Clock className="w-4 h-4" style={{ color: "oklch(0.55 0.18 280)" }} />
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: isCancelled ? "oklch(0.92 0.04 25)" : "oklch(0.92 0.04 280)" }}
+          >
+            <Clock className="w-4 h-4" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }} />
           </div>
           <div>
             {showDate && (
-              <p className="text-xs font-semibold" style={{ color: "oklch(0.55 0.18 280)" }}>
+              <p className="text-xs font-semibold" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }}>
                 {fmtDate(slot.consultationDate)}
               </p>
             )}
@@ -71,15 +99,43 @@ function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: bo
             </p>
           </div>
         </div>
-        {slot.saleDate && (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
-            Venda: {fmtDate(slot.saleDate)}
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {slot.saleDate && (
+            <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+              Venda: {fmtDate(slot.saleDate)}
+            </span>
+          )}
+          {/* Botão Cancelar (apenas para pendentes com venda) */}
+          {onCancel && slot.sold && !isCancelled && (
+            <button
+              onClick={onCancel}
+              disabled={cancelling}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ background: "oklch(0.94 0.04 25)", color: "oklch(0.50 0.20 25)", border: "1px solid oklch(0.85 0.08 25)" }}
+              title="Cancelar consulta"
+            >
+              {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+              Cancelar
+            </button>
+          )}
+          {/* Botão Restaurar (apenas para canceladas — ADM) */}
+          {onRestore && isCancelled && (
+            <button
+              onClick={onRestore}
+              disabled={restoring}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ background: "oklch(0.94 0.04 160)", color: "oklch(0.40 0.15 160)", border: "1px solid oklch(0.85 0.08 160)" }}
+              title="Restaurar consulta"
+            >
+              {restoring ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+              Restaurar
+            </button>
+          )}
+        </div>
       </div>
+
       {slot.clientName && (
         <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: "1px solid oklch(0.92 0.008 65)" }}>
-          {/* Vendedor */}
           {sellerDisplay && (
             <div className="flex items-center gap-2">
               <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.55 0.18 280)" }} />
@@ -87,11 +143,9 @@ function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: bo
               <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{sellerDisplay}</span>
             </div>
           )}
-          {/* Linha divisória */}
           {sellerDisplay && (
             <div style={{ height: "1px", background: "oklch(0.92 0.008 65)", margin: "4px 0" }} />
           )}
-          {/* Cliente */}
           <div className="flex items-center gap-2">
             <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Cliente:</span>
@@ -116,6 +170,12 @@ function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: bo
               Obs: {slot.notes}
             </p>
           )}
+          {/* Informação de cancelamento */}
+          {isCancelled && slot.cancelledAt && (
+            <p className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.18 25)" }}>
+              Cancelada em: {fmtDate(slot.cancelledAt)}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -124,26 +184,36 @@ function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: bo
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-type Tab = "pendentes" | "realizadas" | "gerenciar";
+type Tab = "pendentes" | "realizadas" | "canceladas" | "gerenciar";
 
 export default function AdminConsultas() {
   const [activeTab, setActiveTab] = useState<Tab>("pendentes");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
   const { data: pending = [], isLoading: loadingPending } = trpc.consultationSlots.listPending.useQuery();
   const { data: done = [], isLoading: loadingDone } = trpc.consultationSlots.listDone.useQuery();
+  const { data: cancelled = [], isLoading: loadingCancelled } = trpc.consultationSlots.listCancelled.useQuery();
   const { data: allSlots = [], isLoading: loadingAll } = trpc.consultationSlots.listAll.useQuery();
+
+  const invalidateAll = () => {
+    utils.consultationSlots.listPending.invalidate();
+    utils.consultationSlots.listDone.invalidate();
+    utils.consultationSlots.listCancelled.invalidate();
+    utils.consultationSlots.listAll.invalidate();
+    utils.consultationSlots.listAvailable.invalidate();
+  };
 
   const createSlot = trpc.consultationSlots.create.useMutation({
     onSuccess: () => {
       toast.success("Horário adicionado com sucesso!");
       setNewDate("");
       setNewTime("");
-      utils.consultationSlots.listAll.invalidate();
-      utils.consultationSlots.listAvailable.invalidate();
+      invalidateAll();
     },
     onError: (err) => toast.error(err.message || "Erro ao adicionar horário."),
   });
@@ -151,10 +221,33 @@ export default function AdminConsultas() {
   const deleteSlot = trpc.consultationSlots.delete.useMutation({
     onSuccess: () => {
       toast.success("Horário removido.");
-      utils.consultationSlots.listAll.invalidate();
-      utils.consultationSlots.listAvailable.invalidate();
+      invalidateAll();
     },
     onError: (err) => toast.error(err.message || "Erro ao remover horário."),
+  });
+
+  const cancelSlot = trpc.consultationSlots.cancel.useMutation({
+    onSuccess: () => {
+      toast.success("Consulta cancelada.");
+      setCancellingId(null);
+      invalidateAll();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erro ao cancelar consulta.");
+      setCancellingId(null);
+    },
+  });
+
+  const restoreSlot = trpc.consultationSlots.restore.useMutation({
+    onSuccess: () => {
+      toast.success("Consulta restaurada para pendente.");
+      setRestoringId(null);
+      invalidateAll();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erro ao restaurar consulta.");
+      setRestoringId(null);
+    },
   });
 
   const handleAddSlot = () => {
@@ -163,31 +256,43 @@ export default function AdminConsultas() {
     createSlot.mutate({ consultationDate: newDate, consultationTime: newTime });
   };
 
-  // Agrupa por data
-  const pendingByDate = pending.reduce<Record<string, typeof pending>>((acc, s) => {
-    const key = String(s.consultationDate).slice(0, 10);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(s);
-    return acc;
-  }, {});
+  const handleCancel = (id: number) => {
+    if (!window.confirm("Tem certeza que deseja cancelar esta consulta?")) return;
+    setCancellingId(id);
+    cancelSlot.mutate({ id });
+  };
 
-  const doneByDate = done.reduce<Record<string, typeof done>>((acc, s) => {
-    const key = String(s.consultationDate).slice(0, 10);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(s);
-    return acc;
-  }, {});
+  const handleRestore = (id: number) => {
+    if (!window.confirm("Restaurar esta consulta para pendente?")) return;
+    setRestoringId(id);
+    restoreSlot.mutate({ id });
+  };
+
+  // Agrupa por data
+  function groupByDate<T extends { consultationDate: string | Date | null }>(items: T[]) {
+    return items.reduce<Record<string, T[]>>((acc, s) => {
+      const key = String(s.consultationDate).slice(0, 10);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(s);
+      return acc;
+    }, {});
+  }
+
+  const pendingByDate = groupByDate(pending);
+  const doneByDate = groupByDate(done);
+  const cancelledByDate = groupByDate(cancelled);
 
   const tabStyle = (t: Tab): React.CSSProperties => ({
-    padding: "8px 16px",
+    padding: "8px 12px",
     borderRadius: "12px",
     fontWeight: 600,
-    fontSize: "14px",
+    fontSize: "13px",
     cursor: "pointer",
     transition: "all 0.15s",
     background: activeTab === t ? "oklch(0.55 0.18 280)" : "transparent",
     color: activeTab === t ? "white" : "oklch(0.45 0.015 260)",
     border: "none",
+    whiteSpace: "nowrap" as const,
   });
 
   return (
@@ -213,18 +318,22 @@ export default function AdminConsultas() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 rounded-2xl" style={{ background: "oklch(0.94 0.008 65)" }}>
+        <div className="flex gap-1 mb-6 p-1 rounded-2xl overflow-x-auto" style={{ background: "oklch(0.94 0.008 65)" }}>
           <button style={tabStyle("pendentes")} onClick={() => setActiveTab("pendentes")}>
-            <ClipboardList className="w-4 h-4 inline mr-1.5" />
+            <ClipboardList className="w-4 h-4 inline mr-1" />
             Pendentes {pending.length > 0 && `(${pending.length})`}
           </button>
           <button style={tabStyle("realizadas")} onClick={() => setActiveTab("realizadas")}>
-            <CheckCircle2 className="w-4 h-4 inline mr-1.5" />
+            <CheckCircle2 className="w-4 h-4 inline mr-1" />
             Realizadas {done.length > 0 && `(${done.length})`}
           </button>
+          <button style={tabStyle("canceladas")} onClick={() => setActiveTab("canceladas")}>
+            <XCircle className="w-4 h-4 inline mr-1" />
+            Canceladas {cancelled.length > 0 && `(${cancelled.length})`}
+          </button>
           <button style={tabStyle("gerenciar")} onClick={() => setActiveTab("gerenciar")}>
-            <Plus className="w-4 h-4 inline mr-1.5" />
-            Gerenciar Horários
+            <Plus className="w-4 h-4 inline mr-1" />
+            Gerenciar
           </button>
         </div>
 
@@ -252,13 +361,19 @@ export default function AdminConsultas() {
                       <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
                         {fmtDate(dateKey)}
                       </h3>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: "oklch(0.88 0.06 280)", color: "oklch(0.38 0.16 280)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                        {slots.length} {slots.length === 1 ? "consulta" : "consultas"}
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.45 0.18 280)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                        {slots.length} consulta{slots.length !== 1 ? "s" : ""}
                       </span>
                     </div>
                     <div className="space-y-2">
                       {slots.map(slot => (
-                        <ConsultaCard key={slot.id} slot={slot} showDate={false} />
+                        <ConsultaCard
+                          key={slot.id}
+                          slot={{ ...slot, effectiveStatus: "pendente" }}
+                          showDate={false}
+                          onCancel={() => handleCancel(slot.id)}
+                          cancelling={cancellingId === slot.id}
+                        />
                       ))}
                     </div>
                   </div>
@@ -296,6 +411,52 @@ export default function AdminConsultas() {
                     <div className="space-y-2">
                       {slots.map(slot => (
                         <ConsultaCard key={slot.id} slot={slot} showDate={false} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Consultas Canceladas ── */}
+        {activeTab === "canceladas" && (
+          <div>
+            {loadingCancelled ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.55 0.18 280)" }} />
+              </div>
+            ) : Object.keys(cancelledByDate).length === 0 ? (
+              <div className="text-center py-16">
+                <XCircle className="w-10 h-10 mx-auto mb-3" style={{ color: "oklch(0.75 0.01 260)" }} />
+                <p className="font-medium" style={{ color: "oklch(0.40 0.02 260)" }}>Nenhuma consulta cancelada</p>
+                <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>
+                  Consultas canceladas aparecerão aqui.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(cancelledByDate).map(([dateKey, slots]) => (
+                  <div key={dateKey}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <XCircle className="w-4 h-4" style={{ color: "oklch(0.55 0.18 25)" }} />
+                      <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
+                        {fmtDate(dateKey)}
+                      </h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.92 0.04 25)", color: "oklch(0.50 0.18 25)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                        {slots.length} cancelada{slots.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {slots.map(slot => (
+                        <ConsultaCard
+                          key={slot.id}
+                          slot={{ ...slot, effectiveStatus: "cancelada" }}
+                          showDate={false}
+                          onRestore={() => handleRestore(slot.id)}
+                          restoring={restoringId === slot.id}
+                        />
                       ))}
                     </div>
                   </div>
@@ -359,7 +520,7 @@ export default function AdminConsultas() {
               </button>
             </div>
 
-            {/* Lista de todos os slots */}
+            {/* Lista de todos os slots (não cancelados) */}
             <div className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
               <h2 className="text-sm font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
                 Todos os Horários Cadastrados

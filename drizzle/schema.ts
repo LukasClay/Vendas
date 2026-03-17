@@ -97,6 +97,10 @@ export const consultationSlots = mysqlTable("consultation_slots", {
   consultationTime: varchar("consultationTime", { length: 5 }).notNull(),  // ex: "09:00"
   sold: boolean("sold").default(false).notNull(),        // true quando vendido
   saleId: int("saleId"),                                 // FK → sales.id (null = disponível)
+  // Status: pendente (agendado), realizada (automático +50min), cancelada (manual)
+  status: mysqlEnum("status", ["pendente", "realizada", "cancelada"]).default("pendente").notNull(),
+  cancelledBy: int("cancelledBy"),                       // FK → users.id (quem cancelou)
+  cancelledAt: timestamp("cancelledAt"),
   createdBy: int("createdBy").notNull(),                 // FK → users.id (quem criou)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -156,3 +156,14 @@
 - [ ] Remover "Consulta Cartas" da aba de Trabalhos do ADM
 - [ ] Remover "Consulta Cartas" do painel de trabalhos da Consultora
 - [ ] Adicionar seção de Consultas no histórico de compras de uma cliente (separado dos trabalhos)
+
+## Sistema de Status de Consultas (Híbrido)
+- [x] Schema: adicionar campo status (pendente/realizada/cancelada) na tabela consultation_slots
+- [x] Backend: lógica automática +50min para realizada nas queries listPending/listDone
+- [x] Backend: procedure cancelar (consultora e ADM)
+- [x] Backend: procedure restaurar (somente ADM)
+- [x] Backend: procedure listCancelled (consultora e ADM)
+- [x] Frontend Consultora: botão Cancelar nos cards pendentes
+- [x] Frontend Consultora: aba "Cartas Canceladas" (somente visualização)
+- [x] Frontend ADM: aba "Cartas Canceladas" com botão Restaurar
+- [x] Testes: 25 testes passando (12 novos para consultationSlots)
