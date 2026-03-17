@@ -205,7 +205,8 @@ export async function createSale(data: InsertSale) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(sales).values(data);
-  return (result as any).insertId as number;
+  // insertId pode ser bigint no MySQL2 — converter para number via parseInt
+  return parseInt(String((result as any).insertId), 10);
 }
 
 export async function getSales(filters: SaleFilters = {}) {

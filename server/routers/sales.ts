@@ -93,12 +93,15 @@ export const salesRouter = router({
       if (input.consultationSlotId) {
         const db = await getDb();
         if (db) {
-          const numericSaleId = Number(saleId);
-          await withRetry(() =>
-            db.update(consultationSlots)
-              .set({ sold: true, saleId: numericSaleId })
-              .where(eq(consultationSlots.id, input.consultationSlotId!))
-          );
+          // insertId pode ser bigint no MySQL2 — usar parseInt para garantir number válido
+          const numericSaleId = parseInt(String(saleId), 10);
+          if (!isNaN(numericSaleId)) {
+            await withRetry(() =>
+              db.update(consultationSlots)
+                .set({ sold: true, saleId: numericSaleId })
+                .where(eq(consultationSlots.id, input.consultationSlotId!))
+            );
+          }
         }
       }
 
