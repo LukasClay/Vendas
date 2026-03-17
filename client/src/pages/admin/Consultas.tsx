@@ -47,9 +47,12 @@ type SlotItem = {
   notes?: string | null;
   saleDate?: string | Date | null;
   sold?: boolean;
+  sellerName?: string | null;
+  sellerUsername?: string | null;
 };
 
 function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: boolean }) {
+  const sellerDisplay = slot.sellerName || slot.sellerUsername || null;
   return (
     <div className="rounded-xl p-4" style={{ background: "oklch(0.97 0.006 65)", border: "1px solid oklch(0.90 0.010 65)" }}>
       <div className="flex items-start justify-between gap-3">
@@ -75,20 +78,36 @@ function ConsultaCard({ slot, showDate = true }: { slot: SlotItem; showDate?: bo
         )}
       </div>
       {slot.clientName && (
-        <div className="mt-3 pt-3 space-y-1" style={{ borderTop: "1px solid oklch(0.92 0.008 65)" }}>
+        <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: "1px solid oklch(0.92 0.008 65)" }}>
+          {/* Vendedor */}
+          {sellerDisplay && (
+            <div className="flex items-center gap-2">
+              <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.55 0.18 280)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.55 0.18 280)" }}>Vendedor:</span>
+              <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{sellerDisplay}</span>
+            </div>
+          )}
+          {/* Linha divisória */}
+          {sellerDisplay && (
+            <div style={{ height: "1px", background: "oklch(0.92 0.008 65)", margin: "4px 0" }} />
+          )}
+          {/* Cliente */}
           <div className="flex items-center gap-2">
             <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Cliente:</span>
             <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{slot.clientName}</span>
           </div>
           {slot.clientBirthDate && (
             <div className="flex items-center gap-2">
               <CalendarDays className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Nasc.:</span>
               <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{fmtDate(slot.clientBirthDate)}</span>
             </div>
           )}
           {slot.clientPhone && (
             <div className="flex items-center gap-2">
               <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Tel.:</span>
               <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{slot.clientPhone}</span>
             </div>
           )}
@@ -370,9 +389,26 @@ export default function AdminConsultas() {
                           {fmtDate(slot.consultationDate)} — {slot.consultationTime}
                         </p>
                         {slot.sold && slot.clientName && (
-                          <p className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.12 160)" }}>
-                            ✓ {slot.clientName}
-                          </p>
+                          <div className="mt-0.5 space-y-0.5">
+                            <p className="text-xs" style={{ color: "oklch(0.45 0.12 160)" }}>
+                              ✓ <span className="font-medium">{slot.clientName}</span>
+                            </p>
+                            {(slot.sellerName || slot.sellerUsername) && (
+                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
+                                Vendedor: {slot.sellerName || slot.sellerUsername}
+                              </p>
+                            )}
+                            {slot.clientPhone && (
+                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
+                                Tel: {slot.clientPhone}
+                              </p>
+                            )}
+                            {slot.clientBirthDate && (
+                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
+                                Nasc: {fmtDate(slot.clientBirthDate)}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2">

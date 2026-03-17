@@ -2,8 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb, withRetry } from "../db";
-import { consultationSlots, sales, products } from "../../drizzle/schema";
-import { eq, and, gte, asc, desc, isNull } from "drizzle-orm";
+import { consultationSlots, sales, users } from "../../drizzle/schema";
+import { eq, and, gte, asc, desc } from "drizzle-orm";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export const consultationSlotsRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
 
-    // Busca slots com dados da venda (cliente)
+    // Busca slots com dados da venda (cliente) e nome do vendedor
     const rows = await withRetry(() =>
       db.select({
         id: consultationSlots.id,
@@ -57,9 +57,12 @@ export const consultationSlotsRouter = router({
         clientBirthDate: sales.clientBirthDate,
         notes: sales.notes,
         saleDate: sales.saleDate,
+        sellerName: users.displayName,
+        sellerUsername: users.username,
       })
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+        .leftJoin(users, eq(sales.sellerId, users.id))
         .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
     );
     return rows;
@@ -144,10 +147,12 @@ export const consultationSlotsRouter = router({
         clientBirthDate: sales.clientBirthDate,
         notes: sales.notes,
         saleDate: sales.saleDate,
-        sellerName: sales.clientName, // será substituído abaixo se necessário
+        sellerName: users.displayName,
+        sellerUsername: users.username,
       })
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+        .leftJoin(users, eq(sales.sellerId, users.id))
         .where(
           and(
             eq(consultationSlots.sold, true),
@@ -178,15 +183,13 @@ export const consultationSlotsRouter = router({
         clientBirthDate: sales.clientBirthDate,
         notes: sales.notes,
         saleDate: sales.saleDate,
+        sellerName: users.displayName,
+        sellerUsername: users.username,
       })
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
-        .where(
-          and(
-            eq(consultationSlots.sold, true),
-            // data < hoje: usamos NOT gte
-          )
-        )
+        .leftJoin(users, eq(sales.sellerId, users.id))
+        .where(eq(consultationSlots.sold, true))
         .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
     );
     // Filtra no JS para datas passadas (MySQL date comparison)

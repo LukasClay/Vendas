@@ -148,3 +148,8 @@
 - [x] Consultora: adicionar datas/horários de consulta diretamente no painel
 - [x] Aba "Consultas" no painel do ADM (dentro de Trabalhos): visão geral + gerenciar datas
 - [x] ADM: adicionar/remover datas e horários de consulta
+
+## Melhorias Consulta Cartas - Dados da Venda
+- [ ] Backend: retornar dados da venda (vendedor, cliente, nascimento, telefone) junto com slot vendido
+- [ ] Frontend ADM: exibir dados completos da venda nos horários vendidos
+- [ ] Frontend Consultora: exibir dados completos da venda nos horários vendidos

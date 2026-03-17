@@ -49,9 +49,12 @@ function ConsultaCard({ slot, showDate = true }: {
     clientBirthDate?: string | Date | null;
     notes?: string | null;
     saleDate?: string | Date | null;
+    sellerName?: string | null;
+    sellerUsername?: string | null;
   };
   showDate?: boolean;
 }) {
+  const sellerDisplay = slot.sellerName || slot.sellerUsername || null;
   return (
     <div
       className="rounded-2xl p-4 shadow-sm"
@@ -85,19 +88,34 @@ function ConsultaCard({ slot, showDate = true }: {
 
       {slot.clientName && (
         <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: "1px solid oklch(0.92 0.008 65)" }}>
+          {/* Vendedor */}
+          {sellerDisplay && (
+            <div className="flex items-center gap-2">
+              <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.55 0.18 280)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.55 0.18 280)" }}>Vendedor:</span>
+              <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{sellerDisplay}</span>
+            </div>
+          )}
+          {sellerDisplay && (
+            <div style={{ height: "1px", background: "oklch(0.92 0.008 65)", margin: "4px 0" }} />
+          )}
+          {/* Cliente */}
           <div className="flex items-center gap-2">
             <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Cliente:</span>
             <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{slot.clientName}</span>
           </div>
           {slot.clientBirthDate && (
             <div className="flex items-center gap-2">
               <CalendarDays className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Nasc.:</span>
               <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{fmtBirth(slot.clientBirthDate)}</span>
             </div>
           )}
           {slot.clientPhone && (
             <div className="flex items-center gap-2">
               <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Tel.:</span>
               <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{slot.clientPhone}</span>
             </div>
           )}
