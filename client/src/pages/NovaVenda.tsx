@@ -8,16 +8,14 @@ import { useIsMobile } from "@/hooks/useMobile";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
-// Formata qualquer valor de data para "DD/MM/AAAA"
+// Formata qualquer valor de data para "DD/MM/AAAA" sem conversão de fuso
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
-  // Tenta criar um objeto Date e formatar de forma segura
-  const date = typeof d === "string" ? new Date(d) : d;
-  if (isNaN(date.getTime())) return String(d);
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  return `${day}/${month}/${year}`;
+  // Extrai a parte YYYY-MM-DD da string ISO (evita problema de fuso)
+  const iso = typeof d === "string" ? d : d.toISOString();
+  const match = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return String(d);
+  return `${match[3]}/${match[2]}/${match[1]}`;
 }
 
 function parseCurrencyToNumber(formatted: string): number {
