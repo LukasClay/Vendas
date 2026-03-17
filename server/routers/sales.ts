@@ -54,7 +54,7 @@ export const salesRouter = router({
         clientId = await upsertClient({
           fullName: input.clientName,
           phone: input.clientPhone ?? null,
-          birthDate: input.clientBirthDate ? new Date(input.clientBirthDate) : null,
+          birthDate: (input.clientBirthDate ?? null) as any,
         });
       } catch (e) {
         // Non-critical: continue without clientId
@@ -78,10 +78,11 @@ export const salesRouter = router({
         sellerId: ctx.user.id,
         clientId: clientId ?? undefined,
         clientName: input.clientName,
-        clientBirthDate: input.clientBirthDate ? new Date(input.clientBirthDate) : null,
+        // Passar strings diretamente para evitar conversão de timezone pelo MySQL
+        clientBirthDate: (input.clientBirthDate ?? null) as any,
         clientPhone: input.clientPhone ?? null,
         productName: input.productName,
-        saleDate: new Date(input.saleDate),
+        saleDate: input.saleDate as any,
         amount: String(input.amount),
         notes: input.notes ?? null,
         attachmentUrl,
@@ -157,10 +158,10 @@ export const salesRouter = router({
       const { id, ...fields } = input;
       const data: Record<string, unknown> = {};
       if (fields.clientName !== undefined) data.clientName = fields.clientName;
-      if (fields.clientBirthDate !== undefined) data.clientBirthDate = fields.clientBirthDate ? new Date(fields.clientBirthDate) : null;
+      if (fields.clientBirthDate !== undefined) data.clientBirthDate = fields.clientBirthDate ?? null;
       if (fields.clientPhone !== undefined) data.clientPhone = fields.clientPhone;
       if (fields.productName !== undefined) data.productName = fields.productName;
-      if (fields.saleDate !== undefined) data.saleDate = new Date(fields.saleDate);
+      if (fields.saleDate !== undefined) data.saleDate = fields.saleDate;
       if (fields.amount !== undefined) data.amount = String(fields.amount);
       if (fields.notes !== undefined) data.notes = fields.notes;
       if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;

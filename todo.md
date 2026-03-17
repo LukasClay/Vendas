@@ -187,3 +187,13 @@
 
 ## Bug: Data errada nas vendas
 - [x] Corrigir data de venda exibida com 2 dias a menos (ex: venda feita em 17/03 aparece como 15/03) — criado dateUtils.ts com formatDate sem timezone offset, aplicado em todos os arquivos
+
+## Limpeza e Novas Funcionalidades (17/03/2026)
+- [x] Limpar vendas de teste do banco (sales + consultation_slots)
+- [x] Migration: adicionar campo cancelReason (texto opcional) na tabela consultation_slots
+- [x] Backend: incluir cancelReason no procedure cancel
+- [x] Frontend ADM: campo de motivo no modal de confirmação de cancelamento
+- [x] Frontend Consultora: campo de motivo no modal de confirmação de cancelamento
+- [x] Frontend: exibir motivo do cancelamento no card cancelado
+- [x] Backend: notificação ao ADM (dono do projeto) quando consulta for cancelada (plataforma não suporta notif. para usuários individuais)
+- [x] Corrigir bug de data salva com 1 dia a menos no banco (saleDate gravada como D-1)

@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, clientName, productName, saleDate, createdAt FROM sales ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, clientName, productName, saleDate, createdAt FROM sales ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "clientName": "Maria da silva",
+      "productName": "Broxamento",
+      "saleDate": "2026-03-15",
+      "createdAt": "2026-03-16 15:58:14"
+    },
+    {
+      "id": "30004",
+      "clientName": "maria2",
+      "productName": "Consulta Cartas",
+      "saleDate": "2026-03-16",
+      "createdAt": "2026-03-17 17:14:12"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclientName\tproductName\tsaleDate\tcreatedAt\n1\tMaria da silva\tBroxamento\t2026-03-15\t2026-03-16 15:58:14\n30004\tmaria2\tConsulta Cartas\t2026-03-16\t2026-03-17 17:14:12\n",
+  "stderr": "",
+  "execution_time_ms": 71
+}

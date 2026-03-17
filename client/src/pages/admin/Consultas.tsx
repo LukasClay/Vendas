@@ -48,6 +48,7 @@ type SlotItem = {
   sellerName?: string | null;
   sellerUsername?: string | null;
   cancelledAt?: Date | null;
+  cancelReason?: string | null;
   effectiveStatus?: string;
 };
 
@@ -193,6 +194,11 @@ function ConsultaCard({
               Cancelada em: {fmtDate(slot.cancelledAt)}
             </p>
           )}
+          {isCancelled && slot.cancelReason && (
+            <p className="text-xs mt-0.5 italic" style={{ color: "oklch(0.50 0.15 25)" }}>
+              Motivo: {slot.cancelReason}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -210,6 +216,9 @@ export default function AdminConsultas() {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // Modal de cancelamento com motivo
+  const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -286,10 +295,16 @@ export default function AdminConsultas() {
     createSlot.mutate({ consultationDate: newDate, consultationTime: newTime });
   };
 
-  const handleCancel = (id: number) => {
-    if (!window.confirm("Tem certeza que deseja cancelar esta consulta?")) return;
-    setCancellingId(id);
-    cancelSlot.mutate({ id });
+  const handleCancel = (id: number, clientName?: string | null) => {
+    setCancelReason("");
+    setCancelModal({ id, clientName });
+  };
+
+  const confirmCancel = () => {
+    if (!cancelModal) return;
+    setCancellingId(cancelModal.id);
+    cancelSlot.mutate({ id: cancelModal.id, reason: cancelReason.trim() || undefined });
+    setCancelModal(null);
   };
 
   const handleRestore = (id: number) => {
@@ -407,7 +422,7 @@ export default function AdminConsultas() {
                           key={slot.id}
                           slot={{ ...slot, effectiveStatus: "pendente" }}
                           showDate={false}
-                          onCancel={() => handleCancel(slot.id)}
+                          onCancel={() => handleCancel(slot.id, slot.clientName)}
                           cancelling={cancellingId === slot.id}
                         />
                       ))}
@@ -635,6 +650,58 @@ export default function AdminConsultas() {
           </div>
         )}
       </div>
+
+      {/* Modal de cancelamento com motivo */}
+      {cancelModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setCancelModal(null); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl p-6 shadow-xl" style={{ background: "white" }}>
+            <h3 className="text-base font-bold mb-1" style={{ color: "oklch(0.15 0.02 260)", fontFamily: "'Playfair Display', serif" }}>
+              Cancelar Consulta
+            </h3>
+            {cancelModal.clientName && (
+              <p className="text-sm mb-4" style={{ color: "oklch(0.45 0.015 260)" }}>
+                Cliente: <span className="font-semibold">{cancelModal.clientName}</span>
+              </p>
+            )}
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "oklch(0.45 0.015 260)" }}>
+              Motivo do cancelamento <span style={{ color: "oklch(0.65 0.01 260)" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ex: cliente desmarcou, conflito de agenda..."
+              rows={3}
+              className="w-full rounded-xl px-3 py-2 text-sm resize-none outline-none"
+              style={{
+                background: "oklch(0.97 0.006 65)",
+                border: "1px solid oklch(0.88 0.012 65)",
+                color: "oklch(0.15 0.02 260)",
+              }}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setCancelModal(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: "oklch(0.94 0.008 65)", color: "oklch(0.45 0.015 260)" }}
+              >
+                Voltar
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                style={{ background: "oklch(0.55 0.20 25)" }}
+              >
+                Confirmar Cancelamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

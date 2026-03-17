@@ -4,6 +4,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb, withRetry } from "../db";
 import { consultationSlots, sales, users } from "../../drizzle/schema";
 import { eq, and, gte, ne, asc, desc, lt } from "drizzle-orm";
+import { notifyOwner } from "../_core/notification";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ const slotFields = (cs: typeof consultationSlots, s: typeof sales, u: typeof use
   status: cs.status,
   cancelledBy: cs.cancelledBy,
   cancelledAt: cs.cancelledAt,
+  cancelReason: cs.cancelReason,
   createdBy: cs.createdBy,
   createdAt: cs.createdAt,
   clientName: s.clientName,
@@ -179,7 +181,10 @@ export const consultationSlotsRouter = router({
 
   // Cancela um slot (ADM ou consultora)
   cancel: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({
+      id: z.number(),
+      reason: z.string().optional(), // Motivo opcional do cancelamento
+    }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "consultora") {
         throw new TRPCError({ code: "FORBIDDEN" });
@@ -187,11 +192,27 @@ export const consultationSlotsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
 
-      const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+      // Busca slot com dados da venda e do vendedor para a notificação
+      const slotRows = await withRetry(() =>
+        db.select({
+          id: consultationSlots.id,
+          status: consultationSlots.status,
+          consultationDate: consultationSlots.consultationDate,
+          consultationTime: consultationSlots.consultationTime,
+          saleId: consultationSlots.saleId,
+          clientName: sales.clientName,
+          sellerName: users.displayName,
+          sellerUsername: users.username,
+        })
+          .from(consultationSlots)
+          .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+          .leftJoin(users, eq(sales.sellerId, users.id))
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
-      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
-      if (slot[0].status === "cancelada") throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta já está cancelada." });
+      const slot = slotRows[0];
+      if (!slot) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
+      if (slot.status === "cancelada") throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta já está cancelada." });
 
       await withRetry(() =>
         db.update(consultationSlots)
@@ -199,9 +220,24 @@ export const consultationSlotsRouter = router({
             status: "cancelada",
             cancelledBy: ctx.user.id,
             cancelledAt: new Date(),
+            cancelReason: input.reason ?? null,
           })
           .where(eq(consultationSlots.id, input.id))
       );
+
+      // Envia notificação ao dono do projeto informando o cancelamento
+      if (slot.saleId) {
+        const cancelledBy = ctx.user.displayName || ctx.user.name || ctx.user.username || "Usuário";
+        const sellerInfo = slot.sellerName || slot.sellerUsername || "vendedor desconhecido";
+        const clientInfo = slot.clientName || "cliente desconhecido";
+        const dateInfo = `${slot.consultationDate} às ${slot.consultationTime}`;
+        const reasonInfo = input.reason ? `\nMotivo: ${input.reason}` : "";
+        await notifyOwner({
+          title: `Consulta cancelada por ${cancelledBy}`,
+          content: `A consulta de ${clientInfo} (vendida por ${sellerInfo}) agendada para ${dateInfo} foi cancelada por ${cancelledBy}.${reasonInfo}`,
+        }).catch(() => {}); // Não bloqueia se a notificação falhar
+      }
+
       return { success: true };
     }),
 

@@ -101,6 +101,7 @@ export const consultationSlots = mysqlTable("consultation_slots", {
   status: mysqlEnum("status", ["pendente", "realizada", "cancelada"]).default("pendente").notNull(),
   cancelledBy: int("cancelledBy"),                       // FK → users.id (quem cancelou)
   cancelledAt: timestamp("cancelledAt"),
+  cancelReason: text("cancelReason"),                    // Motivo opcional do cancelamento
   createdBy: int("createdBy").notNull(),                 // FK → users.id (quem criou)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
