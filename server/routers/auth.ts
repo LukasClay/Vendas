@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { getDb, withRetry } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
@@ -31,8 +31,10 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
-      // Busca usuário pelo email
-      const result = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+      // Busca usuário pelo email com retry automático (para reconexão após hibernação)
+      const result = await withRetry(() =>
+        db.select().from(users).where(eq(users.email, input.email)).limit(1)
+      );
       const user = result[0];
 
       if (!user || !user.passwordHash) {

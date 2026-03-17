@@ -108,3 +108,9 @@
 ## Gestão de Vendas (Admin)
 - [x] Painel admin: botão "Editar" venda (alterar qualquer campo)
 - [x] Painel admin: botão "Excluir" venda (com confirmação)
+
+## Bugs
+- [ ] Corrigir erro "Failed query" ao fazer login com email/senha
+
+## Bugs
+- [x] Erro de login ao acordar da hibernação: implementar retry automático de conexão com o banco

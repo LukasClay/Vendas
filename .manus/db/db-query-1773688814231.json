@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, name, email, role, active, loginMethod, LENGTH(passwordHash) as hashLen FROM users WHERE email = 'ktnwilsonktn@gmail.com' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, email, role, active, loginMethod, LENGTH(passwordHash) as hashLen FROM users WHERE email = 'ktnwilsonktn@gmail.com' LIMIT 1;",
+  "rows": [
+    {
+      "id": "30023",
+      "name": "Wilson",
+      "email": "ktnwilsonktn@gmail.com",
+      "role": "admin",
+      "active": "1",
+      "loginMethod": "email_password",
+      "hashLen": "60"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\tactive\tloginMethod\thashLen\n30023\tWilson\tktnwilsonktn@gmail.com\tadmin\t1\temail_password\t60\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

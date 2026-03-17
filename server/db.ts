@@ -1,20 +1,74 @@
 import { and, asc, desc, eq, like, lte, gte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createPool, Pool } from "mysql2";
 import { clients, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: Pool | null = null;
+
+function createDbInstance() {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    _pool = createPool({
+      uri: process.env.DATABASE_URL,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+    });
+    _db = drizzle(_pool);
+    return _db;
+  } catch (error) {
+    console.warn("[Database] Failed to create pool:", error);
+    _db = null;
+    _pool = null;
+    return null;
+  }
+}
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) createDbInstance();
+  return _db;
+}
+
+// Reseta o pool em caso de erro de conexão (ex: após hibernação)
+export function resetDbPool() {
+  console.warn("[Database] Resetting connection pool...");
+  if (_pool) {
+    try { _pool.end(() => {}); } catch (_) {}
+  }
+  _db = null;
+  _pool = null;
+  createDbInstance();
+}
+
+// Wrapper que faz retry automático em caso de erro de conexão
+export async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
+      return await fn();
+    } catch (error: unknown) {
+      const isConnectionError = error instanceof Error && (
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.message.includes('ECONNREFUSED') ||
+        error.message.includes('PROTOCOL_CONNECTION_LOST') ||
+        error.message.includes('ER_CON_COUNT_ERROR') ||
+        error.message.includes('Cannot read properties of undefined') ||
+        error.message.includes('Failed query')
+      );
+      if (isConnectionError && attempt < retries) {
+        console.warn(`[Database] Connection error on attempt ${attempt + 1}, resetting pool and retrying...`);
+        resetDbPool();
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      throw error;
     }
   }
-  return _db;
+  throw new Error('Max retries exceeded');
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
