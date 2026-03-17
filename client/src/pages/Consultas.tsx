@@ -261,12 +261,12 @@ export default function Consultas() {
               <div className="space-y-6">
                 {Object.entries(pendingByDate).map(([dateKey, slots]) => (
                   <div key={dateKey}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Calendar className="w-4 h-4" style={{ color: "oklch(0.55 0.18 280)" }} />
-                      <h3 className="font-semibold text-sm" style={{ color: "oklch(0.55 0.18 280)" }}>
-                        {fmtDate(dateKey)}
-                      </h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.45 0.15 280)" }}>
+                     <div className="flex items-center gap-2 mb-3">
+                       <Calendar className="w-4 h-4" style={{ color: "oklch(0.50 0.18 280)" }} />
+                       <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
+                         {fmtDate(dateKey)}
+                       </h3>
+                       <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: "oklch(0.88 0.06 280)", color: "oklch(0.38 0.16 280)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
                         {slots.length} {slots.length === 1 ? "consulta" : "consultas"}
                       </span>
                     </div>
@@ -301,12 +301,12 @@ export default function Consultas() {
               <div className="space-y-6">
                 {Object.entries(doneByDate).map(([dateKey, slots]) => (
                   <div key={dateKey}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <CheckCircle2 className="w-4 h-4" style={{ color: "oklch(0.55 0.15 160)" }} />
-                      <h3 className="font-semibold text-sm" style={{ color: "oklch(0.45 0.12 160)" }}>
-                        {fmtDate(dateKey)}
-                      </h3>
-                    </div>
+                     <div className="flex items-center gap-2 mb-3">
+                       <CheckCircle2 className="w-4 h-4" style={{ color: "oklch(0.50 0.15 160)" }} />
+                       <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
+                         {fmtDate(dateKey)}
+                       </h3>
+                     </div>
                     <div className="space-y-3">
                       {slots.map(slot => (
                         <ConsultaCard key={slot.id} slot={slot} showDate={false} />
