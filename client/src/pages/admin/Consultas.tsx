@@ -11,9 +11,12 @@ import {
 
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
-  const s = typeof d === "string" ? d : d.toISOString().slice(0, 10);
-  const [y, m, day] = s.slice(0, 10).split("-");
-  return `${day}/${m}/${y}`;
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(date.getTime())) return String(d);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function generateTimeOptions(): string[] {
