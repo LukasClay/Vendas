@@ -25,9 +25,7 @@ export default function AdminRelatorios() {
   const { data: reportData, isLoading } = trpc.reports.summary.useQuery(
     dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined
   );
-  const { data: exportData = [] } = trpc.reports.exportData.useQuery(
-    dateFilter.startDate || dateFilter.endDate ? dateFilter : {}
-  );
+  const { data: exportData = [] } = trpc.reports.exportData.useQuery(dateFilter);
   const { data: schedules = [], isLoading: loadingSchedules } = trpc.reports.schedules.useQuery();
 
   const createSchedule = trpc.reports.createSchedule.useMutation({

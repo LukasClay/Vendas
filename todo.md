@@ -330,3 +330,6 @@
 ## Navegação - Alertas
 - [x] Adicionar botão de voltar na página de Alertas do ADM
 - [x] Alertas da Consultora são uma aba dentro de Trabalhos (sem problema de navegação)
+
+## Varredura de Inputs Instáveis
+- [ ] Varrer e corrigir inputs instáveis em Vendas, Relatórios e Funcionários
