@@ -326,3 +326,7 @@
 
 ## Ajuste AlertsJob
 - [x] Alterar job de alertas de "a cada hora" para rodar apenas às 8h e 18h
+
+## Navegação - Alertas
+- [x] Adicionar botão de voltar na página de Alertas do ADM
+- [x] Alertas da Consultora são uma aba dentro de Trabalhos (sem problema de navegação)

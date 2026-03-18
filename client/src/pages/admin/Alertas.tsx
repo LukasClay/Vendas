@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, Clock, RefreshCw, Phone, User } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, RefreshCw, Phone, User } from "lucide-react";
+import { useLocation } from "wouter";
 
 function formatDate(d: Date | string | null) {
   if (!d) return "—";
@@ -40,6 +41,7 @@ function UrgencyChip({ daysRemaining, isOverdue }: { daysRemaining: number; isOv
 }
 
 export default function AdminAlertas() {
+  const [, navigate] = useLocation();
   const { data: alerts = [], isLoading, refetch, isFetching } = trpc.consultora.alerts.useQuery(undefined, {
     staleTime: 3 * 60 * 1000, // dados ficam frescos por 3 min; usuário pode forçar atualização manualmente
   });
@@ -51,13 +53,21 @@ export default function AdminAlertas() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "oklch(0.15 0.02 260)" }}>
-            🔔 Alertas
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
-            Trabalhos com prazo crítico — Para Escrever e Pendentes
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/admin/dashboard")}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-all active:scale-95 hover:opacity-80"
+            style={{ background: "oklch(0.93 0.012 260)", color: "oklch(0.40 0.08 260)" }}>
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: "oklch(0.15 0.02 260)" }}>
+              🔔 Alertas
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
+              Trabalhos com prazo crítico — Para Escrever e Pendentes
+            </p>
+          </div>
         </div>
         <button
           onClick={() => refetch()}
