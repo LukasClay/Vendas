@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
@@ -18,15 +18,23 @@ function formatCurrency(value: number | string) {
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Constantes estáticas fora do componente — evitam re-criação a cada render
+const CURRENT_YEAR = new Date().getFullYear();
+const RECENT_SALES_INPUT = { limit: 8 } as const;
+const MONTHLY_INPUT = { year: CURRENT_YEAR } as const;
+
 export default function AdminDashboard() {
-  const currentYear = new Date().getFullYear();
   const [dateFilter, setDateFilter] = useState({ startDate: "", endDate: "" });
 
-  const { data: reportData, isLoading } = trpc.reports.summary.useQuery(
-    dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined
+  // Estabiliza o input do filtro de datas para evitar re-fetches desnecessários
+  const summaryInput = useMemo(
+    () => (dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined),
+    [dateFilter.startDate, dateFilter.endDate]
   );
-  const { data: monthlyData = [] } = trpc.reports.salesByMonth.useQuery({ year: currentYear });
-  const { data: recentSales = [] } = trpc.sales.list.useQuery({ limit: 8 });
+
+  const { data: reportData, isLoading } = trpc.reports.summary.useQuery(summaryInput);
+  const { data: monthlyData = [] } = trpc.reports.salesByMonth.useQuery(MONTHLY_INPUT);
+  const { data: recentSales = [] } = trpc.sales.list.useQuery(RECENT_SALES_INPUT);
 
   const chartData = MONTHS.map((name, i) => {
     const found = monthlyData.find((m: any) => Number(m.month) === i + 1);
@@ -139,7 +147,7 @@ export default function AdminDashboard() {
           <div className="xl:col-span-2 rounded-2xl p-4 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
             <h2 className="font-semibold mb-5 flex items-center gap-2" style={{ color: "oklch(0.15 0.02 260)" }}>
               <TrendingUp className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
-              Vendas por Mês — {currentYear}
+              Vendas por Mês — {CURRENT_YEAR}
             </h2>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>

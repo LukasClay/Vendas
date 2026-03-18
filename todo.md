@@ -314,3 +314,8 @@
 - [x] localStorage.setItem() removido do useMemo (useAuth.ts) — causava re-renders em cascata
 - [x] refetchInterval removido do Dashboard e Consultora (feito anteriormente)
 - [x] QueryClient global com staleTime: 30s e refetchOnWindowFocus: false (feito anteriormente)
+
+## Correção Loop Infinito de Queries (Dashboard ADM)
+- [x] Inputs instáveis corrigidos no Dashboard ADM: currentYear e { limit: 8 } movidos para constantes fora do componente
+- [x] summaryInput estabilizado com useMemo para evitar re-fetch ao trocar de aba
+- [x] Causa raiz da aba "Para Escrever" travada: loop de queries no Dashboard consumia todas as conexões do banco
