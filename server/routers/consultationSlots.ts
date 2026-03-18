@@ -13,6 +13,17 @@ function todayStr() {
 }
 
 /**
+ * Retorna o horário atual no formato "HH:MM" no fuso local do servidor.
+ * Usado para filtrar slots que já passaram no dia de hoje.
+ */
+function nowTimeStr() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/**
  * Determina o status efetivo de um slot com base na lógica híbrida:
  * - "cancelada" → se status = cancelada
  * - "realizada" → se status = pendente E o horário já passou há mais de 50 minutos
@@ -61,10 +72,13 @@ const slotFields = (cs: typeof consultationSlots, s: typeof sales, u: typeof use
 
 export const consultationSlotsRouter = router({
 
-  // Lista horários disponíveis (não vendidos, não cancelados, data >= hoje) — para o formulário de venda
+  // Lista horários disponíveis (não vendidos, não cancelados, data+hora >= agora) — para o formulário de venda
   listAvailable: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+
+    const today = todayStr();
+    const nowTime = nowTimeStr();
 
     const rows = await withRetry(() =>
       db.select()
@@ -73,12 +87,19 @@ export const consultationSlotsRouter = router({
           and(
             eq(consultationSlots.sold, false),
             ne(consultationSlots.status, "cancelada"),
-            gte(consultationSlots.consultationDate, todayStr() as any)
+            gte(consultationSlots.consultationDate, today as any)
           )
         )
         .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
     );
-    return rows;
+
+    // Filtra no JS: remove slots de hoje cujo horário já passou
+    return rows.filter(r => {
+      if (r.consultationDate === today) {
+        return r.consultationTime > nowTime;
+      }
+      return true;
+    });
   }),
 
   // Lista todos os slots (ADM e consultora) — para gerenciamento (aba Gerenciar)
@@ -89,6 +110,9 @@ export const consultationSlotsRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
 
+    const today = todayStr();
+    const nowTime = nowTimeStr();
+
     const rows = await withRetry(() =>
       db.select(slotFields(consultationSlots, sales, users))
         .from(consultationSlots)
@@ -97,7 +121,16 @@ export const consultationSlotsRouter = router({
         .where(ne(consultationSlots.status, "cancelada"))
         .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
     );
-    return rows.map(r => ({ ...r, effectiveStatus: effectiveStatus(r as any) }));
+
+    // Oculta slots não vendidos cujo horário já passou (mantém vendidos para histórico)
+    return rows
+      .filter(r => {
+        if (r.sold) return true; // vendidos sempre aparecem
+        if (r.consultationDate === today) return r.consultationTime > nowTime;
+        if (r.consultationDate < today) return false; // dias passados sem venda: oculta
+        return true;
+      })
+      .map(r => ({ ...r, effectiveStatus: effectiveStatus(r as any) }));
   }),
 
   // Consultas pendentes (sold = true, status != cancelada, horário não passou +50min)

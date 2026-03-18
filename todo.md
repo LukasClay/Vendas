@@ -319,3 +319,7 @@
 - [x] Inputs instáveis corrigidos no Dashboard ADM: currentYear e { limit: 8 } movidos para constantes fora do componente
 - [x] summaryInput estabilizado com useMemo para evitar re-fetch ao trocar de aba
 - [x] Causa raiz da aba "Para Escrever" travada: loop de queries no Dashboard consumia todas as conexões do banco
+
+## Filtro de Horários Passados (Consulta Cartas)
+- [x] listAvailable: filtrar por data+hora atual — slots de hoje com horário passado somem automaticamente
+- [x] listAll: ocultar slots não vendidos que já passaram (mantém vendidos no histórico)
