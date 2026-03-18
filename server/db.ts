@@ -9,13 +9,15 @@ let _pool: Pool | null = null;
 
 export async function getDb() {
   if (_db) return _db;
-  if (!process.env.DATABASE_URL) return null;
+  // Prefere RAILWAY_DATABASE_URL (PostgreSQL real) sobre DATABASE_URL (TiDB do Manus)
+  const connStr = process.env.RAILWAY_DATABASE_URL || process.env.DATABASE_URL;
+  if (!connStr) return null;
   _pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: connStr,
     max: 20,
     idleTimeoutMillis: 60000,
     connectionTimeoutMillis: 10000,
-    ssl: process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : undefined,
+    ssl: connStr.includes('railway') ? { rejectUnauthorized: false } : undefined,
   });
   _db = drizzle(_pool);
   return _db;
