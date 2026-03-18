@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { sales, users } from "../../drizzle/schema";
 import { and, asc, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
+import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
 
 // Apenas consultoras e admins podem acessar estes endpoints
 const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -18,41 +19,6 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
   return next({ ctx });
 });
-
-/**
- * Calcula dias úteis (seg-sex) a partir do dia SEGUINTE à venda.
- * Ex: venda dia 16 → prazo começa dia 17, conta 7 dias úteis.
- */
-function calcBusinessDaysFromSale(saleDateStr: string): { daysPassed: number; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; urgencyScore: number } {
-  const saleDate = new Date(saleDateStr + "T00:00:00");
-  // Prazo começa no dia seguinte à venda
-  const startDate = new Date(saleDate);
-  startDate.setDate(startDate.getDate() + 1);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Conta dias úteis passados desde startDate até hoje
-  let daysPassed = 0;
-  const cursor = new Date(startDate);
-  cursor.setHours(0, 0, 0, 0);
-  while (cursor <= today) {
-    const day = cursor.getDay(); // 0=Dom, 6=Sab
-    if (day !== 0 && day !== 6) daysPassed++;
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  // Não contar o dia de hoje se ainda não chegou
-  const todayDay = today.getDay();
-  if (todayDay !== 0 && todayDay !== 6 && today >= startDate) daysPassed = Math.max(0, daysPassed - 1);
-
-  const daysRemaining = 7 - daysPassed;
-  const isOverdue = daysRemaining < 0;
-  const isUrgent = daysRemaining <= 1 && daysRemaining >= 0;
-  // Score: atrasados primeiro (maior score = mais urgente), depois por dias restantes crescente
-  const urgencyScore = isOverdue ? 10000 + Math.abs(daysRemaining) : (7 - daysRemaining);
-
-  return { daysPassed, daysRemaining, isOverdue, isUrgent, urgencyScore };
-}
 
 export const consultoraRouter = router({
   // ─── Contagem de badges por status ───────────────────────────────────────────
@@ -102,18 +68,27 @@ export const consultoraRouter = router({
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt));
 
-      return rows.map((s: any) => ({
-        id: s.id,
-        clientName: s.clientName,
-        clientBirthDate: s.clientBirthDate,
-        clientPhone: s.clientPhone,
-        productName: s.productName,
-        productCategory: s.productCategory ?? "individual",
-        saleDate: s.saleDate,
-        notes: s.notes,
-        createdAt: s.createdAt,
-        sellerName: s.sellerName,
-      }));
+      return rows.map((s: any) => {
+        const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate);
+        const urgency = calcBusinessDaysFromSale(saleDateStr);
+        return {
+          id: s.id,
+          clientName: s.clientName,
+          clientBirthDate: s.clientBirthDate,
+          clientPhone: s.clientPhone,
+          productName: s.productName,
+          productCategory: s.productCategory ?? "individual",
+          saleDate: s.saleDate,
+          notes: s.notes,
+          createdAt: s.createdAt,
+          sellerName: s.sellerName,
+          daysRemaining: urgency.daysRemaining,
+          deadline: urgency.deadline,
+          isOverdue: urgency.isOverdue,
+          isUrgent: urgency.isUrgent,
+          urgencyScore: urgency.urgencyScore,
+        };
+      });
     }),
 
   // ─── Aba 2: Pendentes (com prazo e urgência) ────────────────────────────────────────────────────────────────────────────────────
@@ -161,7 +136,11 @@ export const consultoraRouter = router({
             notes: s.notes,
             writtenAt: s.writtenAt,
             sellerName: s.sellerName,
-            ...urgency,
+            daysRemaining: urgency.daysRemaining,
+            deadline: urgency.deadline,
+            isOverdue: urgency.isOverdue,
+            isUrgent: urgency.isUrgent,
+            urgencyScore: urgency.urgencyScore,
           };
         }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
     }),

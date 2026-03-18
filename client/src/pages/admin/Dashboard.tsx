@@ -5,28 +5,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 
-// Calcula dias úteis (seg-sex) a partir do dia seguinte à venda
-function calcBusinessDays(saleDateRaw: string | Date): { daysRemaining: number; isOverdue: boolean; isUrgent: boolean } {
-  const saleDateStr = saleDateRaw instanceof Date
-    ? saleDateRaw.toISOString().slice(0, 10)
-    : String(saleDateRaw).slice(0, 10);
-  const saleDate = new Date(saleDateStr + "T00:00:00");
-  const startDate = new Date(saleDate);
-  startDate.setDate(startDate.getDate() + 1);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let daysPassed = 0;
-  const cursor = new Date(startDate);
-  cursor.setHours(0, 0, 0, 0);
-  while (cursor <= today) {
-    const d = cursor.getDay();
-    if (d !== 0 && d !== 6) daysPassed++;
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  const todayDay = today.getDay();
-  if (todayDay !== 0 && todayDay !== 6 && today >= startDate) daysPassed = Math.max(0, daysPassed - 1);
-  const daysRemaining = 7 - daysPassed;
-  return { daysRemaining, isOverdue: daysRemaining < 0, isUrgent: daysRemaining <= 1 && daysRemaining >= 0 };
+// Formata a data limite recebida do backend
+function formatDeadline(deadline: string | Date | undefined): string {
+  if (!deadline) return "—";
+  const d = deadline instanceof Date ? deadline : new Date(deadline);
+  return d.toLocaleDateString("pt-BR");
 }
 
 function formatCurrency(value: number | string) {
@@ -269,43 +252,27 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(toWriteWorks as any[]).slice(0, 3).map((w: any) => (
-                      <tr key={`write-${w.id}`} className="border-t" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                        <td className="px-4 py-3">
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>Para Escrever</span>
-                        </td>
-                        <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</td>
-                        <td className="px-4 py-3" style={{ color: "oklch(0.40 0.02 260)" }}>{w.productName}</td>
-                        <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</td>
-                        <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>—</td>
-                        <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>—</td>
-                      </tr>
-                    ))}
-                    {[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10).map((w: any) => {
-                      const { daysRemaining, isOverdue, isUrgent } = calcBusinessDays(w.saleDate);
-                      const deadlineDate = (() => {
-                        const saleDateStr = String(w.saleDate).slice(0, 10);
-                        const d = new Date(saleDateStr + "T12:00:00");
-                        d.setDate(d.getDate() + 1);
-                        let count = 0;
-                        while (count < 7) {
-                          const day = d.getDay();
-                          if (day !== 0 && day !== 6) count++;
-                          if (count < 7) d.setDate(d.getDate() + 1);
-                        }
-                        return formatDate(d);
-                      })();
+                    {[...(toWriteWorks as any[]).slice(0, 3), ...[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10)].map((w: any) => {
+                      const isWrite = w.urgencyScore === undefined && !w.isOverdue && !w.isUrgent && w.daysRemaining !== undefined
+                        ? false : (w.writtenAt === undefined && w.createdAt !== undefined);
+                      // Usar dados do backend diretamente
+                      const daysRemaining: number = w.daysRemaining ?? 7;
+                      const isOverdue: boolean = w.isOverdue ?? false;
+                      const isUrgent: boolean = w.isUrgent ?? false;
+                      const deadlineDate = formatDeadline(w.deadline);
+                      const isParaEscrever = w.writtenAt === undefined && w.createdAt !== undefined;
                       return (
-                        <tr key={w.id} className="border-t" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
+                        <tr key={`${isParaEscrever ? 'write' : 'pend'}-${w.id}`} className="border-t" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
                           <td className="px-4 py-3">
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                              style={isOverdue
+                              style={isParaEscrever
+                                ? { background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }
+                                : isOverdue
                                 ? { background: "oklch(0.93 0.06 25)", color: "oklch(0.40 0.18 25)" }
                                 : isUrgent
                                 ? { background: "oklch(0.94 0.06 55)", color: "oklch(0.45 0.14 55)" }
                                 : { background: "oklch(0.92 0.04 160)", color: "oklch(0.35 0.15 160)" }}>
-                              {isOverdue ? "Atrasado" : isUrgent ? "Urgente" : "No Prazo"}
+                              {isParaEscrever ? "Para Escrever" : isOverdue ? "Atrasado" : isUrgent ? "Urgente" : "No Prazo"}
                             </span>
                           </td>
                           <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</td>
@@ -313,7 +280,7 @@ export default function AdminDashboard() {
                           <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</td>
                           <td className="px-4 py-3" style={{ color: "oklch(0.52 0.015 260)" }}>{deadlineDate}</td>
                           <td className="px-4 py-3">
-                            <span className="font-semibold" style={{ color: isOverdue ? "oklch(0.45 0.18 25)" : isUrgent ? "oklch(0.50 0.14 55)" : "oklch(0.40 0.15 160)" }}>
+                            <span className="font-semibold" style={{ color: isParaEscrever ? "oklch(0.35 0.15 250)" : isOverdue ? "oklch(0.45 0.18 25)" : isUrgent ? "oklch(0.50 0.14 55)" : "oklch(0.40 0.15 160)" }}>
                               {isOverdue ? `${Math.abs(daysRemaining)}d atrasado` : `${daysRemaining}d restante${daysRemaining !== 1 ? "s" : ""}`}
                             </span>
                           </td>
@@ -326,44 +293,27 @@ export default function AdminDashboard() {
 
               {/* Mobile cards */}
               <div className="md:hidden divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                {(toWriteWorks as any[]).slice(0, 3).map((w: any) => (
-                  <div key={`write-m-${w.id}`} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>Para Escrever</span>
-                      <span className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>{formatDate(w.saleDate)}</span>
-                    </div>
-                    <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.40 0.02 260)" }}>{w.productName}</p>
-                  </div>
-                ))}
-                {[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10).map((w: any) => {
-                  const { daysRemaining, isOverdue, isUrgent } = calcBusinessDays(w.saleDate);
-                  const deadlineDate = (() => {
-                    const saleDateStr = String(w.saleDate).slice(0, 10);
-                    const d = new Date(saleDateStr + "T12:00:00");
-                    d.setDate(d.getDate() + 1);
-                    let count = 0;
-                    while (count < 7) {
-                      const day = d.getDay();
-                      if (day !== 0 && day !== 6) count++;
-                      if (count < 7) d.setDate(d.getDate() + 1);
-                    }
-                    return formatDate(d);
-                  })();
+                {[...(toWriteWorks as any[]).slice(0, 3), ...[...overdueWorks, ...urgentWorks, ...onTrackWorks].slice(0, 10)].map((w: any) => {
+                  const isParaEscrever = w.writtenAt === undefined && w.createdAt !== undefined;
+                  const daysRemaining: number = w.daysRemaining ?? 7;
+                  const isOverdue: boolean = w.isOverdue ?? false;
+                  const isUrgent: boolean = w.isUrgent ?? false;
+                  const deadlineDate = formatDeadline(w.deadline);
                   return (
-                    <div key={`m-${w.id}`} className="px-4 py-3">
+                    <div key={`m-${isParaEscrever ? 'write' : 'pend'}-${w.id}`} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                          style={isOverdue
+                          style={isParaEscrever
+                            ? { background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }
+                            : isOverdue
                             ? { background: "oklch(0.93 0.06 25)", color: "oklch(0.40 0.18 25)" }
                             : isUrgent
                             ? { background: "oklch(0.94 0.06 55)", color: "oklch(0.45 0.14 55)" }
                             : { background: "oklch(0.92 0.04 160)", color: "oklch(0.35 0.15 160)" }}>
-                          {isOverdue ? "Atrasado" : isUrgent ? "Urgente" : "No Prazo"}
+                          {isParaEscrever ? "Para Escrever" : isOverdue ? "Atrasado" : isUrgent ? "Urgente" : "No Prazo"}
                         </span>
-                        <span className="font-semibold text-xs" style={{ color: isOverdue ? "oklch(0.45 0.18 25)" : isUrgent ? "oklch(0.50 0.14 55)" : "oklch(0.40 0.15 160)" }}>
-                          {isOverdue ? `${Math.abs(daysRemaining)}d atrasado` : `${daysRemaining}d restantes`}
+                        <span className="font-semibold text-xs" style={{ color: isParaEscrever ? "oklch(0.35 0.15 250)" : isOverdue ? "oklch(0.45 0.18 25)" : isUrgent ? "oklch(0.50 0.14 55)" : "oklch(0.40 0.15 160)" }}>
+                          {isOverdue ? `${Math.abs(daysRemaining)}d atrasado` : `${daysRemaining}d restante${daysRemaining !== 1 ? "s" : ""}`}
                         </span>
                       </div>
                       <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{w.clientName}</p>

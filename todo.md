@@ -151,11 +151,11 @@
 
 ## Melhorias Consulta Cartas - Dados da Venda
 - [x] Backend: retornar dados da venda (vendedor, cliente, nascimento, telefone) junto com slot vendido
-- [ ] Frontend ADM: corrigir bug - cards de consulta não mostram dados da cliente/vendedor
-- [ ] Frontend Consultora: corrigir bug - cards de consulta não mostram dados da cliente/vendedor
-- [ ] Remover "Consulta Cartas" da aba de Trabalhos do ADM
-- [ ] Remover "Consulta Cartas" do painel de trabalhos da Consultora
-- [ ] Adicionar seção de Consultas no histórico de compras de uma cliente (separado dos trabalhos)
+- [x] Frontend ADM: cards de consulta mostram dados da cliente/vendedor (corrigido)
+- [x] Frontend Consultora: cards de consulta mostram dados da cliente/vendedor (corrigido)
+- [x] Remover "Consulta Cartas" da aba de Trabalhos do ADM (implementado em seção posterior)
+- [x] Remover "Consulta Cartas" do painel de trabalhos da Consultora (implementado em seção posterior)
+- [x] Adicionar seção de Consultas no histórico de compras de uma cliente (implementado em seção posterior)
 
 ## Sistema de Status de Consultas (Híbrido)
 - [x] Schema: adicionar campo status (pendente/realizada/cancelada) na tabela consultation_slots
@@ -268,3 +268,7 @@
 
 ## Bug: Clique no card de trabalho
 - [x] Corrigir área clicável do card nos painéis de Trabalhos (ADM e Consultora): removido stopPropagation desnecessario do div do nome do cliente
+
+## Bug: Status dos Trabalhos no Dashboard ADM
+- [x] Prazo e Dias Restantes aparecem como — para status "Para Escrever" (corrigido: backend agora retorna daysRemaining/deadline/isOverdue/isUrgent para toWrite igual ao pending)
+- [x] Prazo calculado como data da venda + 7 dias úteis com feriados brasileiros (Carnaval, Sexta Santa, Páscoa, Corpus Christi, fixos nacionais) via shared/businessDays.ts
