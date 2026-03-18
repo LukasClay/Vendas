@@ -340,10 +340,9 @@ export async function getSalesByMonth(year: number) {
   if (!db) return [];
 
   const result = await db.execute(
-    sql`SELECT MONTH(saleDate) as month, COALESCE(SUM(amount), 0) as totalAmount, COUNT(*) as totalSales FROM sales WHERE YEAR(saleDate) = ${year} GROUP BY MONTH(saleDate) ORDER BY MONTH(saleDate)`
+    sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} GROUP BY EXTRACT(MONTH FROM "saleDate") ORDER BY EXTRACT(MONTH FROM "saleDate")`
   );
-  // mysql2 returns [rows, fields]; drizzle execute returns rows directly
-  const rows = Array.isArray((result as any)[0]) ? (result as any)[0] : result;
+  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
   return (rows as any[]).map((r: any) => ({
     month: Number(r.month),
     totalAmount: Number(r.totalAmount),
