@@ -6,11 +6,12 @@ import {
   CheckCircle2, Clock, AlertTriangle, Search, Copy, Check,
   ChevronDown, ChevronUp, Phone, Calendar, FileText,
   X, Pencil, Hourglass, BookCheck, ClipboardList,
-  RotateCcw, User
+  RotateCcw, UserCog
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 
 type Tab = "para_escrever" | "pendente" | "feito";
+type Seller = { id: number; name: string | null };
 
 function formatBirthDate(d: Date | string | null | undefined): string {
   return formatDate(d);
@@ -72,10 +73,72 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
   );
 }
 
+// ─── Edição inline de vendedor (somente ADM) ──────────────────────────────────
+function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
+  saleId: number;
+  currentSellerName: string | null | undefined;
+  sellers: Seller[];
+  onUpdated: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const utils = trpc.useUtils();
+
+  const updateSeller = trpc.consultora.updateSeller.useMutation({
+    onSuccess: () => {
+      toast.success("Vendedor atualizado!");
+      utils.consultora.toWrite.invalidate();
+      utils.consultora.pending.invalidate();
+      utils.consultora.done.invalidate();
+      setEditing(false);
+      onUpdated();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  if (!editing) {
+    return (
+      <button onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all active:scale-95"
+        style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
+        <UserCog className="w-3 h-3" />
+        {currentSellerName || "Sem vendedor"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+      <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
+        className="text-xs px-2 py-1 rounded-lg outline-none"
+        style={{ background: "white", border: "1.5px solid oklch(0.88 0.012 65)", color: "oklch(0.15 0.02 260)" }}>
+        <option value="">Selecionar...</option>
+        {sellers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+      </select>
+      <button onClick={() => {
+        if (!selectedId) { toast.error("Selecione um vendedor"); return; }
+        const seller = sellers.find(s => s.id === Number(selectedId));
+        if (!seller) return;
+        updateSeller.mutate({ saleId, sellerId: seller.id, sellerName: seller.name ?? "" });
+      }} disabled={updateSeller.isPending}
+        className="text-xs px-2 py-1 rounded-lg font-semibold active:scale-95 text-white"
+        style={{ background: "oklch(0.55 0.16 65)" }}>
+        {updateSeller.isPending ? "..." : "Salvar"}
+      </button>
+      <button onClick={() => setEditing(false)}
+        className="text-xs px-2 py-1 rounded-lg active:scale-95"
+        style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
-function ToWriteCard({ item, onMarkWritten }: {
+function ToWriteCard({ item, onMarkWritten, sellers }: {
   item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
   onMarkWritten: (id: number) => void;
+  sellers: Seller[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -96,11 +159,7 @@ function ToWriteCard({ item, onMarkWritten }: {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
-              {item.sellerName && (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
-                  <User className="w-3 h-3 inline mr-1" />{item.sellerName}
-                </span>
-              )}
+              <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
             <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
@@ -176,9 +235,10 @@ function ToWriteCard({ item, onMarkWritten }: {
 }
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
-function PendingCard({ item, onMarkDone }: {
+function PendingCard({ item, onMarkDone, sellers }: {
   item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; writtenAt: Date | string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
   onMarkDone: (id: number) => void;
+  sellers: Seller[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -197,18 +257,15 @@ function PendingCard({ item, onMarkDone }: {
       <button onClick={() => setExpanded(e => !e)} className="w-full p-4 text-left">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
-              {item.sellerName && (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
-                  <User className="w-3 h-3 inline mr-1" />{item.sellerName}
-                </span>
-              )}
-            </div>
-            <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
               <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
             </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
+              <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
+            </div>
+            <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
           {expanded ? <ChevronUp className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} /> : <ChevronDown className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} />}
         </div>
@@ -271,9 +328,10 @@ function PendingCard({ item, onMarkDone }: {
 }
 
 // ─── Card: Feito ──────────────────────────────────────────────────────────────
-function DoneCard({ item, onUndo }: {
+function DoneCard({ item, onUndo, sellers }: {
   item: { id: number; clientName: string; productName: string; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
   onUndo: (id: number) => void;
+  sellers: Seller[];
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -283,11 +341,7 @@ function DoneCard({ item, onUndo }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
-            {item.sellerName && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
-                <User className="w-3 h-3 inline mr-1" />{item.sellerName}
-              </span>
-            )}
+            <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
           </div>
           <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
           <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
@@ -328,6 +382,7 @@ export default function AdminTrabalhos() {
   const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   // Debounce simples
@@ -339,6 +394,9 @@ export default function AdminTrabalhos() {
   };
 
   const utils = trpc.useUtils();
+
+  // Vendedores ativos para o select de edição
+  const { data: sellers = [] } = trpc.consultora.listActiveSellers.useQuery();
 
   const { data: counts } = trpc.consultora.statusCounts.useQuery();
   const { data: toWriteItems = [], isLoading: loadingWrite } = trpc.consultora.toWrite.useQuery(
@@ -385,6 +443,17 @@ export default function AdminTrabalhos() {
 
   const isLoading = activeTab === "para_escrever" ? loadingWrite : activeTab === "pendente" ? loadingPending : loadingDone;
 
+  // Derivar tipos únicos da aba ativa
+  const activeItems = activeTab === "para_escrever" ? toWriteItems : activeTab === "pendente" ? pendingItems : doneItems;
+  const uniqueTypes = Array.from(new Set((activeItems as Array<{ productName: string }>).map(i => i.productName))).sort();
+
+  // Filtrar por tipo selecionado
+  const filteredToWrite = selectedType ? toWriteItems.filter((i: any) => i.productName === selectedType) : toWriteItems;
+  const filteredPending = selectedType ? pendingItems.filter((i: any) => i.productName === selectedType) : pendingItems;
+  const filteredDone = selectedType ? doneItems.filter((i: any) => i.productName === selectedType) : doneItems;
+
+  function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setDebouncedSearch(""); setSelectedType(null); }
+
   return (
     <DashboardLayout>
       <div ref={topRef} className="max-w-2xl mx-auto">
@@ -400,7 +469,7 @@ export default function AdminTrabalhos() {
         {/* Abas */}
         <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "oklch(0.92 0.008 65)" }}>
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSearch(""); setDebouncedSearch(""); }}
+            <button key={tab.id} onClick={() => handleTabChange(tab.id)}
               className="flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={activeTab === tab.id
                 ? { background: "white", color: "oklch(0.15 0.02 260)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.10)" }
@@ -419,6 +488,33 @@ export default function AdminTrabalhos() {
             </button>
           ))}
         </div>
+
+        {/* Filtro por tipo de trabalho (chips dinâmicos) */}
+        {!isLoading && uniqueTypes.length > 1 && (
+          <div className="flex gap-2 flex-wrap mb-3">
+            <button
+              onClick={() => setSelectedType(null)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={selectedType === null
+                ? { background: "oklch(0.60 0.13 65)", color: "white" }
+                : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+              Todos ({activeItems.length})
+            </button>
+            {uniqueTypes.map(type => {
+              const count = (activeItems as Array<{ productName: string }>).filter(i => i.productName === type).length;
+              return (
+                <button key={type}
+                  onClick={() => setSelectedType(selectedType === type ? null : type)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedType === type
+                    ? { background: "oklch(0.60 0.13 65)", color: "white" }
+                    : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+                  {type} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Busca */}
         <div className="relative mb-4">
@@ -442,24 +538,24 @@ export default function AdminTrabalhos() {
         ) : (
           <div className="space-y-3">
             {activeTab === "para_escrever" && (
-              toWriteItems.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum trabalho para escrever</p>
-                : toWriteItems.map((item: any) => (
-                  <ToWriteCard key={item.id} item={item} onMarkWritten={(id) => markWritten.mutate({ id })} />
+              filteredToWrite.length === 0
+                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" para escrever` : "Nenhum trabalho para escrever"}</p>
+                : filteredToWrite.map((item: any) => (
+                  <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={(id) => markWritten.mutate({ id })} />
                 ))
             )}
             {activeTab === "pendente" && (
-              pendingItems.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum trabalho pendente</p>
-                : pendingItems.map((item: any) => (
-                  <PendingCard key={item.id} item={item} onMarkDone={(id) => markDone.mutate({ id })} />
+              filteredPending.length === 0
+                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"}</p>
+                : filteredPending.map((item: any) => (
+                  <PendingCard key={item.id} item={item} sellers={sellers} onMarkDone={(id) => markDone.mutate({ id })} />
                 ))
             )}
             {activeTab === "feito" && (
-              doneItems.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum trabalho feito ainda</p>
-                : doneItems.map((item: any) => (
-                  <DoneCard key={item.id} item={item} onUndo={(id) => undoDone.mutate({ id })} />
+              filteredDone.length === 0
+                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"}</p>
+                : filteredDone.map((item: any) => (
+                  <DoneCard key={item.id} item={item} sellers={sellers} onUndo={(id) => undoDone.mutate({ id })} />
                 ))
             )}
           </div>

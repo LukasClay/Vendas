@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { sales } from "../../drizzle/schema";
-import { and, asc, desc, eq, like, ne, or } from "drizzle-orm";
+import { sales, users } from "../../drizzle/schema";
+import { and, asc, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 
 // Apenas consultoras e admins podem acessar estes endpoints
@@ -10,6 +10,12 @@ const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "consultora" && ctx.user.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito à consultora." });
   }
+  return next({ ctx });
+});
+
+// Apenas admins
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
   return next({ ctx });
 });
 
@@ -209,7 +215,30 @@ export const consultoraRouter = router({
       return { success: true };
     }),
 
-  // ─── Histórico de compras do cliente (sem valores) ────────────────────────────
+  // ADM: alterar vendedor de um trabalho
+  updateSeller: adminProcedure
+    .input(z.object({ saleId: z.number(), sellerId: z.number(), sellerName: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(sales)
+        .set({ sellerId: input.sellerId, sellerName: input.sellerName })
+        .where(eq(sales.id, input.saleId));
+      return { success: true };
+    }),
+
+  // ADM: listar vendedores ativos para o select
+  listActiveSellers: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = await db.select({ id: users.id, name: users.name, displayName: users.displayName })
+      .from(users)
+      .where(and(eq(users.role, "user"), eq(users.active, true), isNull(users.deletedAt)))
+      .orderBy(asc(users.name));
+    return rows.map(u => ({ id: u.id, name: u.displayName || u.name }));
+  }),
+
+  // ─── Histórico de compras do cliente (sem valores) ──────────────────────────────────────────────
   clientHistory: consultoraProcedure
     .input(z.object({ clientName: z.string().min(1) }))
     .query(async ({ input }) => {

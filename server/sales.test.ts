@@ -134,3 +134,36 @@ describe("auth.logout", () => {
     expect(cleared.length).toBe(1);
   });
 });
+
+describe("consultora.updateSeller (admin only)", () => {
+  it("throws FORBIDDEN for non-admin users", async () => {
+    const ctx = createContext("user");
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.consultora.updateSeller({ saleId: 1, sellerId: 1, sellerName: "Test" })).rejects.toThrow();
+  });
+
+  it("throws FORBIDDEN for consultora users", async () => {
+    const ctxConsultora: TrpcContext = {
+      user: { ...createContext("user").user!, role: "consultora" as any },
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: { clearCookie: () => {} } as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(ctxConsultora);
+    await expect(caller.consultora.updateSeller({ saleId: 1, sellerId: 1, sellerName: "Test" })).rejects.toThrow();
+  });
+});
+
+describe("consultora.listActiveSellers (admin only)", () => {
+  it("throws FORBIDDEN for non-admin users", async () => {
+    const ctx = createContext("user");
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.consultora.listActiveSellers()).rejects.toThrow();
+  });
+
+  it("allows admin to list active sellers", async () => {
+    const ctx = createContext("admin");
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.consultora.listActiveSellers();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});

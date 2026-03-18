@@ -12,7 +12,12 @@ export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
 
   // Se for objeto Date, serializar para ISO e extrair a parte da data
-  const str = d instanceof Date ? d.toISOString() : String(d);
+  let str: string;
+  try {
+    str = d instanceof Date ? d.toISOString() : String(d);
+  } catch {
+    return "—";
+  }
 
   // Extrai "YYYY-MM-DD" do início da string (funciona para ISO e para strings puras)
   const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);

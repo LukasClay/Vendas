@@ -209,3 +209,12 @@
 - [x] Backend: incluir sellerName nas procedures toWrite/pending/done da Consultora
 - [x] Frontend Consultora: exibir nome do vendedor nos cards de trabalho (Para Escrever, Pendentes, Feitos)
 - [x] Frontend ADM: painel Trabalhos com rota /admin/trabalhos e item no menu
+
+## Filtro por Tipo de Trabalho e Melhorias nos Cards
+- [x] Consultora: filtro por tipo de trabalho (chips dinâmicos) nas 3 abas — só mostra tipos que existem naquela aba
+- [x] Consultora: exibir nome do vendedor nos cards das 3 abas (Para Escrever, Pendentes, Feitos)
+- [x] ADM Trabalhos: filtro por tipo de trabalho (chips dinâmicos) nas 3 abas
+- [x] ADM Trabalhos: exibir nome do vendedor nos cards das 3 abas
+- [x] ADM Trabalhos: botão para alterar o vendedor de uma venda (select com vendedores ativos)
+- [x] Backend: procedure updateSeller + listActiveSellers (ADM) para alterar o vendedor de uma venda
+- [x] Testes: 32 testes passando (4 novos para updateSeller e listActiveSellers)

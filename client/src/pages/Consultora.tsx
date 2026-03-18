@@ -466,6 +466,7 @@ export default function ConsultoraPage() {
   const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -512,6 +513,15 @@ export default function ConsultoraPage() {
     onError: (e) => toast.error(e.message),
   });
 
+  // Derivar tipos únicos da aba ativa
+  const activeItems = activeTab === "para_escrever" ? toWriteItems : activeTab === "pendente" ? pendingItems : doneItems;
+  const uniqueTypes = Array.from(new Set((activeItems as Array<{ productName: string }>).map(i => i.productName))).sort();
+
+  // Filtrar por tipo selecionado
+  const filteredToWrite = selectedType ? toWriteItems.filter(i => i.productName === selectedType) : toWriteItems;
+  const filteredPending = selectedType ? pendingItems.filter(i => i.productName === selectedType) : pendingItems;
+  const filteredDone = selectedType ? doneItems.filter(i => i.productName === selectedType) : doneItems;
+
   function handleCopyAllToWrite() {
     if (toWriteItems.length === 0) { toast.error("Nenhum item para copiar"); return; }
     const text = toWriteItems.map((item, i) =>
@@ -542,6 +552,9 @@ export default function ConsultoraPage() {
 
   const isLoading = activeTab === "para_escrever" ? loadingWrite : activeTab === "pendente" ? loadingPending : loadingDone;
 
+  // Reset tipo ao trocar aba
+  function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setSelectedType(null); }
+
   return (
     <DashboardLayout>
       <div ref={topRef} className="max-w-2xl mx-auto">
@@ -558,7 +571,7 @@ export default function ConsultoraPage() {
         {/* Abas */}
         <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "oklch(0.92 0.008 65)" }}>
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSearch(""); }}
+            <button key={tab.id} onClick={() => handleTabChange(tab.id)}
               className="flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={activeTab === tab.id
                 ? { background: "white", color: "oklch(0.15 0.02 260)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.10)" }
@@ -578,6 +591,33 @@ export default function ConsultoraPage() {
           ))}
         </div>
 
+        {/* Filtro por tipo de trabalho (chips dinâmicos) */}
+        {!isLoading && uniqueTypes.length > 1 && (
+          <div className="flex gap-2 flex-wrap mb-3">
+            <button
+              onClick={() => setSelectedType(null)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={selectedType === null
+                ? { background: "oklch(0.60 0.13 65)", color: "white" }
+                : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+              Todos ({activeItems.length})
+            </button>
+            {uniqueTypes.map(type => {
+              const count = (activeItems as Array<{ productName: string }>).filter(i => i.productName === type).length;
+              return (
+                <button key={type}
+                  onClick={() => setSelectedType(selectedType === type ? null : type)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedType === type
+                    ? { background: "oklch(0.60 0.13 65)", color: "white" }
+                    : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+                  {type} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Busca */}
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.60 0.01 260)" }} />
@@ -593,12 +633,12 @@ export default function ConsultoraPage() {
         </div>
 
         {/* Botão Copiar Todos (só na aba Para Escrever) */}
-        {activeTab === "para_escrever" && toWriteItems.length > 0 && (
+        {activeTab === "para_escrever" && filteredToWrite.length > 0 && (
           <button onClick={handleCopyAllToWrite}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-4 active:scale-95 transition-transform text-white"
             style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
             <ClipboardList className="w-4 h-4" />
-            Copiar Todos os {toWriteItems.length} Trabalhos
+            Copiar Todos os {filteredToWrite.length} Trabalhos
           </button>
         )}
 
@@ -610,19 +650,19 @@ export default function ConsultoraPage() {
         ) : (
           <div className="space-y-3 pb-24">
             {activeTab === "para_escrever" && (
-              toWriteItems.length === 0
-                ? <EmptyState icon={<Pencil className="w-10 h-10" />} text="Nenhum trabalho para escrever" sub="Novos trabalhos vendidos aparecerão aqui" />
-                : toWriteItems.map(item => <ToWriteCard key={item.id} item={item} onMarkWritten={id => markWritten.mutate({ id })} />)
+              filteredToWrite.length === 0
+                ? <EmptyState icon={<Pencil className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" para escrever` : "Nenhum trabalho para escrever"} sub={selectedType ? "Tente outro filtro" : "Novos trabalhos vendidos aparecerão aqui"} />
+                : filteredToWrite.map(item => <ToWriteCard key={item.id} item={item} onMarkWritten={id => markWritten.mutate({ id })} />)
             )}
             {activeTab === "pendente" && (
-              pendingItems.length === 0
-                ? <EmptyState icon={<Hourglass className="w-10 h-10" />} text="Nenhum trabalho pendente" sub="Trabalhos marcados como escritos aparecerão aqui" />
-                : pendingItems.map(item => <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ id })} />)
+              filteredPending.length === 0
+                ? <EmptyState icon={<Hourglass className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"} sub={selectedType ? "Tente outro filtro" : "Trabalhos marcados como escritos aparecerão aqui"} />
+                : filteredPending.map(item => <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ id })} />)
             )}
             {activeTab === "feito" && (
-              doneItems.length === 0
-                ? <EmptyState icon={<BookCheck className="w-10 h-10" />} text="Nenhum trabalho feito ainda" sub="Trabalhos concluídos aparecerão aqui" />
-                : doneItems.map(item => <DoneCard key={item.id} item={item} onUndo={id => undoDone.mutate({ id })} />)
+              filteredDone.length === 0
+                ? <EmptyState icon={<BookCheck className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"} sub={selectedType ? "Tente outro filtro" : "Trabalhos concluídos aparecerão aqui"} />
+                : filteredDone.map(item => <DoneCard key={item.id} item={item} onUndo={id => undoDone.mutate({ id })} />)
             )}
           </div>
         )}
