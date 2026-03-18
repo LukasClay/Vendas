@@ -1,76 +1,29 @@
-import { and, asc, desc, eq, like, lte, gte, or, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { createPool, Pool } from "mysql2";
+import { and, asc, desc, eq, like, lte, gte, ne, or, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import { clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
 
-function createDbInstance() {
-  if (!process.env.DATABASE_URL) return null;
-  try {
-    _pool = createPool({
-      uri: process.env.DATABASE_URL,
-      waitForConnections: true,
-      connectionLimit: 20,       // mais conexões simultâneas
-      queueLimit: 50,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 5000,
-      connectTimeout: 10000,     // 10s timeout de conexão
-      idleTimeout: 60000,        // fecha conexões ociosas após 60s
-    });
-    _db = drizzle(_pool);
-    return _db;
-  } catch (error) {
-    console.warn("[Database] Failed to create pool:", error);
-    _db = null;
-    _pool = null;
-    return null;
-  }
-}
-
 export async function getDb() {
-  if (!_db) createDbInstance();
+  if (_db) return _db;
+  if (!process.env.DATABASE_URL) return null;
+  _pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 20,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    ssl: process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : undefined,
+  });
+  _db = drizzle(_pool);
   return _db;
 }
 
-// Reseta o pool em caso de erro de conexão (ex: após hibernação)
-export function resetDbPool() {
-  console.warn("[Database] Resetting connection pool...");
-  if (_pool) {
-    try { _pool.end(() => {}); } catch (_) {}
-  }
-  _db = null;
-  _pool = null;
-  createDbInstance();
-}
-
-// Wrapper que faz retry automático em caso de erro de conexão
-export async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (error: unknown) {
-      const isConnectionError = error instanceof Error && (
-        error.message.includes('ECONNRESET') ||
-        error.message.includes('ETIMEDOUT') ||
-        error.message.includes('ECONNREFUSED') ||
-        error.message.includes('PROTOCOL_CONNECTION_LOST') ||
-        error.message.includes('ER_CON_COUNT_ERROR') ||
-        error.message.includes('Cannot read properties of undefined') ||
-        error.message.includes('Failed query')
-      );
-      if (isConnectionError && attempt < retries) {
-        console.warn(`[Database] Connection error on attempt ${attempt + 1}, resetting pool and retrying...`);
-        resetDbPool();
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-        continue;
-      }
-      throw error;
-    }
-  }
-  throw new Error('Max retries exceeded');
+// Mantido para compatibilidade com chamadas existentes — Postgres é estável, sem retry necessário
+export async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  return await fn();
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -97,7 +50,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!values.lastSignedIn) values.lastSignedIn = new Date();
   if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db.insert(users).values(values)
+    .onConflictDoUpdate({ target: users.openId, set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {

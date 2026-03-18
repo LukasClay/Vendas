@@ -1,1 +1,0 @@
-ALTER TABLE `consultation_slots` ADD `cancelReason` text;

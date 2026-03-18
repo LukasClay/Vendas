@@ -1,1 +1,0 @@
-ALTER TABLE `sales` ADD `productCategory` enum('individual','promocao','coletivo') DEFAULT 'individual';

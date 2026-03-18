@@ -1,110 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1773673550940,
-      "tag": "0000_young_kylun",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1773673812591,
-      "tag": "0001_yellow_the_watchers",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1773676115975,
-      "tag": "0002_jazzy_dagger",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1773677826177,
-      "tag": "0003_useful_skrulls",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1773680415259,
-      "tag": "0004_parched_lilith",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1773757921074,
-      "tag": "0005_fixed_skaar",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1773760881718,
-      "tag": "0006_nappy_madrox",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1773763184957,
-      "tag": "0007_cynical_magik",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1773765268984,
-      "tag": "0008_bizarre_tarantula",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1773768649850,
-      "tag": "0009_serious_sharon_carter",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1773797110848,
-      "tag": "0010_soft_rattler",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "5",
-      "when": 1773801569050,
-      "tag": "0011_tired_mindworm",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "5",
-      "when": 1773804541460,
-      "tag": "0012_talented_zaladane",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "5",
-      "when": 1773805243132,
-      "tag": "0013_chubby_harpoon",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "5",
-      "when": 1773809578092,
-      "tag": "0014_thankful_black_panther",
+      "version": "7",
+      "when": 1773872608022,
+      "tag": "0000_watery_fat_cobra",
       "breakpoints": true
     }
   ]
