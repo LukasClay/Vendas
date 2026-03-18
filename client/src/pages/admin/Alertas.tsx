@@ -41,7 +41,7 @@ function UrgencyChip({ daysRemaining, isOverdue }: { daysRemaining: number; isOv
 
 export default function AdminAlertas() {
   const { data: alerts = [], isLoading, refetch, isFetching } = trpc.consultora.alerts.useQuery(undefined, {
-    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 min
+    staleTime: 3 * 60 * 1000, // dados ficam frescos por 3 min; usuário pode forçar atualização manualmente
   });
 
   const overdueCount = alerts.filter((a: any) => a.isOverdue).length;

@@ -38,7 +38,7 @@ export default function AdminDashboard() {
   const topClients = reportData?.topClients ?? [];
 
   // Trabalhos pendentes para o painel de urgência (1 query em vez de 2)
-  const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(undefined, { refetchInterval: 60000 });
+  const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(undefined, { staleTime: 3 * 60 * 1000 });
   const pendingWorks: any[] = worksSummary?.pending ?? [];
   const toWriteWorks: any[] = worksSummary?.toWrite ?? [];
 

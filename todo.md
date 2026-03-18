@@ -290,3 +290,14 @@
 - [x] Query worksSummary: retorna toWrite + pending em paralelo (Promise.all) para o Dashboard ADM
 - [x] statusCounts otimizado: GROUP BY no banco em vez de SELECT * + contar em JS
 - [x] Dashboard ADM: usa worksSummary (1 query) em vez de consultora.pending + consultora.toWrite (2 queries)
+
+## Correção de Lentidão (Causa Raiz: refetchInterval + dynamic imports)
+- [x] Identificado: refetchInterval: 60000 no Dashboard ADM causava query ao banco a cada 60s
+- [x] Identificado: refetchInterval: 30000 no statusCounts da Consultora causava query a cada 30s
+- [x] Identificado: refetchInterval: 5min nas páginas Alertas (ADM e Consultora)
+- [x] Identificado: dynamic imports dentro de sendPushToRoles causavam overhead desnecessário
+- [x] Identificado: caracteres unicode box-drawing (─) no consultora.ts causavam erro de compilação esbuild
+- [x] Corrigido: todos os refetchInterval removidos — substituídos por staleTime (dados ficam frescos por 2-3min, sem polling automático)
+- [x] Corrigido: webpush.ts com imports estáticos e envio paralelo com Promise.allSettled
+- [x] Corrigido: caracteres unicode box-drawing no consultora.ts (7 linhas)
+- [x] 32 testes passando

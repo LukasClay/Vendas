@@ -495,7 +495,7 @@ export default function ConsultoraPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, { refetchInterval: 30000 });
+  const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, { staleTime: 2 * 60 * 1000 });
 
   const { data: toWriteItems = [], isLoading: loadingWrite } = trpc.consultora.toWrite.useQuery(
     { search: debouncedSearch || undefined }, { enabled: activeTab === "para_escrever" }
@@ -507,7 +507,7 @@ export default function ConsultoraPage() {
     { search: debouncedSearch || undefined }, { enabled: activeTab === "feito" }
   );
   const { data: alertItems = [], isLoading: loadingAlerts, refetch: refetchAlerts, isFetching: isFetchingAlerts } = trpc.consultora.alerts.useQuery(
-    undefined, { enabled: activeTab === "alertas", refetchInterval: 5 * 60 * 1000 }
+    undefined, { enabled: activeTab === "alertas", staleTime: 3 * 60 * 1000 }
   );
 
   const invalidateAll = () => {

@@ -38,7 +38,7 @@ export const consultoraRouter = router({
       return counts;
     }),
 
-  // ─── Aba 1: Para Escrever ─────────────────────────────────────────────────────
+  // Aba 1: Para Escrever
   toWrite: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
     .query(async ({ input }) => {
@@ -93,7 +93,7 @@ export const consultoraRouter = router({
       });
     }),
 
-  // ─── Aba 2: Pendentes (com prazo e urgência) ────────────────────────────────────────────────────────────────────────────────────
+  // Aba 2: Pendentes (com prazo e urgência)
   pending: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
     .query(async ({ input }) => {
@@ -147,7 +147,7 @@ export const consultoraRouter = router({
         }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
     }),
 
-  // ─── Aba 3: Feitos (mais recentes no topo para fácil reversão) ────────────────
+  // Aba 3: Feitos (mais recentes no topo para fácil reversão)
   done: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
     .query(async ({ input }) => {
@@ -193,7 +193,7 @@ export const consultoraRouter = router({
       }));
     }),
 
-  // ─── Transições de status ─────────────────────────────────────────────────────
+  // Transições de status
 
   // Para Escrever → Pendente
   markWritten: consultoraProcedure
@@ -266,7 +266,7 @@ export const consultoraRouter = router({
     return rows.map(u => ({ id: u.id, name: u.displayName || u.name || u.role }));
   }),
 
-  // ─── Histórico de compras do cliente (sem valores) ──────────────────────────────────────────────
+  // Histórico de compras do cliente (sem valores)
   clientHistory: consultoraProcedure
     .input(z.object({ clientName: z.string().min(1) }))
     .query(async ({ input }) => {
@@ -305,7 +305,7 @@ export const consultoraRouter = router({
       };
     }),
 
-  // ─── Resumo de trabalhos para o Dashboard (toWrite + pending em paralelo) ──────
+  // Resumo de trabalhos para o Dashboard (toWrite + pending em paralelo)
   worksSummary: consultoraProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -342,7 +342,7 @@ export const consultoraRouter = router({
     };
   }),
 
-  // ─── Aba Alertas: trabalhos urgentes e atrasados (Para Escrever + Pendentes) ─
+  // Aba Alertas: trabalhos urgentes e atrasados (Para Escrever + Pendentes)
    alerts: consultoraProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
