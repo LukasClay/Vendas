@@ -16,6 +16,10 @@ export function useAuth(options?: UseAuthOptions) {
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    // 5 minutos de cache — todas as instâncias de useAuth() na mesma página
+    // (AuthGuard x2, DashboardLayout x2, página) compartilham uma única
+    // requisição em vez de disparar 3–5 chamadas simultâneas ao servidor.
+    staleTime: 5 * 60 * 1000,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -41,11 +45,9 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
+  // ATENÇÃO: NÃO colocar efeitos colaterais (localStorage, fetch, etc.) dentro
+  // do useMemo — isso causa re-renders em cascata que disparam novas requisições.
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
@@ -67,7 +69,7 @@ export function useAuth(options?: UseAuthOptions) {
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,

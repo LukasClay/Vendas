@@ -308,3 +308,9 @@
 - [x] Adicionar manualChunks no vite.config.ts (react-core, trpc-query, radix-ui, charts)
 - [x] Remover @import Google Fonts duplicado do index.css (já estava no index.html)
 - [x] Bundle inicial: de 1.9 MB para 114 kB (redução de 94%)
+
+## Correção 429 Too Many Requests (diagnóstico externo)
+- [x] staleTime: 5min adicionado no trpc.auth.me.useQuery (useAuth.ts) — instâncias simultâneas compartilham 1 request
+- [x] localStorage.setItem() removido do useMemo (useAuth.ts) — causava re-renders em cascata
+- [x] refetchInterval removido do Dashboard e Consultora (feito anteriormente)
+- [x] QueryClient global com staleTime: 30s e refetchOnWindowFocus: false (feito anteriormente)
