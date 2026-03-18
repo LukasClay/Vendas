@@ -52,21 +52,21 @@ function useCopy() {
 function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isOverdue: boolean }) {
   if (isOverdue) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "oklch(0.95 0.04 25)", color: "oklch(0.45 0.22 25)" }}>
+      style={{ background: "#fde8e8", color: "#c0392b" }}>
       <AlertTriangle className="w-3 h-3" />
       {Math.abs(daysRemaining)}d atrasado
     </span>
   );
   if (daysRemaining <= 1) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "oklch(0.96 0.05 60)", color: "oklch(0.50 0.18 60)" }}>
+      style={{ background: "#fef3e2", color: "#b7770d" }}>
       <Clock className="w-3 h-3" />
       Urgente
     </span>
   );
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.08 65)" }}>
+      style={{ background: "var(--accent)", color: "#7a5a20" }}>
       <Clock className="w-3 h-3" />
       {daysRemaining}d restantes
     </span>
@@ -112,7 +112,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
     return (
       <button onClick={handleOpen}
         className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all active:scale-95"
-        style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
+        style={{ background: "#eaeaf8", color: "#4a4a80" }}>
         <UserCog className="w-3 h-3" />
         {currentSellerName || "Sem vendedor"}
       </button>
@@ -123,7 +123,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
     <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
       <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
         className="text-xs px-2 py-1 rounded-lg outline-none"
-        style={{ background: "white", border: "1.5px solid oklch(0.88 0.012 65)", color: "oklch(0.15 0.02 260)" }}>
+        style={{ background: "white", border: "1.5px solid var(--border)", color: "var(--foreground)" }}>
         <option value="">Selecionar...</option>
         {sellers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
       </select>
@@ -134,12 +134,12 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
         updateSeller.mutate({ saleId, sellerId: seller.id, sellerName: seller.name ?? "" });
       }} disabled={updateSeller.isPending}
         className="text-xs px-2 py-1 rounded-lg font-semibold active:scale-95 text-white"
-        style={{ background: "oklch(0.55 0.16 65)" }}>
+        style={{ background: "#c17f24" }}>
         {updateSeller.isPending ? "..." : "Salvar"}
       </button>
       <button onClick={handleCancel}
         className="text-xs px-2 py-1 rounded-lg active:scale-95"
-        style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+        style={{ background: "var(--border)", color: "#2a2a40" }}>
         <X className="w-3 h-3" />
       </button>
     </div>
@@ -159,7 +159,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
   const CopyBtn = ({ text, field }: { text: string; field: string }) => (
     <button onClick={() => copy(text, `${item.id}-${field}`)}
       className="p-2 rounded-lg active:scale-95 shrink-0 transition-all"
-      style={{ background: copiedKey === `${item.id}-${field}` ? "oklch(0.92 0.06 160)" : "oklch(0.92 0.008 65)", color: copiedKey === `${item.id}-${field}` ? "oklch(0.40 0.14 160)" : "oklch(0.45 0.10 65)" }}>
+      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "var(--border)", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
       {copiedKey === `${item.id}-${field}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
     </button>
   );
@@ -167,10 +167,10 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
   const isOverdue = item.isOverdue ?? false;
   const isUrgent = item.isUrgent ?? false;
   const daysRemaining = item.daysRemaining ?? 7;
-  const borderColor = isOverdue ? "oklch(0.80 0.12 25)" : isUrgent ? "oklch(0.82 0.10 55)" : "oklch(0.90 0.012 65)";
+  const borderColor = isOverdue ? "#e88080" : isUrgent ? "#e8b060" : "#e0d8cc";
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${borderColor}`, boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${borderColor}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       {/* Cabeçalho clicavel para expandir */}
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
@@ -179,34 +179,34 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
               <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
             </div>
             <div className="flex items-center gap-2 flex-wrap" >
-              <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
+              <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-              <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
-              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
-              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+              <p className="text-xs font-medium" style={{ color: "#9a6e1a" }}>{item.productName}</p>
+              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
             </div>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
-          <div className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
+          <div className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "var(--muted-foreground)" }}>
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.93 0.008 65)" }}>
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "#ede8e0" }}>
           <div className="space-y-2 pt-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 shrink-0" style={{ color: "oklch(0.60 0.13 65)" }} />
-              <span className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>Nasc: {formatBirthDate(item.clientBirthDate)}</span>
+              <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+              <span className="text-sm" style={{ color: "var(--foreground)" }}>Nasc: {formatBirthDate(item.clientBirthDate)}</span>
             </div>
             {item.clientPhone && (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Phone className="w-4 h-4 shrink-0" style={{ color: "oklch(0.60 0.13 65)" }} />
-                  <span className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientPhone}</span>
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>{item.clientPhone}</span>
                 </div>
                 <CopyBtn text={item.clientPhone} field="phone" />
               </div>
@@ -214,10 +214,10 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
             {item.notes && (
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.13 65)" }} />
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
                   <div className="min-w-0">
-                    <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>Observação</p>
-                    <p className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.notes}</p>
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Observação</p>
+                    <p className="text-sm" style={{ color: "var(--foreground)" }}>{item.notes}</p>
                   </div>
                 </div>
                 <CopyBtn text={item.notes} field="notes" />
@@ -227,7 +227,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
               const all = [`Nome: ${item.clientName}`, `Nascimento: ${formatBirthDate(item.clientBirthDate)}`, item.clientPhone ? `Telefone: ${item.clientPhone}` : null, item.notes ? `Obs: ${item.notes}` : null].filter(Boolean).join("\n");
               copy(all, `${item.id}-all`);
             }} className="w-full py-3 rounded-xl text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              style={{ background: copiedKey === `${item.id}-all` ? "oklch(0.92 0.06 160)" : "oklch(0.94 0.02 65)", color: copiedKey === `${item.id}-all` ? "oklch(0.40 0.14 160)" : "oklch(0.35 0.05 65)", border: "1px solid oklch(0.88 0.012 65)" }}>
+              style={{ background: copiedKey === `${item.id}-all` ? "#d4f5e9" : "var(--accent)", color: copiedKey === `${item.id}-all` ? "#1a7a4a" : "#6b4c18", border: "1px solid var(--border)" }}>
               {copiedKey === `${item.id}-all` ? <><Check className="w-4 h-4" /> Copiado!</> : <><ClipboardList className="w-4 h-4" /> Copiar Todos os Dados</>}
             </button>
           </div>
@@ -235,21 +235,21 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
           {!confirming ? (
             <button onClick={() => setConfirming(true)}
               className="w-full py-4 rounded-2xl text-white font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              style={{ background: "linear-gradient(135deg, oklch(0.55 0.16 65), oklch(0.62 0.17 70))" }}>
+              style={{ background: "linear-gradient(135deg, #c17f24, #d4932a)" }}>
               <Pencil className="w-5 h-5" /> Marcar como Escrito
             </button>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-center font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Confirmar que foi escrito?</p>
+              <p className="text-sm text-center font-medium" style={{ color: "#2a2a40" }}>Confirmar que foi escrito?</p>
               <div className="flex gap-2">
                 <button onClick={() => { onMarkWritten(item.id); setConfirming(false); }}
                   className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "oklch(0.55 0.16 65)" }}>
+                  style={{ background: "#c17f24" }}>
                   <Check className="w-4 h-4" /> Sim
                 </button>
                 <button onClick={() => setConfirming(false)}
                   className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                  style={{ background: "var(--border)", color: "#2a2a40" }}>
                   <X className="w-4 h-4" /> Cancelar
                 </button>
               </div>
@@ -275,13 +275,13 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
   const CopyBtn = ({ text, field }: { text: string; field: string }) => (
     <button onClick={() => copy(text, `${item.id}-${field}`)}
       className="p-2 rounded-lg active:scale-95 shrink-0 transition-all"
-      style={{ background: copiedKey === `${item.id}-${field}` ? "oklch(0.92 0.06 160)" : "oklch(0.92 0.008 65)", color: copiedKey === `${item.id}-${field}` ? "oklch(0.40 0.14 160)" : "oklch(0.45 0.10 65)" }}>
+      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "var(--border)", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
       {copiedKey === `${item.id}-${field}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
     </button>
   );
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${item.isOverdue ? "oklch(0.85 0.08 25)" : item.isUrgent ? "oklch(0.88 0.08 60)" : "oklch(0.90 0.012 65)"}`, boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${item.isOverdue ? "#f0a0a0" : item.isUrgent ? "#f0d090" : "#e0d8cc"}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       {/* Cabeçalho clicavel para expandir */}
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
@@ -290,34 +290,34 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
               <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
             </div>
             <div className="flex items-center gap-2 flex-wrap" >
-              <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
+              <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-              <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
-              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
-              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+              <p className="text-xs font-medium" style={{ color: "#9a6e1a" }}>{item.productName}</p>
+              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
             </div>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
-          <div className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
+          <div className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "var(--muted-foreground)" }}>
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.93 0.008 65)" }}>
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "#ede8e0" }}>
           <div className="space-y-2 pt-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 shrink-0" style={{ color: "oklch(0.60 0.13 65)" }} />
-              <span className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>Nasc: {formatBirthDate(item.clientBirthDate)}</span>
+              <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+              <span className="text-sm" style={{ color: "var(--foreground)" }}>Nasc: {formatBirthDate(item.clientBirthDate)}</span>
             </div>
             {item.clientPhone && (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Phone className="w-4 h-4 shrink-0" style={{ color: "oklch(0.60 0.13 65)" }} />
-                  <span className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientPhone}</span>
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>{item.clientPhone}</span>
                 </div>
                 <CopyBtn text={item.clientPhone} field="phone" />
               </div>
@@ -325,8 +325,8 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
             {item.notes && (
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.13 65)" }} />
-                  <p className="text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.notes}</p>
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
+                  <p className="text-sm" style={{ color: "var(--foreground)" }}>{item.notes}</p>
                 </div>
                 <CopyBtn text={item.notes} field="notes" />
               </div>
@@ -337,27 +337,27 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
             <div className="space-y-2">
               <button onClick={() => setConfirming(true)}
                 className="w-full py-4 rounded-2xl text-white font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                style={{ background: "linear-gradient(135deg, oklch(0.45 0.18 160), oklch(0.55 0.20 165))" }}>
+                style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
                 <CheckCircle2 className="w-5 h-5" /> Marcar como Feito
               </button>
               <button onClick={() => onUndoWritten(item.id)}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
-                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.08 65)" }}>
+                style={{ background: "var(--accent)", color: "#7a5a20" }}>
                 <RotateCcw className="w-3.5 h-3.5" /> Voltar para Para Escrever
               </button>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-center font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Confirmar que o trabalho foi feito?</p>
+              <p className="text-sm text-center font-medium" style={{ color: "#2a2a40" }}>Confirmar que o trabalho foi feito?</p>
               <div className="flex gap-2">
                 <button onClick={() => { onMarkDone(item.id); setConfirming(false); }}
                   className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "oklch(0.50 0.18 160)" }}>
+                  style={{ background: "#1a8a50" }}>
                   <Check className="w-4 h-4" /> Sim
                 </button>
                 <button onClick={() => setConfirming(false)}
                   className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                  style={{ background: "var(--border)", color: "#2a2a40" }}>
                   <X className="w-4 h-4" /> Cancelar
                 </button>
               </div>
@@ -378,23 +378,23 @@ function DoneCard({ item, onUndo, sellers }: {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: "white", border: "1.5px solid oklch(0.90 0.012 65)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
+    <div className="rounded-2xl p-4" style={{ background: "white", border: "1.5px solid #e0d8cc", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
+            <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
             <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
-            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
-            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+            <p className="text-xs font-medium" style={{ color: "#9a6e1a" }}>{item.productName}</p>
+            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
+          <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
             Venda: {formatDate(item.saleDate)} · Feito: {formatDate(item.completedAt)}
           </p>
         </div>
-        <span className="shrink-0 px-2 py-1 rounded-full text-xs font-semibold" style={{ background: "oklch(0.92 0.06 160)", color: "oklch(0.35 0.14 160)" }}>
+        <span className="shrink-0 px-2 py-1 rounded-full text-xs font-semibold" style={{ background: "#d4f5e9", color: "#1a7a4a" }}>
           <CheckCircle2 className="w-3 h-3 inline mr-1" />Feito
         </span>
       </div>
@@ -402,19 +402,19 @@ function DoneCard({ item, onUndo, sellers }: {
       {!confirming ? (
         <button onClick={() => setConfirming(true)}
           className="mt-3 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
-          style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.08 65)" }}>
+          style={{ background: "var(--accent)", color: "#7a5a20" }}>
           <RotateCcw className="w-3.5 h-3.5" /> Desfazer
         </button>
       ) : (
         <div className="mt-3 flex gap-2">
           <button onClick={() => { onUndo(item.id); setConfirming(false); }}
             className="flex-1 py-2 rounded-xl text-white text-sm font-semibold active:scale-95 flex items-center justify-center gap-1.5"
-            style={{ background: "oklch(0.55 0.16 65)" }}>
+            style={{ background: "#c17f24" }}>
             <RotateCcw className="w-3.5 h-3.5" /> Confirmar
           </button>
           <button onClick={() => setConfirming(false)}
             className="flex-1 py-2 rounded-xl text-sm font-semibold active:scale-95 flex items-center justify-center gap-1.5"
-            style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+            style={{ background: "var(--border)", color: "#2a2a40" }}>
             <X className="w-3.5 h-3.5" /> Cancelar
           </button>
         </div>
@@ -518,28 +518,28 @@ export default function AdminTrabalhos() {
     <DashboardLayout>
       <div ref={topRef} className="max-w-2xl mx-auto">
         <div className="mb-5">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
             Trabalhos
           </h1>
-          <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
             Visão geral de todos os trabalhos espirituais
           </p>
         </div>
 
         {/* Abas */}
-        <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "oklch(0.92 0.008 65)" }}>
+        <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "var(--border)" }}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => handleTabChange(tab.id)}
               className="flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={activeTab === tab.id
-                ? { background: "white", color: "oklch(0.15 0.02 260)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.10)" }
-                : { color: "oklch(0.52 0.015 260)" }
+                ? { background: "white", color: "var(--foreground)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
+                : { color: "var(--muted-foreground)" }
               }>
               <div className="flex items-center gap-1">
                 {tab.icon}
                 {tab.count > 0 && (
                   <span className="min-w-[18px] h-[18px] rounded-full text-xs flex items-center justify-center font-bold px-1"
-                    style={{ background: activeTab === tab.id ? (tab.id === "para_escrever" ? "oklch(0.60 0.13 65)" : tab.id === "pendente" ? "oklch(0.55 0.20 25)" : "oklch(0.45 0.18 160)") : "oklch(0.75 0.05 65)", color: "white" }}>
+                    style={{ background: activeTab === tab.id ? (tab.id === "para_escrever" ? "var(--primary)" : tab.id === "pendente" ? "#c0392b" : "#1a7a4a") : "#b8962e", color: "white" }}>
                     {tab.count}
                   </span>
                 )}
@@ -560,8 +560,8 @@ export default function AdminTrabalhos() {
                   onClick={() => { setSelectedCategory(cat.key); setSelectedType(null); }}
                   className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
                   style={selectedCategory === cat.key
-                    ? { background: "oklch(0.45 0.15 260)", color: "white" }
-                    : { background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)" }}>
+                    ? { background: "#4040b0", color: "white" }
+                    : { background: "#e8e8f8", color: "#4040b0" }}>
                   {cat.label} ({count})
                 </button>
               );
@@ -576,8 +576,8 @@ export default function AdminTrabalhos() {
               onClick={() => setSelectedType(null)}
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
               style={selectedType === null
-                ? { background: "oklch(0.60 0.13 65)", color: "white" }
-                : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+                ? { background: "var(--primary)", color: "white" }
+                : { background: "var(--border)", color: "#6b5020" }}>
               Todos ({categoryFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
@@ -587,8 +587,8 @@ export default function AdminTrabalhos() {
                   onClick={() => setSelectedType(selectedType === type ? null : type)}
                   className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
                   style={selectedType === type
-                    ? { background: "oklch(0.60 0.13 65)", color: "white" }
-                    : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
+                    ? { background: "var(--primary)", color: "white" }
+                    : { background: "var(--border)", color: "#6b5020" }}>
                   {type} ({count})
                 </button>
               );
@@ -598,13 +598,14 @@ export default function AdminTrabalhos() {
 
         {/* Busca */}
         <div className="relative mb-4">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.60 0.01 260)" }} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
           <input type="text" value={search} onChange={e => handleSearch(e.target.value)}
             placeholder="Buscar por nome ou trabalho..."
+            autoComplete="off"
             className="w-full pl-10 pr-10 py-3.5 rounded-xl outline-none text-sm"
-            style={{ background: "white", border: "1.5px solid oklch(0.88 0.012 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }} />
+            style={{ background: "white", border: "1.5px solid var(--border)", color: "var(--foreground)", fontSize: "16px" }} />
           {search && (
-            <button onClick={() => { setSearch(""); setDebouncedSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: "oklch(0.60 0.01 260)" }}>
+            <button onClick={() => { setSearch(""); setDebouncedSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: "var(--muted-foreground)" }}>
               <X className="w-4 h-4" />
             </button>
           )}
@@ -613,27 +614,27 @@ export default function AdminTrabalhos() {
         {/* Lista */}
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <div className="w-8 h-8 rounded-full border-2 animate-spin" style={{ borderColor: "oklch(0.88 0.012 65)", borderTopColor: "oklch(0.60 0.13 65)" }} />
+            <div className="w-8 h-8 rounded-full border-2 animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--primary)" }} />
           </div>
         ) : (
           <div className="space-y-3">
             {activeTab === "para_escrever" && (
               filteredToWrite.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" para escrever` : "Nenhum trabalho para escrever"}</p>
+                ? <p className="text-center py-12 text-sm" style={{ color: "var(--muted-foreground)" }}>{selectedType ? `Nenhum "${selectedType}" para escrever` : "Nenhum trabalho para escrever"}</p>
                 : filteredToWrite.map((item: any) => (
                   <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={(id) => markWritten.mutate({ id })} />
                 ))
             )}
             {activeTab === "pendente" && (
               filteredPending.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"}</p>
+                ? <p className="text-center py-12 text-sm" style={{ color: "var(--muted-foreground)" }}>{selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"}</p>
                 : filteredPending.map((item: any) => (
                   <PendingCard key={item.id} item={item} sellers={sellers} onMarkDone={(id) => markDone.mutate({ id })} onUndoWritten={(id) => undoWritten.mutate({ id })} />
                 ))
             )}
             {activeTab === "feito" && (
               filteredDone.length === 0
-                ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"}</p>
+                ? <p className="text-center py-12 text-sm" style={{ color: "var(--muted-foreground)" }}>{selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"}</p>
                 : filteredDone.map((item: any) => (
                   <DoneCard key={item.id} item={item} sellers={sellers} onUndo={(id) => undoDone.mutate({ id })} />
                 ))

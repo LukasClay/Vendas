@@ -144,11 +144,16 @@ export default function NovaVenda() {
     let attachmentName: string | undefined;
 
     if (file) {
-      const buffer = await file.arrayBuffer();
-      const uint8 = new Uint8Array(buffer);
-      let binary = '';
-      for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
-      attachmentBase64 = btoa(binary);
+      // FileReader é nativo e não bloqueia a UI thread — seguro em celulares com pouca RAM
+      attachmentBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]); // extrai só o base64, sem o prefixo data:...
+        };
+        reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
       attachmentMime = file.type;
       attachmentName = file.name;
     }
