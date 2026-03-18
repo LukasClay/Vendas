@@ -241,3 +241,7 @@
 
 ## UX Cards de Trabalhos
 - [x] ADM e Consultora: card inteiro clicável para expandir (não só a setinha), badge do vendedor continua clicável separadamente
+
+## Refactor Sub-filtro de Categoria
+- [x] ADM Trabalhos: 2 níveis separados — nível 1 (categoria: Todos/Individual/Promoção/Coletivo) + nível 2 (tipo de trabalho dentro da categoria selecionada)
+- [x] Consultora: mesma lógica de 2 níveis

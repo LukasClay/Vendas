@@ -641,10 +641,10 @@ export default function ConsultoraPage() {
               style={selectedType === null
                 ? { background: "oklch(0.60 0.13 65)", color: "white" }
                 : { background: "oklch(0.92 0.008 65)", color: "oklch(0.40 0.05 65)" }}>
-              Todos ({activeItems.length})
+              Todos ({categoryFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
-              const count = (activeItems as Array<{ productName: string }>).filter(i => i.productName === type).length;
+              const count = (categoryFilteredItems as Array<{ productName: string }>).filter(i => i.productName === type).length;
               return (
                 <button key={type}
                   onClick={() => setSelectedType(selectedType === type ? null : type)}
