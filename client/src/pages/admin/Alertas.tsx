@@ -54,7 +54,7 @@ export default function AdminAlertas() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/admin/dashboard")}
+          <button onClick={() => navigate("/admin")}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-all active:scale-95 hover:opacity-80"
             style={{ background: "oklch(0.93 0.012 260)", color: "oklch(0.40 0.08 260)" }}>
             <ArrowLeft className="w-4 h-4" />
