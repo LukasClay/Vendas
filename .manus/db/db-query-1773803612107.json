@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE sales SET productName = 'Amarração' WHERE productName = 'Amarração promoção';\nUPDATE sales SET productName = 'Amarração' WHERE productName = 'Amarração coletivo';\nUPDATE sales SET productName = 'Limpeza' WHERE productName = 'Limpeza promoção';\nUPDATE sales SET productName = 'Limpeza' WHERE productName = 'Limpeza coletivo';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nUPDATE sales SET productName = 'Amarração' WHERE productName = 'Amarração promoção';\nUPDATE sales SET productName = 'Amarração' WHERE productName = 'Amarração coletivo';\nUPDATE sales SET productName = 'Limpeza' WHERE productName = 'Limpeza promoção';\nUPDATE sales SET productName = 'Limpeza' WHERE productName = 'Limpeza coletivo';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 99
+}

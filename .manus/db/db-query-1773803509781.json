@@ -1,0 +1,64 @@
+{
+  "query": "SELECT id, name, category, active FROM products ORDER BY category, name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, category, active FROM products ORDER BY category, name;",
+  "rows": [
+    {
+      "id": "60001",
+      "name": "Amarração",
+      "category": "individual",
+      "active": "1"
+    },
+    {
+      "id": "1",
+      "name": "Broxamento",
+      "category": "individual",
+      "active": "1"
+    },
+    {
+      "id": "30001",
+      "name": "Consulta Cartas",
+      "category": "individual",
+      "active": "1"
+    },
+    {
+      "id": "60002",
+      "name": "Limpeza",
+      "category": "individual",
+      "active": "1"
+    },
+    {
+      "id": "60003",
+      "name": "Limpeza",
+      "category": "individual",
+      "active": "0"
+    },
+    {
+      "id": "60004",
+      "name": "Amarração promoção",
+      "category": "promocao",
+      "active": "1"
+    },
+    {
+      "id": "60006",
+      "name": "Limpeza promoção",
+      "category": "promocao",
+      "active": "1"
+    },
+    {
+      "id": "60005",
+      "name": "Amarração coletivo",
+      "category": "coletivo",
+      "active": "1"
+    },
+    {
+      "id": "60007",
+      "name": "Limpeza coletivo",
+      "category": "coletivo",
+      "active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcategory\tactive\n60001\tAmarração\tindividual\t1\n1\tBroxamento\tindividual\t1\n30001\tConsulta Cartas\tindividual\t1\n60002\tLimpeza\tindividual\t1\n60003\tLimpeza\tindividual\t0\n60004\tAmarração promoção\tpromocao\t1\n60006\tLimpeza promoção\tpromocao\t1\n60005\tAmarração coletivo\tcoletivo\t1\n60007\tLimpeza coletivo\tcoletivo\t1\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

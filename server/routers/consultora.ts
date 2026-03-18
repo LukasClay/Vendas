@@ -253,6 +253,18 @@ export const consultoraRouter = router({
       return { success: true };
     }),
 
+  // ADM: Pendente → Para Escrever (reversão de erro)
+  undoWritten: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(sales)
+        .set({ workStatus: "para_escrever", writtenAt: undefined })
+        .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
+      return { success: true };
+    }),
+
   // ADM: alterar vendedor de um trabalho
   updateSeller: adminProcedure
     .input(z.object({ saleId: z.number(), sellerId: z.number(), sellerName: z.string() }))

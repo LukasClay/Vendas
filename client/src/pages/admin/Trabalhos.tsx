@@ -254,9 +254,10 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
 }
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
-function PendingCard({ item, onMarkDone, sellers }: {
+function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
   item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; writtenAt: Date | string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
   onMarkDone: (id: number) => void;
+  onUndoWritten: (id: number) => void;
   sellers: Seller[];
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -325,11 +326,18 @@ function PendingCard({ item, onMarkDone, sellers }: {
           </div>
 
           {!confirming ? (
-            <button onClick={() => setConfirming(true)}
-              className="w-full py-4 rounded-2xl text-white font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              style={{ background: "linear-gradient(135deg, oklch(0.45 0.18 160), oklch(0.55 0.20 165))" }}>
-              <CheckCircle2 className="w-5 h-5" /> Marcar como Feito
-            </button>
+            <div className="space-y-2">
+              <button onClick={() => setConfirming(true)}
+                className="w-full py-4 rounded-2xl text-white font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg, oklch(0.45 0.18 160), oklch(0.55 0.20 165))" }}>
+                <CheckCircle2 className="w-5 h-5" /> Marcar como Feito
+              </button>
+              <button onClick={() => onUndoWritten(item.id)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.08 65)" }}>
+                <RotateCcw className="w-3.5 h-3.5" /> Voltar para Para Escrever
+              </button>
+            </div>
           ) : (
             <div className="space-y-2">
               <p className="text-sm text-center font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Confirmar que o trabalho foi feito?</p>
@@ -463,6 +471,11 @@ export default function AdminTrabalhos() {
 
   const undoDone = trpc.consultora.undoDone.useMutation({
     onSuccess: () => { toast.success("Voltou para Pendentes!"); invalidateAll(); },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const undoWritten = trpc.consultora.undoWritten.useMutation({
+    onSuccess: () => { toast.success("Voltou para Para Escrever!"); invalidateAll(); },
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
@@ -607,7 +620,7 @@ export default function AdminTrabalhos() {
               filteredPending.length === 0
                 ? <p className="text-center py-12 text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>{selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"}</p>
                 : filteredPending.map((item: any) => (
-                  <PendingCard key={item.id} item={item} sellers={sellers} onMarkDone={(id) => markDone.mutate({ id })} />
+                  <PendingCard key={item.id} item={item} sellers={sellers} onMarkDone={(id) => markDone.mutate({ id })} onUndoWritten={(id) => undoWritten.mutate({ id })} />
                 ))
             )}
             {activeTab === "feito" && (

@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, name, category FROM products ORDER BY category, name;\nSELECT DISTINCT productName, productCategory FROM sales ORDER BY productCategory, productName;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, category FROM products ORDER BY category, name;\nSELECT DISTINCT productName, productCategory FROM sales ORDER BY productCategory, productName;",
+  "returncode": 1,
+  "logs": [
+    "id\tname\tcategory",
+    "60001\tAmarração\tindividual",
+    "1\tBroxamento\tindividual",
+    "30001\tConsulta Cartas\tindividual",
+    "60002\tLimpeza\tindividual",
+    "60003\tLimpeza\tindividual",
+    "60004\tAmarração\tpromocao",
+    "60006\tLimpeza\tpromocao",
+    "60005\tAmarração\tcoletivo",
+    "60007\tLimpeza\tcoletivo",
+    "ERROR 1054 (42S22) at line 2: Unknown column 'productcategory' in 'field list'"
+  ]
+}

@@ -245,3 +245,7 @@
 ## Refactor Sub-filtro de Categoria
 - [x] ADM Trabalhos: 2 níveis separados — nível 1 (categoria: Todos/Individual/Promoção/Coletivo) + nível 2 (tipo de trabalho dentro da categoria selecionada)
 - [x] Consultora: mesma lógica de 2 níveis
+
+## Correções ADM Trabalhos
+- [x] Corrigir sub-filtro de categoria: nomes dos produtos corrigidos no banco (sem categoria no nome)
+- [x] ADM: botão para voltar trabalho de Pendente → Para Escrever (somente ADM)
