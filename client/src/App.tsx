@@ -18,6 +18,7 @@ import AdminProdutos from "./pages/admin/Produtos";
 import AdminVendedores from "./pages/admin/Vendedores";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminConsultas from "./pages/admin/Consultas";
+import AdminTrabalhos from "./pages/admin/Trabalhos";
 import ConsultoraPage from "./pages/Consultora";
 import ConsultasPage from "./pages/Consultas";
 
@@ -113,6 +114,9 @@ function Router() {
       </Route>
       <Route path="/admin/consultas">
         <AuthGuard adminOnly><AdminConsultas /></AuthGuard>
+      </Route>
+      <Route path="/admin/trabalhos">
+        <AuthGuard adminOnly><AdminTrabalhos /></AuthGuard>
       </Route>
       <Route path="/admin/nova-venda">
         <AuthGuard adminOnly><NovaVenda /></AuthGuard>

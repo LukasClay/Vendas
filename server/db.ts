@@ -108,7 +108,8 @@ export async function getUserByOpenId(openId: string) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(users).orderBy(asc(users.name));
+  // Filtra usuários excluídos (soft delete) — deletedAt IS NULL
+  return db.select().from(users).where(sql`${users.deletedAt} IS NULL`).orderBy(asc(users.name));
 }
 
 export async function getUserById(id: number) {
@@ -127,7 +128,17 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(users).set({ active: false }).where(eq(users.id, id));
+  // Soft delete: salva snapshot do nome nas vendas e marca deletedAt
+  // 1. Buscar dados do usuário antes de deletar
+  const user = await getUserById(id);
+  if (!user) return;
+  const snapshotName = user.displayName || user.name || user.username || `Usuário #${id}`;
+  // 2. Atualizar sellerName nas vendas que ainda não têm snapshot
+  await db.update(sales).set({ sellerName: snapshotName }).where(
+    and(eq(sales.sellerId, id), sql`${sales.sellerName} IS NULL`)
+  );
+  // 3. Marcar como deletado e inativo
+  await db.update(users).set({ active: false, deletedAt: new Date() }).where(eq(users.id, id));
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
@@ -135,8 +146,9 @@ export async function deleteUser(id: number) {
 export async function getAllProducts(includeInactive = false) {
   const db = await getDb();
   if (!db) return [];
-  if (includeInactive) return db.select().from(products).orderBy(asc(products.name));
-  return db.select().from(products).where(eq(products.active, true)).orderBy(asc(products.name));
+  // Sempre filtra produtos com soft delete (deletedAt IS NULL)
+  if (includeInactive) return db.select().from(products).where(sql`${products.deletedAt} IS NULL`).orderBy(asc(products.name));
+  return db.select().from(products).where(and(eq(products.active, true), sql`${products.deletedAt} IS NULL`)).orderBy(asc(products.name));
 }
 
 export async function getProductById(id: number) {
@@ -162,7 +174,8 @@ export async function updateProduct(id: number, data: Partial<InsertProduct>) {
 export async function deleteProduct(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(products).set({ active: false }).where(eq(products.id, id));
+  // Soft delete: marca deletedAt e desativa — productName já é snapshot nas vendas
+  await db.update(products).set({ active: false, deletedAt: new Date() }).where(eq(products.id, id));
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
@@ -225,7 +238,12 @@ export async function getSales(filters: SaleFilters = {}) {
 
   const query = db.select({
     sale: sales,
-    seller: { id: users.id, name: users.name, displayName: users.displayName },
+    // Usa snapshot sellerName se disponível (vendedor excluído), senão busca do JOIN
+    seller: {
+      id: users.id,
+      name: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+      displayName: users.displayName,
+    },
   })
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id))
@@ -294,14 +312,15 @@ export async function getTopSellers(startDate?: Date, endDate?: Date, limit = 10
 
   const query = db.select({
     sellerId: sales.sellerId,
-    sellerName: users.name,
+    // Usa snapshot sellerName se disponível, senão faz JOIN com users
+    sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
     sellerDisplayName: users.displayName,
     totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
     totalSales: sql<number>`COUNT(*)`,
   })
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id))
-    .groupBy(sales.sellerId, users.name, users.displayName)
+    .groupBy(sales.sellerId, sql`COALESCE(${sales.sellerName}, ${users.name})`, users.displayName)
     .orderBy(desc(sql`SUM(${sales.amount})`))
     .limit(limit);
 

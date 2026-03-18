@@ -77,7 +77,7 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
 
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
   onMarkWritten: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -106,7 +106,7 @@ function ToWriteCard({ item, onMarkWritten }: {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}</p>
+          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.50 0.12 65)" }}>
@@ -249,7 +249,7 @@ function ToWriteCard({ item, onMarkWritten }: {
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
 function PendingCard({ item, onMarkDone }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
   onMarkDone: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -284,7 +284,7 @@ function PendingCard({ item, onMarkDone }: {
             <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
           </div>
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}</p>
+          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
         </div>
         <div className="shrink-0 mt-1">
           {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "oklch(0.52 0.015 260)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "oklch(0.52 0.015 260)" }} />}
@@ -423,7 +423,7 @@ function PendingCard({ item, onMarkDone }: {
 
 // ─── Card: Feito ──────────────────────────────────────────────────────────────
 function DoneCard({ item, onUndo }: {
-  item: { id: number; clientName: string; productName: string; saleDate: Date | string | null; completedAt: Date | string | null };
+  item: { id: number; clientName: string; productName: string; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
   onUndo: (id: number) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -437,7 +437,7 @@ function DoneCard({ item, onUndo }: {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}</p>
+          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
           <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.01 260)" }}>Feito em {formatDate(item.completedAt)}</p>
         </div>
         {!confirming ? (

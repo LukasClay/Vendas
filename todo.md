@@ -200,3 +200,12 @@
 
 ## Bug: Perda de foco nos inputs de edição de funcionários
 - [x] Corrigir campos de input que perdem foco a cada caractere digitado na tela de Funcionários (UserCard movido para fora do componente principal)
+
+## Integridade de Dados e Novas Funcionalidades
+- [x] Soft delete de funcionários: ao excluir, salvar snapshot (nome, username, role) nas vendas antes de marcar como deletado — dados de vendas preservados
+- [x] Soft delete de trabalhos (products): ao excluir, salvar snapshot do nome no campo productName das vendas — dados preservados
+- [x] Painel de Trabalhos para o ADM: abas "Para Escrever", "Pendentes" e "Realizados" com mesmas funcionalidades da Consultora
+- [x] ADM pode alterar status de trabalhos (para_escrever → pendente → feito) e visualizar todos os trabalhos
+- [x] Backend: incluir sellerName nas procedures toWrite/pending/done da Consultora
+- [x] Frontend Consultora: exibir nome do vendedor nos cards de trabalho (Para Escrever, Pendentes, Feitos)
+- [x] Frontend ADM: painel Trabalhos com rota /admin/trabalhos e item no menu

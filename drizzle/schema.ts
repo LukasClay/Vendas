@@ -23,6 +23,7 @@ export const users = mysqlTable("users", {
   displayName: varchar("displayName", { length: 128 }),
   phone: varchar("phone", { length: 32 }),
   active: boolean("active").default(true).notNull(),
+  deletedAt: timestamp("deletedAt"),  // soft delete: preenchido quando excluído
   // Own auth (username/password login)
   username: varchar("username", { length: 64 }).unique(),
   passwordHash: varchar("passwordHash", { length: 256 }),
@@ -40,10 +41,10 @@ export const products = mysqlTable("products", {
   name: varchar("name", { length: 256 }).notNull(),
   description: text("description"),
   active: boolean("active").default(true).notNull(),
+  deletedAt: timestamp("deletedAt"),  // soft delete: preenchido quando excluído
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 
@@ -66,7 +67,8 @@ export const sales = mysqlTable("sales", {
   sellerId: int("sellerId").notNull(),        // FK → users.id
   clientId: int("clientId"),                  // FK → clients.id (nullable for flexibility)
   productId: int("productId"),                // FK → products.id (nullable for flexibility)
-  // Denormalized snapshot fields (in case product/client is deleted later)
+  // Denormalized snapshot fields (in case product/client/seller is deleted later)
+  sellerName: varchar("sellerName", { length: 256 }),  // snapshot do nome do vendedor
   clientName: varchar("clientName", { length: 256 }).notNull(),
   clientBirthDate: date("clientBirthDate"),
   clientPhone: varchar("clientPhone", { length: 32 }),

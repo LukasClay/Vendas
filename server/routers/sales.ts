@@ -74,8 +74,12 @@ export const salesRouter = router({
         }
       }
 
+      // Snapshot do nome do vendedor para preservar mesmo se o usuário for excluído
+      const sellerName = ctx.user.displayName || ctx.user.name || ctx.user.username || `Usuário #${ctx.user.id}`;
+
       const saleId = await createSale({
         sellerId: ctx.user.id,
+        sellerName,
         clientId: clientId ?? undefined,
         clientName: input.clientName,
         // Passar strings diretamente para evitar conversão de timezone pelo MySQL

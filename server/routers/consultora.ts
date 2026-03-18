@@ -94,10 +94,11 @@ export const consultoraRouter = router({
         saleDate: s.saleDate,
         notes: s.notes,
         createdAt: s.createdAt,
+        sellerName: s.sellerName,
       }));
     }),
 
-  // ─── Aba 2: Pendentes (com prazo e urgência) ──────────────────────────────────
+  // ─── Aba 2: Pendentes (com prazo e urgência) ────────────────────────────────────────────────────────────────────────────────────
   pending: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
     .query(async ({ input }) => {
@@ -130,6 +131,7 @@ export const consultoraRouter = router({
           saleDate: s.saleDate,
           notes: s.notes,
           writtenAt: s.writtenAt,
+          sellerName: s.sellerName,
           ...urgency,
         };
       }).sort((a, b) => b.urgencyScore - a.urgencyScore);
@@ -165,6 +167,7 @@ export const consultoraRouter = router({
         saleDate: s.saleDate,
         notes: s.notes,
         completedAt: s.completedAt,
+        sellerName: s.sellerName,
       }));
     }),
 

@@ -71,6 +71,13 @@
       "when": 1773768649850,
       "tag": "0009_serious_sharon_carter",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1773797110848,
+      "tag": "0010_soft_rattler",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  BarChart3, FileText, LayoutDashboard, LogOut, Package,
+  BarChart3, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
   PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles, Calendar,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -27,6 +27,7 @@ const adminMenuItems = [
   { icon: FileText, label: "Todas as Vendas", path: "/admin/vendas" },
   { icon: PlusCircle, label: "Nova Venda", path: "/admin/nova-venda" },
   { icon: Package, label: "Trabalhos", path: "/admin/produtos" },
+  { icon: ClipboardList, label: "Painel Trabalhos", path: "/admin/trabalhos" },
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
