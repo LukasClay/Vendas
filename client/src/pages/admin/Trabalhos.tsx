@@ -154,7 +154,8 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1.5px solid oklch(0.90 0.012 65)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
-      <button onClick={() => setExpanded(e => !e)} className="w-full p-4 text-left">
+      {/* Cabeçalho: nome + vendedor fora do botão de expansão para evitar button aninhado */}
+      <div className="px-4 pt-4 pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -164,9 +165,14 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
             <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
-          {expanded ? <ChevronUp className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} /> : <ChevronDown className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} />}
+          <button onClick={() => setExpanded(e => !e)} className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
-      </button>
+      </div>
+
+      {/* Botão de expansão na área vazia abaixo do cabeçalho */}
+      <button onClick={() => setExpanded(e => !e)} className="w-full h-3" aria-label="expandir" />
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.93 0.008 65)" }}>
@@ -254,7 +260,8 @@ function PendingCard({ item, onMarkDone, sellers }: {
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${item.isOverdue ? "oklch(0.85 0.08 25)" : item.isUrgent ? "oklch(0.88 0.08 60)" : "oklch(0.90 0.012 65)"}`, boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
-      <button onClick={() => setExpanded(e => !e)} className="w-full p-4 text-left">
+      {/* Cabeçalho fora do botão para evitar button aninhado */}
+      <div className="px-4 pt-4 pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -267,9 +274,12 @@ function PendingCard({ item, onMarkDone, sellers }: {
             <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
-          {expanded ? <ChevronUp className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} /> : <ChevronDown className="w-4 h-4 shrink-0 mt-1" style={{ color: "oklch(0.60 0.01 260)" }} />}
+          <button onClick={() => setExpanded(e => !e)} className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
-      </button>
+      </div>
+      <button onClick={() => setExpanded(e => !e)} className="w-full h-3" aria-label="expandir" />
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.93 0.008 65)" }}>
