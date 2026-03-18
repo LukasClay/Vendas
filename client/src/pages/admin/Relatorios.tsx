@@ -3,7 +3,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check } from "lucide-react";
-import * as XLSX from "xlsx";
 import { formatDate } from "@/lib/dateUtils";
 
 function formatCurrency(value: string | number) {
@@ -54,10 +53,11 @@ export default function AdminRelatorios() {
     onError: (err) => toast.error(err.message),
   });
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (exportData.length === 0) { toast.error("Nenhuma venda para exportar."); return; }
     setExportLoading(true);
     try {
+      const XLSX = await import("xlsx");
       const rows = exportData.map((item: any) => {
         const sale = item.sale ?? item;
         const seller = item.seller;

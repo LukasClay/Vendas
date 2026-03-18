@@ -301,3 +301,10 @@
 - [x] Corrigido: webpush.ts com imports estáticos e envio paralelo com Promise.allSettled
 - [x] Corrigido: caracteres unicode box-drawing no consultora.ts (7 linhas)
 - [x] 32 testes passando
+
+## Correção Tela Branca e Lentidão (Bundle JS gigante)
+- [x] Aplicar React.lazy() em todas as páginas do App.tsx (code splitting por rota)
+- [x] Converter import XLSX estático para dynamic import no Relatorios.tsx
+- [x] Adicionar manualChunks no vite.config.ts (react-core, trpc-query, radix-ui, charts)
+- [x] Remover @import Google Fonts duplicado do index.css (já estava no index.html)
+- [x] Bundle inicial: de 1.9 MB para 114 kB (redução de 94%)
