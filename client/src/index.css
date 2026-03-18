@@ -205,10 +205,9 @@
     transition: transform 100ms ease;
   }
 
-  /* Fix para inputs em iOS — cursor e border-radius */
+  /* Fix para inputs em iOS — remove aparência nativa sem resetar border-radius */
   input, textarea, select {
     -webkit-appearance: none;
-    border-radius: 0;
   }
 
   button:not(:disabled),
