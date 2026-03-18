@@ -91,14 +91,26 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
       utils.consultora.pending.invalidate();
       utils.consultora.done.invalidate();
       setEditing(false);
+      setSelectedId("");
       onUpdated();
     },
     onError: (e) => toast.error(e.message),
   });
 
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedId(""); // sempre começa sem seleção ao abrir
+    setEditing(true);
+  }
+
+  function handleCancel() {
+    setSelectedId("");
+    setEditing(false);
+  }
+
   if (!editing) {
     return (
-      <button onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+      <button onClick={handleOpen}
         className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all active:scale-95"
         style={{ background: "oklch(0.93 0.015 260)", color: "oklch(0.45 0.08 260)" }}>
         <UserCog className="w-3 h-3" />
@@ -125,7 +137,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
         style={{ background: "oklch(0.55 0.16 65)" }}>
         {updateSeller.isPending ? "..." : "Salvar"}
       </button>
-      <button onClick={() => setEditing(false)}
+      <button onClick={handleCancel}
         className="text-xs px-2 py-1 rounded-lg active:scale-95"
         style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
         <X className="w-3 h-3" />

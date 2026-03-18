@@ -229,3 +229,8 @@
 - [x] Frontend cards de trabalhos (ADM e Consultora): exibir tag de categoria nos cards
 - [x] Frontend painel Trabalhos (ADM e Consultora): sub-filtro de categoria (Todos/Promoção/Coletivos)
 - [x] 32 testes passando
+
+## Bug: SellerEditInline
+- [x] listActiveSellers filtra só vendedores — deve incluir todos os funcionários ativos (vendedor, consultora, admin)
+- [x] Bug do X: ao cancelar edição de vendedor, o card fica "Sem vendedor" em vez de manter o valor original
+- [x] Venda com sellerName null corrigida diretamente no banco (Wilson)

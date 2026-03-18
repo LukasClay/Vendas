@@ -269,11 +269,11 @@ export const consultoraRouter = router({
   listActiveSellers: adminProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    const rows = await db.select({ id: users.id, name: users.name, displayName: users.displayName })
+    const rows = await db.select({ id: users.id, name: users.name, displayName: users.displayName, role: users.role })
       .from(users)
-      .where(and(eq(users.role, "user"), eq(users.active, true), isNull(users.deletedAt)))
+      .where(and(eq(users.active, true), isNull(users.deletedAt)))
       .orderBy(asc(users.name));
-    return rows.map(u => ({ id: u.id, name: u.displayName || u.name }));
+    return rows.map(u => ({ id: u.id, name: u.displayName || u.name || u.role }));
   }),
 
   // ─── Histórico de compras do cliente (sem valores) ──────────────────────────────────────────────
