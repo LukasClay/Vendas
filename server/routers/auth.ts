@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -12,6 +13,56 @@ import { ENV } from "../_core/env";
 
 const REMEMBER_ME_MS = ONE_YEAR_MS; // 1 ano
 const SESSION_MS = 1000 * 60 * 60 * 8; // 8 horas
+
+// ─── Rate Limiter de Login ─────────────────────────────────────────────────
+// Máx. 10 tentativas por combinação IP+username em janela de 15 minutos
+interface RateLimitEntry {
+  count: number;
+  firstAttempt: number;
+}
+
+const loginAttempts = new Map<string, RateLimitEntry>();
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 min
+
+// Limpeza periódica para não acumular entradas expiradas em memória
+setInterval(() => {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  loginAttempts.forEach((entry, key) => {
+    if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+      keysToDelete.push(key);
+    }
+  });
+  keysToDelete.forEach(key => loginAttempts.delete(key));
+}, 5 * 60 * 1000); // a cada 5 min
+
+function checkRateLimit(ip: string, username: string): void {
+  const key = `${ip}:${username.toLowerCase()}`;
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+
+  if (!entry || now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAttempt: now });
+    return;
+  }
+
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    const retryAfterMin = Math.ceil(
+      (RATE_LIMIT_WINDOW_MS - (now - entry.firstAttempt)) / 60000
+    );
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: `Muitas tentativas de login. Tente novamente em ${retryAfterMin} minuto(s).`,
+    });
+  }
+}
+
+function clearRateLimit(ip: string, username: string): void {
+  loginAttempts.delete(`${ip}:${username.toLowerCase()}`);
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin")
@@ -28,6 +79,15 @@ export const ownAuthRouter = router({
       rememberMe: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
+      // IP extraído do header real (considera proxies como Nginx/Cloudflare)
+      const ip =
+        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        ctx.req.socket?.remoteAddress ||
+        "unknown";
+
+      // Verifica rate limit ANTES de qualquer query no banco
+      checkRateLimit(ip, input.username);
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
@@ -43,6 +103,7 @@ export const ownAuthRouter = router({
       const user = result[0];
 
       if (!user || !user.passwordHash) {
+        // NÃO limpar o rate limit em falha — intencional
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
@@ -52,8 +113,12 @@ export const ownAuthRouter = router({
 
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
+        // NÃO limpar o rate limit em falha — intencional
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
+
+      // Login bem-sucedido: limpar contador
+      clearRateLimit(ip, input.username);
 
       // Gera JWT de sessão usando o SDK existente
       const expiresInMs = input.rememberMe ? REMEMBER_ME_MS : SESSION_MS;
@@ -94,7 +159,8 @@ export const ownAuthRouter = router({
       }
 
       const passwordHash = await bcrypt.hash(input.password, 12);
-      const openId = `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      // C3: randomUUID() criptograficamente seguro em vez de Math.random()
+      const openId = `local_${randomUUID()}`;
 
       await db.insert(users).values({
         openId,

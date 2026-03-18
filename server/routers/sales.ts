@@ -129,8 +129,8 @@ export const salesRouter = router({
       endDate: z.string().optional(),
       sellerId: z.number().optional(),
       productName: z.string().optional(),
-      limit: z.number().optional(),
-      offset: z.number().optional(),
+      limit: z.number().min(1).max(200).default(100),
+      offset: z.number().min(0).default(0),
     }).optional())
     .query(async ({ input }) => {
       return getSales({
@@ -199,9 +199,16 @@ export const salesRouter = router({
         endDate: input?.endDate ? new Date(input.endDate) : undefined,
         sellerId: input?.sellerId,
         productName: input?.productName,
-        limit: 10000,
+        limit: 5000,
         offset: 0,
       });
+
+      if (rows.length >= 5000) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `A exportação retornou ${rows.length}+ registros. Refine os filtros de data ou vendedor para no máximo 5.000 registros por exportação.`,
+        });
+      }
 
       const header = ['ID', 'Data', 'Cliente', 'Nascimento', 'Telefone', 'Trabalho', 'Tipo', 'Vendedor', 'Valor (R$)', 'Status', 'Observação'];
       const escape = (v: unknown) => {

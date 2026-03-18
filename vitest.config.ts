@@ -15,5 +15,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    env: {
+      // JWT_SECRET mínimo de 32 chars para o ambiente de teste
+      JWT_SECRET: "test-secret-key-for-vitest-minimum-32-chars-ok",
+    },
   },
 });
