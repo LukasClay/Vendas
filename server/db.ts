@@ -13,10 +13,12 @@ function createDbInstance() {
     _pool = createPool({
       uri: process.env.DATABASE_URL,
       waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
+      connectionLimit: 20,       // mais conexões simultâneas
+      queueLimit: 50,
       enableKeepAlive: true,
-      keepAliveInitialDelay: 10000,
+      keepAliveInitialDelay: 5000,
+      connectTimeout: 10000,     // 10s timeout de conexão
+      idleTimeout: 60000,        // fecha conexões ociosas após 60s
     });
     _db = drizzle(_pool);
     return _db;

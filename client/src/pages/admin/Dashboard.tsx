@@ -37,13 +37,14 @@ export default function AdminDashboard() {
   const topSellers = reportData?.topSellers ?? [];
   const topClients = reportData?.topClients ?? [];
 
-  // Trabalhos pendentes para o painel de urgência
-  const { data: pendingWorks = [] } = trpc.consultora.pending.useQuery(undefined, { refetchInterval: 60000 });
-  const { data: toWriteWorks = [] } = trpc.consultora.toWrite.useQuery(undefined, { refetchInterval: 60000 });
+  // Trabalhos pendentes para o painel de urgência (1 query em vez de 2)
+  const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(undefined, { refetchInterval: 60000 });
+  const pendingWorks: any[] = worksSummary?.pending ?? [];
+  const toWriteWorks: any[] = worksSummary?.toWrite ?? [];
 
-  const overdueWorks = (pendingWorks as any[]).filter(w => w.isOverdue);
-  const urgentWorks = (pendingWorks as any[]).filter(w => w.isUrgent);
-  const onTrackWorks = (pendingWorks as any[]).filter(w => !w.isOverdue && !w.isUrgent);
+  const overdueWorks = pendingWorks.filter(w => w.isOverdue);
+  const urgentWorks = pendingWorks.filter(w => w.isUrgent);
+  const onTrackWorks = pendingWorks.filter(w => !w.isOverdue && !w.isUrgent);
 
   return (
     <DashboardLayout>

@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { sales, users } from "../../drizzle/schema";
-import { and, asc, desc, eq, isNull, like, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
 
@@ -21,17 +21,19 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 export const consultoraRouter = router({
-  // ─── Contagem de badges por status ───────────────────────────────────────────
+
   statusCounts: consultoraProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-      const all = await db.select({ workStatus: sales.workStatus, productName: sales.productName }).from(sales);
+      // GROUP BY no banco é muito mais eficiente que SELECT * + contar em JS
+      const rows = await db.select({ workStatus: sales.workStatus, total: count() })
+        .from(sales)
+        .where(ne(sales.productName, "Consulta Cartas"))
+        .groupBy(sales.workStatus);
       const counts = { para_escrever: 0, pendente: 0, feito: 0 };
-      for (const row of all) {
-        if (row.productName === "Consulta Cartas") continue; // Consultas ficam na aba própria
-        if (row.workStatus in counts) counts[row.workStatus as keyof typeof counts]++;
+      for (const row of rows) {
+        if (row.workStatus in counts) counts[row.workStatus as keyof typeof counts] = Number(row.total);
       }
       return counts;
     }),
@@ -302,6 +304,43 @@ export const consultoraRouter = router({
         consultas: consultaRows,
       };
     }),
+
+  // ─── Resumo de trabalhos para o Dashboard (toWrite + pending em paralelo) ──────
+  worksSummary: consultoraProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const [toWriteRows, pendingRows] = await Promise.all([
+      (db.select({
+        id: sales.id,
+        clientName: sales.clientName,
+        productName: sales.productName,
+        productCategory: sales.productCategory,
+        saleDate: sales.saleDate,
+        sellerName: sales.sellerName,
+      }).from(sales) as any)
+        .where(and(eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas")))
+        .orderBy(asc(sales.saleDate)),
+      (db.select({
+        id: sales.id,
+        clientName: sales.clientName,
+        productName: sales.productName,
+        productCategory: sales.productCategory,
+        saleDate: sales.saleDate,
+        sellerName: sales.sellerName,
+      }).from(sales) as any)
+        .where(and(eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas")))
+        .orderBy(asc(sales.saleDate)),
+    ]);
+    const mapUrgency = (s: any) => {
+      const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate);
+      const urgency = calcBusinessDaysFromSale(saleDateStr);
+      return { ...s, productCategory: s.productCategory ?? "individual", ...urgency };
+    };
+    return {
+      toWrite: toWriteRows.map(mapUrgency),
+      pending: pendingRows.map(mapUrgency),
+    };
+  }),
 
   // ─── Aba Alertas: trabalhos urgentes e atrasados (Para Escrever + Pendentes) ─
    alerts: consultoraProcedure.query(async () => {

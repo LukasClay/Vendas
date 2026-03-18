@@ -281,3 +281,12 @@
 - [x] Web Push + PWA: service worker (sw.js), manifest.json, subscription no banco (push_subscriptions), botão Bell no DashboardLayout, job automático alertsJob.ts (a cada hora)
 - [x] Restringir data de venda: vendedor e consultora só visualizam (readonly), ADM pode editar
 - [x] 32 testes passando, TypeScript sem erros
+
+## Otimizações de Performance
+- [x] Pool de conexões MySQL otimizado: connectionLimit 20, connectTimeout 10s, idleTimeout 60s
+- [x] QueryClient com staleTime global de 30s (evita re-fetches desnecessários ao trocar de aba)
+- [x] Retry inteligente: 1 retry em erros de rede, sem retry em 4xx/5xx
+- [x] refetchOnWindowFocus desabilitado (evita queries ao voltar para a aba)
+- [x] Query worksSummary: retorna toWrite + pending em paralelo (Promise.all) para o Dashboard ADM
+- [x] statusCounts otimizado: GROUP BY no banco em vez de SELECT * + contar em JS
+- [x] Dashboard ADM: usa worksSummary (1 query) em vez de consultora.pending + consultora.toWrite (2 queries)
