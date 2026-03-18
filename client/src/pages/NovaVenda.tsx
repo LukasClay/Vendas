@@ -127,6 +127,12 @@ export default function NovaVenda() {
     e.preventDefault();
     if (!form.clientName.trim()) { toast.error("Nome do cliente é obrigatório."); return; }
     if (!form.clientBirthDate) { toast.error("Data de nascimento é obrigatória."); return; }
+    {
+      const birth = new Date(form.clientBirthDate + "T12:00:00");
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear() - (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
+      if (age < 18) { toast.error("O cliente deve ter pelo menos 18 anos."); return; }
+    }
     if (!form.clientPhone.replace(/\D/g, "")) { toast.error("Telefone é obrigatório."); return; }
     if (!form.productName) { toast.error("Selecione o trabalho espiritual."); return; }
     if (!form.amountFormatted) { toast.error("Informe o valor do trabalho."); return; }

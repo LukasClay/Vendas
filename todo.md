@@ -234,3 +234,7 @@
 - [x] listActiveSellers filtra só vendedores — deve incluir todos os funcionários ativos (vendedor, consultora, admin)
 - [x] Bug do X: ao cancelar edição de vendedor, o card fica "Sem vendedor" em vez de manter o valor original
 - [x] Venda com sellerName null corrigida diretamente no banco (Wilson)
+
+## UX e Validações
+- [x] Mover Sonner toaster para canto inferior direito (bottom-right) em todo o sistema
+- [x] Nova Venda: validação de data de nascimento mínima de 18 anos antes de registrar
