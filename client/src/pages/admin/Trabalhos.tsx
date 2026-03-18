@@ -170,7 +170,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 flex-wrap" >
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
@@ -281,7 +281,7 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
             </div>
-            <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 flex-wrap" >
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>

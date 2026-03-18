@@ -265,3 +265,6 @@
 - [x] Frontend Nova Venda: adicionar campo "Tipo" (Individual/Promoção/Coletivo) logo após seleção do trabalho
 - [x] Frontend ADM Produtos: remover campo categoria do formulário de adicionar/editar produto (lista simples)
 - [x] Testes: 32 passando
+
+## Bug: Clique no card de trabalho
+- [x] Corrigir área clicável do card nos painéis de Trabalhos (ADM e Consultora): removido stopPropagation desnecessario do div do nome do cliente
