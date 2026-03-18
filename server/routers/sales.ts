@@ -205,12 +205,12 @@ export const salesRouter = router({
           workStatus: sales.workStatus,
           amount: sales.amount,
         }).from(sales)
-          .where(and(like(sales.clientName, `%${input.clientName}%`), ne(sales.productName, "Consulta Cartas")))
+          .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas")))
           .orderBy(desc(sales.saleDate))
           .limit(50)
       );
 
-      // Consultas Cartas desta cliente (via consultation_slots)
+      // Consultas Cartas desta cliente (via consultation_slots) — correspondência exata
       const consultaRows = await withRetry(() =>
         db.select({
           id: consultationSlots.id,
@@ -220,7 +220,7 @@ export const salesRouter = router({
           saleDate: sales.saleDate,
         }).from(consultationSlots)
           .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
-          .where(and(like(sales.clientName, `%${input.clientName}%`), eq(consultationSlots.sold, true)))
+          .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true)))
           .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
           .limit(20)
       );

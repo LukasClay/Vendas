@@ -177,14 +177,12 @@ export const ownAuthRouter = router({
     return result;
   }),
 
-  // Admin exclui funcionário
+  // Admin exclui funcionário (Soft Delete Seguro — preserva histórico de vendas)
   deleteUser: adminProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-      await db.delete(users).where(eq(users.id, input.userId));
+      const { deleteUser } = await import("../db");
+      await deleteUser(input.userId);
       return { success: true };
     }),
 });

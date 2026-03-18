@@ -68,7 +68,8 @@ export const consultoraRouter = router({
         sellerName: sales.sellerName,
       }).from(sales) as any)
         .where(and(...conditions))
-        .orderBy(asc(sales.saleDate), asc(sales.createdAt));
+        .orderBy(asc(sales.saleDate), asc(sales.createdAt))
+        .limit(500);
 
       return rows.map((s: any) => {
         const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate);
@@ -123,7 +124,8 @@ export const consultoraRouter = router({
         sellerName: sales.sellerName,
       }).from(sales) as any)
         .where(and(...conditions))
-        .orderBy(asc(sales.saleDate));
+        .orderBy(asc(sales.saleDate))
+        .limit(500);
 
       return rows.map((s: any) => {
           const urgency = calcBusinessDaysFromSale(s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate));
@@ -177,7 +179,8 @@ export const consultoraRouter = router({
         sellerName: sales.sellerName,
       }).from(sales) as any)
         .where(and(...conditions))
-        .orderBy(desc(sales.completedAt)); // mais recentes no topo
+        .orderBy(desc(sales.completedAt)) // mais recentes no topo
+        .limit(500);
 
       return rows.map((s: any) => ({
         id: s.id,
@@ -280,11 +283,11 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
         workStatus: sales.workStatus,
       }).from(sales)
-        .where(and(like(sales.clientName, `%${input.clientName}%`), ne(sales.productName, "Consulta Cartas")))
+        .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas")))
         .orderBy(desc(sales.saleDate))
         .limit(50);
 
-      // Consultas Cartas desta cliente (via consultation_slots)
+      // Consultas Cartas desta cliente (via consultation_slots) — correspondência exata
       const { consultationSlots: csTable } = await import("../../drizzle/schema");
       const consultaRows = await db.select({
         id: csTable.id,
@@ -293,7 +296,7 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
       }).from(csTable)
         .leftJoin(sales, eq(csTable.saleId, sales.id))
-        .where(and(like(sales.clientName, `%${input.clientName}%`), eq(csTable.sold, true)))
+        .where(and(eq(sales.clientName, input.clientName), eq(csTable.sold, true)))
         .orderBy(desc(csTable.consultationDate), desc(csTable.consultationTime))
         .limit(20);
 
@@ -362,7 +365,8 @@ export const consultoraRouter = router({
           ne(sales.productName, "Consulta Cartas")
         )
       )
-      .orderBy(asc(sales.saleDate));
+      .orderBy(asc(sales.saleDate))
+      .limit(500);
 
     const withUrgency = rows.map((s: any) => {
       const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split("T")[0] : String(s.saleDate);

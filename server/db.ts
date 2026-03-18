@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, like, lte, gte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { createPool, Pool } from "mysql2";
-import { clients, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
+import { clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -279,6 +279,13 @@ export async function updateSale(id: number, data: Partial<InsertSale>) {
 export async function deleteSale(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // Libera o horário de consulta caso essa venda seja de uma "Consulta Cartas"
+  await db.update(consultationSlots)
+    .set({ sold: false, saleId: null, status: "pendente" })
+    .where(eq(consultationSlots.saleId, id));
+
+  // Remove a venda
   await db.delete(sales).where(eq(sales.id, id));
 }
 
