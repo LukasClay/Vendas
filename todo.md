@@ -218,3 +218,13 @@
 - [x] ADM Trabalhos: botão para alterar o vendedor de uma venda (select com vendedores ativos)
 - [x] Backend: procedure updateSeller + listActiveSellers (ADM) para alterar o vendedor de uma venda
 - [x] Testes: 32 testes passando (4 novos para updateSeller e listActiveSellers)
+
+## Categorias de Trabalho (Individual, Promoção, Coletivo)
+- [ ] Migration: campo category (individual/promocao/coletivo) na tabela products
+- [ ] Backend: atualizar procedures create/update/list de products para incluir category
+- [ ] Backend: incluir productCategory nas procedures de vendas (toWrite/pending/done/sales)
+- [ ] Frontend ADM - Trabalhos Espirituais: 3 abas (Individuais, Promoção, Coletivos)
+- [ ] Frontend ADM - Trabalhos Espirituais: campo de categoria no formulário de adicionar/editar
+- [ ] Frontend Nova Venda: tag visual "Promoção" e "Coletivo" no select de trabalhos
+- [ ] Frontend cards de trabalhos (ADM e Consultora): exibir tag de categoria nos cards
+- [ ] Frontend painel Trabalhos (ADM e Consultora): sub-filtro de categoria (Todos/Promoção/Coletivos)
