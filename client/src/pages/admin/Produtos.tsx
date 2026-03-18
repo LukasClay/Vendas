@@ -30,6 +30,8 @@ export default function AdminProdutos() {
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setEditingId(null);
+      setShowForm(false);
+      setForm({ name: "", description: "" });
     },
     onError: (err) => toast.error(err.message),
   });
