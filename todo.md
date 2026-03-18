@@ -323,3 +323,6 @@
 ## Filtro de Horários Passados (Consulta Cartas)
 - [x] listAvailable: filtrar por data+hora atual — slots de hoje com horário passado somem automaticamente
 - [x] listAll: ocultar slots não vendidos que já passaram (mantém vendidos no histórico)
+
+## Ajuste AlertsJob
+- [x] Alterar job de alertas de "a cada hora" para rodar apenas às 8h e 18h
