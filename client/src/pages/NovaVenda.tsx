@@ -42,6 +42,7 @@ export default function NovaVenda() {
     clientPhone: "",
     productName: "",
     productId: null as number | null,
+    productCategory: "individual" as "individual" | "promocao" | "coletivo",
     saleDate: new Date().toISOString().split("T")[0],
     amountFormatted: "",
     notes: "",
@@ -163,6 +164,7 @@ export default function NovaVenda() {
       clientPhone: form.clientPhone.replace(/\D/g, "") || undefined,
       productName: form.productName,
       productId: form.productId ?? undefined,
+      productCategory: form.productCategory,
       saleDate: form.saleDate,
       amount: parseCurrencyToNumber(form.amountFormatted),
       notes: form.notes || undefined,
@@ -180,6 +182,7 @@ export default function NovaVenda() {
       clientPhone: "",
       productName: "",
       productId: null,
+      productCategory: "individual",
       saleDate: new Date().toISOString().split("T")[0],
       amountFormatted: "",
       notes: "",
@@ -338,13 +341,40 @@ export default function NovaVenda() {
                   ) : products.length === 0 ? (
                     <option disabled>Nenhum trabalho cadastrado</option>
                   ) : (
-                      products.map(p => {
-                      const tag = p.category === "promocao" ? " ⭐ Promoção" : p.category === "coletivo" ? " 👥 Coletivo" : "";
-                      return <option key={p.id} value={p.name}>{p.name}{tag}</option>;
-                    })
+                    products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)
                   )}
                 </select>
               </div>
+
+              {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
+              {!isConsultaCartas && (
+              <div>
+                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                  Tipo {requiredStar}
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    { value: "individual", label: "Individual", icon: "" },
+                    { value: "promocao", label: "Promoção", icon: "⭐ " },
+                    { value: "coletivo", label: "Coletivo", icon: "👥 " },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, productCategory: opt.value }))}
+                      className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 border-2"
+                      style={form.productCategory === opt.value
+                        ? { background: opt.value === "promocao" ? "oklch(0.94 0.04 65)" : opt.value === "coletivo" ? "oklch(0.92 0.04 250)" : "oklch(0.92 0.008 65)",
+                            color: opt.value === "promocao" ? "oklch(0.45 0.14 65)" : opt.value === "coletivo" ? "oklch(0.40 0.14 250)" : "oklch(0.30 0.02 260)",
+                            borderColor: opt.value === "promocao" ? "oklch(0.75 0.12 65)" : opt.value === "coletivo" ? "oklch(0.65 0.12 250)" : "oklch(0.60 0.01 260)" }
+                        : { background: "white", color: "oklch(0.52 0.015 260)", borderColor: "oklch(0.88 0.012 65)" }
+                      }>
+                      {opt.icon}{opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              )}
 
               {/* Data da Venda */}
               <div>

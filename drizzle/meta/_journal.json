@@ -92,6 +92,13 @@
       "when": 1773804541460,
       "tag": "0012_talented_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1773805243132,
+      "tag": "0013_chubby_harpoon",
+      "breakpoints": true
     }
   ]
 }

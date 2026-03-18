@@ -2,40 +2,15 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight, Star, Users } from "lucide-react";
-
-type Category = "individual" | "promocao" | "coletivo";
-
-const CATEGORY_TABS: { key: Category; label: string; color: string; bg: string; icon?: React.ReactNode }[] = [
-  { key: "individual", label: "Individuais", color: "oklch(0.55 0.12 65)", bg: "oklch(0.94 0.02 65)" },
-  { key: "promocao",   label: "Promoção",    color: "oklch(0.50 0.18 25)",  bg: "oklch(0.95 0.05 25)" },
-  { key: "coletivo",   label: "Coletivos",   color: "oklch(0.45 0.15 260)", bg: "oklch(0.94 0.03 260)" },
-];
-
-function CategoryBadge({ category }: { category: Category }) {
-  if (category === "individual") return null;
-  if (category === "promocao") return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-      style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>
-      <Star className="w-3 h-3" /> Promoção
-    </span>
-  );
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-      style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>
-      <Users className="w-3 h-3" /> Coletivo
-    </span>
-  );
-}
+import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 
 export default function AdminProdutos() {
   const utils = trpc.useUtils();
   const { data: products = [], isLoading } = trpc.products.listAll.useQuery();
 
-  const [activeTab, setActiveTab] = useState<Category>("individual");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", category: "individual" as Category });
+  const [form, setForm] = useState({ name: "", description: "" });
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const createProduct = trpc.products.create.useMutation({
@@ -44,7 +19,7 @@ export default function AdminProdutos() {
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setShowForm(false);
-      setForm({ name: "", description: "", category: activeTab });
+      setForm({ name: "", description: "" });
     },
     onError: (err) => toast.error(err.message),
   });
@@ -56,7 +31,7 @@ export default function AdminProdutos() {
       utils.products.list.invalidate();
       setEditingId(null);
       setShowForm(false);
-      setForm({ name: "", description: "", category: activeTab });
+      setForm({ name: "", description: "" });
     },
     onError: (err) => toast.error(err.message),
   });
@@ -75,33 +50,26 @@ export default function AdminProdutos() {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Nome é obrigatório."); return; }
     if (editingId) {
-      updateProduct.mutate({ id: editingId, name: form.name.trim(), description: form.description || undefined, category: form.category });
+      updateProduct.mutate({ id: editingId, name: form.name.trim(), description: form.description || undefined });
     } else {
-      createProduct.mutate({ name: form.name.trim(), description: form.description || undefined, category: form.category });
+      createProduct.mutate({ name: form.name.trim(), description: form.description || undefined });
     }
   };
 
   const startEdit = (product: any) => {
     setEditingId(product.id);
-    setForm({ name: product.name, description: product.description ?? "", category: product.category ?? "individual" });
+    setForm({ name: product.name, description: product.description ?? "" });
     setShowForm(true);
   };
 
   const cancelForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm({ name: "", description: "", category: activeTab });
+    setForm({ name: "", description: "" });
   };
 
-  const openNewForm = () => {
-    setEditingId(null);
-    setForm({ name: "", description: "", category: activeTab });
-    setShowForm(true);
-  };
-
-  // Filtra por aba ativa, excluindo Consulta Cartas
-  const filtered = products.filter(p => p.name !== "Consulta Cartas" && (p.category ?? "individual") === activeTab);
-  const activeTab_ = CATEGORY_TABS.find(t => t.key === activeTab)!;
+  // Exclui Consulta Cartas da lista (é gerenciado separadamente)
+  const displayProducts = products.filter(p => p.name !== "Consulta Cartas");
 
   return (
     <DashboardLayout>
@@ -117,7 +85,7 @@ export default function AdminProdutos() {
             </p>
           </div>
           <button
-            onClick={openNewForm}
+            onClick={() => { setEditingId(null); setForm({ name: "", description: "" }); setShowForm(true); }}
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-95 shadow-md"
             style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             <Plus className="w-4 h-4" />
@@ -125,31 +93,9 @@ export default function AdminProdutos() {
           </button>
         </div>
 
-        {/* Abas de categoria */}
-        <div className="flex gap-2 mb-5 p-1 rounded-2xl" style={{ background: "oklch(0.94 0.012 65)" }}>
-          {CATEGORY_TABS.map(tab => {
-            const count = products.filter(p => p.name !== "Consulta Cartas" && (p.category ?? "individual") === tab.key).length;
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setShowForm(false); setEditingId(null); }}
-                className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: isActive ? "white" : "transparent",
-                  color: isActive ? tab.color : "oklch(0.52 0.015 260)",
-                  boxShadow: isActive ? "0 1px 4px oklch(0 0 0 / 0.08)" : "none",
-                }}>
-                {tab.label}
-                <span className="ml-1.5 text-xs font-normal opacity-70">({count})</span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* Formulário */}
         {showForm && (
-          <div className="rounded-2xl p-4 sm:p-6 mb-5 shadow-sm" style={{ background: "white", border: `1.5px solid ${activeTab_.color}40` }}>
+          <div className="rounded-2xl p-4 sm:p-6 mb-5 shadow-sm" style={{ background: "white", border: "1.5px solid oklch(0.75 0.12 65)" }}>
             <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
               {editingId ? "Editar Trabalho" : "Adicionar Novo Trabalho"}
             </h2>
@@ -162,34 +108,12 @@ export default function AdminProdutos() {
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Trabalho de Amor, Limpeza Espiritual..."
+                  placeholder="Ex: Amarração, Limpeza, Broxamento..."
                   className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2"
                   style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
                   autoFocus
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
-                  Categoria
-                </label>
-                <div className="flex gap-2">
-                  {CATEGORY_TABS.map(tab => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, category: tab.key }))}
-                      className="flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all border"
-                      style={{
-                        background: form.category === tab.key ? tab.bg : "white",
-                        color: form.category === tab.key ? tab.color : "oklch(0.52 0.015 260)",
-                        borderColor: form.category === tab.key ? tab.color + "60" : "oklch(0.88 0.012 65)",
-                        fontWeight: form.category === tab.key ? 600 : 400,
-                      }}>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
@@ -234,15 +158,14 @@ export default function AdminProdutos() {
           </div>
         )}
 
-        {/* Lista filtrada por aba */}
+        {/* Lista de trabalhos */}
         <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
           <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-            <h2 className="font-semibold flex items-center gap-2" style={{ color: "oklch(0.15 0.02 260)" }}>
-              <span>Trabalhos — {activeTab_.label}</span>
-              <CategoryBadge category={activeTab} />
+            <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>
+              Trabalhos Cadastrados
             </h2>
-            <span className="text-sm px-3 py-1 rounded-full" style={{ background: activeTab_.bg, color: activeTab_.color }}>
-              {filtered.filter(p => p.active).length} ativos
+            <span className="text-sm px-3 py-1 rounded-full" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.55 0.12 65)" }}>
+              {displayProducts.filter(p => p.active).length} ativos
             </span>
           </div>
 
@@ -250,14 +173,14 @@ export default function AdminProdutos() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : displayProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
                 style={{ background: "oklch(0.95 0.008 65)" }}>
                 <Package className="w-8 h-8" style={{ color: "oklch(0.75 0.06 65)" }} />
               </div>
               <p className="text-base font-medium mb-1" style={{ color: "oklch(0.30 0.02 260)" }}>
-                Nenhum trabalho {activeTab_.label.toLowerCase()} cadastrado
+                Nenhum trabalho cadastrado
               </p>
               <p className="text-sm" style={{ color: "oklch(0.60 0.01 260)" }}>
                 Clique em "Novo Trabalho" para adicionar.
@@ -265,14 +188,14 @@ export default function AdminProdutos() {
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-              {filtered.map(product => (
+              {displayProducts.map(product => (
                 <div key={product.id} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-colors"
                   style={{ opacity: product.active ? 1 : 0.5 }}
                   onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: product.active ? activeTab_.bg : "oklch(0.92 0.008 65)" }}>
-                    <Package className="w-5 h-5" style={{ color: product.active ? activeTab_.color : "oklch(0.65 0.01 260)" }} />
+                    style={{ background: product.active ? "oklch(0.94 0.02 65)" : "oklch(0.92 0.008 65)" }}>
+                    <Package className="w-5 h-5" style={{ color: product.active ? "oklch(0.55 0.12 65)" : "oklch(0.65 0.01 260)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{product.name}</p>

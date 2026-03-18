@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Deletar todas as vendas (são todas de teste)\nDELETE FROM consultation_slots WHERE saleId IS NOT NULL;\nDELETE FROM sales;\n\n-- Deletar produtos duplicados (promoção e coletivo)\nDELETE FROM products WHERE id IN (60004, 60005, 60006, 60007);\n\n-- Deletar também produtos com nomes duplicados (Limpeza id 60003 é duplicata de 60002)\nDELETE FROM products WHERE id = 60003;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \n-- Deletar todas as vendas (são todas de teste)\nDELETE FROM consultation_slots WHERE saleId IS NOT NULL;\nDELETE FROM sales;\n\n-- Deletar produtos duplicados (promoção e coletivo)\nDELETE FROM products WHERE id IN (60004, 60005, 60006, 60007);\n\n-- Deletar também produtos com nomes duplicados (Limpeza id 60003 é duplicata de 60002)\nDELETE FROM products WHERE id = 60003;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 110
+}

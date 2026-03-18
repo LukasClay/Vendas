@@ -40,7 +40,6 @@ export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 256 }).notNull(),
   description: text("description"),
-  category: mysqlEnum("category", ["individual", "promocao", "coletivo"]).default("individual").notNull(),
   active: boolean("active").default(true).notNull(),
   deletedAt: timestamp("deletedAt"),  // soft delete: preenchido quando excluído
   createdAt: timestamp("createdAt").defaultNow().notNull(),

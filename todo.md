@@ -255,3 +255,13 @@
 - [x] Backend: novas vendas salvam productCategory (snapshot do produto via getProductById); consultora.ts usa sales.productCategory diretamente (sem JOIN)
 - [x] Frontend: tag de categoria na coluna Trabalho da tabela Todas as Vendas (⭐ Promoção / 👥 Coletivo)
 - [x] Frontend: filtro Tipo (Todos/Individual/Promoção/Coletivo) na tela Todas as Vendas (client-side)
+
+## Reestruturação de Categorias (Opção A)
+- [x] Banco: deletar todas as vendas de teste e produtos duplicados (Amarração/Limpeza Promoção e Coletivo)
+- [x] Banco: remover coluna category da tabela products (migration gerada e aplicada)
+- [x] Schema Drizzle: remover campo category de products
+- [x] Backend products: remover category de create/update/list
+- [x] Backend sales.create: receber productCategory diretamente do formulário (não buscar no produto)
+- [x] Frontend Nova Venda: adicionar campo "Tipo" (Individual/Promoção/Coletivo) logo após seleção do trabalho
+- [x] Frontend ADM Produtos: remover campo categoria do formulário de adicionar/editar produto (lista simples)
+- [x] Testes: 32 passando

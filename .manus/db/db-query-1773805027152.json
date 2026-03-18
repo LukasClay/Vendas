@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, category FROM products ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute SELECT id, name, category FROM products ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Broxamento",
+      "category": "individual"
+    },
+    {
+      "id": "30001",
+      "name": "Consulta Cartas",
+      "category": "individual"
+    },
+    {
+      "id": "60001",
+      "name": "Amarração",
+      "category": "individual"
+    },
+    {
+      "id": "60002",
+      "name": "Limpeza",
+      "category": "individual"
+    },
+    {
+      "id": "60003",
+      "name": "Limpeza",
+      "category": "individual"
+    },
+    {
+      "id": "60004",
+      "name": "Amarração",
+      "category": "promocao"
+    },
+    {
+      "id": "60005",
+      "name": "Amarração",
+      "category": "coletivo"
+    },
+    {
+      "id": "60006",
+      "name": "Limpeza",
+      "category": "promocao"
+    },
+    {
+      "id": "60007",
+      "name": "Limpeza",
+      "category": "coletivo"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcategory\n1\tBroxamento\tindividual\n30001\tConsulta Cartas\tindividual\n60001\tAmarração\tindividual\n60002\tLimpeza\tindividual\n60003\tLimpeza\tindividual\n60004\tAmarração\tpromocao\n60005\tAmarração\tcoletivo\n60006\tLimpeza\tpromocao\n60007\tLimpeza\tcoletivo\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

@@ -21,7 +21,8 @@ export const salesRouter = router({
       clientBirthDate: z.string().optional(),
       clientPhone: z.string().optional(),
       productName: z.string().min(1, "Nome do trabalho é obrigatório"),
-      productId: z.number().optional(), // Para salvar snapshot de categoria
+      productId: z.number().optional(),
+      productCategory: z.enum(["individual", "promocao", "coletivo"]).default("individual"),
       saleDate: z.string().min(1, "Data da venda é obrigatória"),
       amount: z.number().positive("Valor deve ser positivo"),
       notes: z.string().optional(),
@@ -79,14 +80,8 @@ export const salesRouter = router({
       // Snapshot do nome do vendedor para preservar mesmo se o usuário for excluído
       const sellerName = ctx.user.displayName || ctx.user.name || ctx.user.username || `Usuário #${ctx.user.id}`;
 
-      // Buscar categoria do produto para salvar snapshot
-      let productCategory: "individual" | "promocao" | "coletivo" = "individual";
-      if (input.productId) {
-        try {
-          const product = await getProductById(input.productId);
-          if (product?.category) productCategory = product.category;
-        } catch (_) { /* não crítico */ }
-      }
+      // Categoria vem diretamente do formulário (não mais do produto)
+      const productCategory = input.productCategory;
 
       const saleId = await createSale({
         sellerId: ctx.user.id,
