@@ -2,9 +2,9 @@ export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: (() => {
     const secret = process.env.JWT_SECRET;
-    if (!secret || secret.length < 32) {
+    if (!secret || secret.length < 16) {
       throw new Error(
-        "FATAL: JWT_SECRET não definido ou muito curto (mínimo 32 caracteres). " +
+        "FATAL: JWT_SECRET não definido ou muito curto (mínimo 16 caracteres). " +
         "Defina a variável de ambiente antes de iniciar o servidor."
       );
     }
