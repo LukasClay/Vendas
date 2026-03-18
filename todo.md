@@ -238,3 +238,6 @@
 ## UX e Validações
 - [x] Mover Sonner toaster para canto inferior direito (bottom-right) em todo o sistema
 - [x] Nova Venda: validação de data de nascimento mínima de 18 anos antes de registrar
+
+## UX Cards de Trabalhos
+- [x] ADM e Consultora: card inteiro clicável para expandir (não só a setinha), badge do vendedor continua clicável separadamente
