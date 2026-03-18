@@ -553,28 +553,6 @@ export default function ConsultoraPage() {
   const filteredPending = applyFilters(pendingItems);
   const filteredDone = applyFilters(doneItems);
 
-  function handleCopyAllToWrite() {
-    if (toWriteItems.length === 0) { toast.error("Nenhum item para copiar"); return; }
-    const text = toWriteItems.map((item: any, i: number) =>
-      `${i + 1}. ${item.productName}\n   Nome: ${item.clientName}\n   Nasc: ${formatBirthDate(item.clientBirthDate)}${item.clientPhone ? `\n   Tel: ${item.clientPhone}` : ""}${item.notes ? `\n   Obs: ${item.notes}` : ""}`
-    ).join("\n\n");
-    const doFallback = () => {
-      const el = document.createElement("textarea");
-      el.value = text;
-      el.style.cssText = "position:fixed;opacity:0;top:0;left:0";
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-      toast.success(`${toWriteItems.length} trabalhos copiados!`);
-    };
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => toast.success(`${toWriteItems.length} trabalhos copiados!`)).catch(doFallback);
-    } else {
-      doFallback();
-    }
-  }
-
   const alertCount = (alertItems as any[]).length;
   const tabs = [
     { id: "para_escrever" as Tab, label: "Para Escrever", icon: <Pencil className="w-4 h-4" />, count: counts?.para_escrever ?? 0 },
@@ -684,16 +662,6 @@ export default function ConsultoraPage() {
             </button>
           )}
         </div>
-
-        {/* Botão Copiar Todos (só na aba Para Escrever) */}
-        {activeTab === "para_escrever" && filteredToWrite.length > 0 && (
-          <button onClick={handleCopyAllToWrite}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-4 active:scale-95 transition-transform text-white"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
-            <ClipboardList className="w-4 h-4" />
-            Copiar Todos os {filteredToWrite.length} Trabalhos
-          </button>
-        )}
 
         {/* Conteúdo */}
         {isLoading ? (
