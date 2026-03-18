@@ -20,16 +20,25 @@ export default function AdminVendas() {
   const { data: sellers = [] } = trpc.users.listAll.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
 
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", sellerId: "", productName: "" });
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", sellerId: "", productName: "", category: "" });
   const queryFilters = useMemo(() => ({
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     sellerId: filters.sellerId ? Number(filters.sellerId) : undefined,
     productName: filters.productName || undefined,
     limit: 200,
-  }), [filters]);
+  }), [filters.startDate, filters.endDate, filters.sellerId, filters.productName]);
 
-  const { data: salesData = [], isLoading } = trpc.sales.list.useQuery(queryFilters);
+  const { data: rawSalesData = [], isLoading } = trpc.sales.list.useQuery(queryFilters);
+
+  // Filtro client-side por categoria
+  const salesData = useMemo(() => {
+    if (!filters.category) return rawSalesData;
+    return rawSalesData.filter((item: any) => {
+      const sale = item.sale ?? item;
+      return (sale.productCategory ?? "individual") === filters.category;
+    });
+  }, [rawSalesData, filters.category]);
 
   // Estado do modal de edição
   const [editSale, setEditSale] = useState<any | null>(null);
@@ -101,8 +110,8 @@ export default function AdminVendas() {
     return acc + Number(sale.amount);
   }, 0);
 
-  const hasFilters = filters.startDate || filters.endDate || filters.sellerId || filters.productName;
-  const clearFilters = () => setFilters({ startDate: "", endDate: "", sellerId: "", productName: "" });
+  const hasFilters = filters.startDate || filters.endDate || filters.sellerId || filters.productName || filters.category;
+  const clearFilters = () => setFilters({ startDate: "", endDate: "", sellerId: "", productName: "", category: "" });
 
   const inputStyle = {
     border: "1.5px solid oklch(0.88 0.012 65)",
@@ -138,7 +147,7 @@ export default function AdminVendas() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Data início</label>
               <input type="date" value={filters.startDate}
@@ -160,6 +169,8 @@ export default function AdminVendas() {
                 {sellers.map(s => <option key={s.id} value={s.id}>{s.displayName || s.name || s.email}</option>)}
               </select>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Trabalho</label>
               <select value={filters.productName}
@@ -167,6 +178,17 @@ export default function AdminVendas() {
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
                 <option value="">Todos</option>
                 {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Tipo</label>
+              <select value={filters.category}
+                onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
+                <option value="">Todos</option>
+                <option value="individual">Individual</option>
+                <option value="promocao">⭐ Promoção</option>
+                <option value="coletivo">👥 Coletivo</option>
               </select>
             </div>
           </div>
@@ -313,7 +335,15 @@ export default function AdminVendas() {
                             </button>
                             {sale.clientPhone && <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{sale.clientPhone}</p>}
                           </td>
-                          <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>{sale.productName}</td>
+                          <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>
+                            <span>{sale.productName}</span>
+                            {sale.productCategory === "promocao" && (
+                              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.94 0.04 65)", color: "oklch(0.50 0.14 65)" }}>⭐ Promoção</span>
+                            )}
+                            {sale.productCategory === "coletivo" && (
+                              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.40 0.14 250)" }}>👥 Coletivo</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>
                             {seller?.displayName || seller?.name || "-"}
                           </td>
@@ -384,7 +414,10 @@ export default function AdminVendas() {
                         <p className="font-semibold text-sm" style={{ color: "oklch(0.45 0.12 65)" }}>{formatCurrency(sale.amount)}</p>
                       </div>
                       <p className="text-xs mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
-                        {sale.productName} · {seller?.displayName || seller?.name || ""} · {formatDate(sale.saleDate)}
+                        {sale.productName}
+                        {sale.productCategory === "promocao" && <span className="ml-1 text-xs">⭐</span>}
+                        {sale.productCategory === "coletivo" && <span className="ml-1 text-xs">👥</span>}
+                        {" · "}{seller?.displayName || seller?.name || ""} · {formatDate(sale.saleDate)}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <button onClick={() => setHistoryClientName(sale.clientName)}

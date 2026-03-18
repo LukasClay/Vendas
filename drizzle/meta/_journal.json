@@ -85,6 +85,13 @@
       "when": 1773801569050,
       "tag": "0011_tired_mindworm",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1773804541460,
+      "tag": "0012_talented_zaladane",
+      "breakpoints": true
     }
   ]
 }

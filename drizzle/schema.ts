@@ -74,6 +74,7 @@ export const sales = mysqlTable("sales", {
   clientBirthDate: date("clientBirthDate"),
   clientPhone: varchar("clientPhone", { length: 32 }),
   productName: varchar("productName", { length: 256 }).notNull(),
+  productCategory: mysqlEnum("productCategory", ["individual", "promocao", "coletivo"]).default("individual"),
   saleDate: date("saleDate").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   notes: text("notes"),

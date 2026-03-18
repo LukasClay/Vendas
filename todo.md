@@ -249,3 +249,9 @@
 ## Correções ADM Trabalhos
 - [x] Corrigir sub-filtro de categoria: nomes dos produtos corrigidos no banco (sem categoria no nome)
 - [x] ADM: botão para voltar trabalho de Pendente → Para Escrever (somente ADM)
+
+## Categoria nas Vendas
+- [x] Banco: migration adicionou coluna productCategory na tabela sales; UPDATE populou vendas existentes via JOIN com products
+- [x] Backend: novas vendas salvam productCategory (snapshot do produto via getProductById); consultora.ts usa sales.productCategory diretamente (sem JOIN)
+- [x] Frontend: tag de categoria na coluna Trabalho da tabela Todas as Vendas (⭐ Promoção / 👥 Coletivo)
+- [x] Frontend: filtro Tipo (Todos/Individual/Promoção/Coletivo) na tela Todas as Vendas (client-side)

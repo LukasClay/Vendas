@@ -1,0 +1,55 @@
+{
+  "query": "\nUPDATE sales s\nJOIN products p ON s.productId = p.id\nSET s.productCategory = p.category\nWHERE s.productCategory IS NULL OR s.productCategory = 'individual';\n\nSELECT id, productName, productCategory FROM sales ORDER BY id DESC LIMIT 12;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nUPDATE sales s\nJOIN products p ON s.productId = p.id\nSET s.productCategory = p.category\nWHERE s.productCategory IS NULL OR s.productCategory = 'individual';\n\nSELECT id, productName, productCategory FROM sales ORDER BY id DESC LIMIT 12;\n",
+  "rows": [
+    {
+      "id": "90008",
+      "productName": "Limpeza",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90007",
+      "productName": "Limpeza",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90006",
+      "productName": "Limpeza",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90005",
+      "productName": "Amarração",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90004",
+      "productName": "Amarração",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90003",
+      "productName": "Limpeza",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90002",
+      "productName": "Amarração",
+      "productCategory": "individual"
+    },
+    {
+      "id": "90001",
+      "productName": "Broxamento",
+      "productCategory": "individual"
+    },
+    {
+      "id": "60001",
+      "productName": "Broxamento",
+      "productCategory": "individual"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductName\tproductCategory\n90008\tLimpeza\tindividual\n90007\tLimpeza\tindividual\n90006\tLimpeza\tindividual\n90005\tAmarração\tindividual\n90004\tAmarração\tindividual\n90003\tLimpeza\tindividual\n90002\tAmarração\tindividual\n90001\tBroxamento\tindividual\n60001\tBroxamento\tindividual\n",
+  "stderr": "",
+  "execution_time_ms": 74
+}

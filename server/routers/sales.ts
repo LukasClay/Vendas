@@ -4,8 +4,9 @@ import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, update
 import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
-import { consultationSlots, sales } from "../../drizzle/schema";
+import { consultationSlots, sales, products } from "../../drizzle/schema";
 import { eq, and, like, ne, desc } from "drizzle-orm";
+import { getProductById } from "../db";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
@@ -20,6 +21,7 @@ export const salesRouter = router({
       clientBirthDate: z.string().optional(),
       clientPhone: z.string().optional(),
       productName: z.string().min(1, "Nome do trabalho é obrigatório"),
+      productId: z.number().optional(), // Para salvar snapshot de categoria
       saleDate: z.string().min(1, "Data da venda é obrigatória"),
       amount: z.number().positive("Valor deve ser positivo"),
       notes: z.string().optional(),
@@ -77,6 +79,15 @@ export const salesRouter = router({
       // Snapshot do nome do vendedor para preservar mesmo se o usuário for excluído
       const sellerName = ctx.user.displayName || ctx.user.name || ctx.user.username || `Usuário #${ctx.user.id}`;
 
+      // Buscar categoria do produto para salvar snapshot
+      let productCategory: "individual" | "promocao" | "coletivo" = "individual";
+      if (input.productId) {
+        try {
+          const product = await getProductById(input.productId);
+          if (product?.category) productCategory = product.category;
+        } catch (_) { /* não crítico */ }
+      }
+
       const saleId = await createSale({
         sellerId: ctx.user.id,
         sellerName,
@@ -85,7 +96,9 @@ export const salesRouter = router({
         // Passar strings diretamente para evitar conversão de timezone pelo MySQL
         clientBirthDate: (input.clientBirthDate ?? null) as any,
         clientPhone: input.clientPhone ?? null,
+        productId: input.productId ?? undefined,
         productName: input.productName,
+        productCategory,
         saleDate: input.saleDate as any,
         amount: String(input.amount),
         notes: input.notes ?? null,

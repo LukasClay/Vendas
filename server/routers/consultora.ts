@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { sales, users, products } from "../../drizzle/schema";
+import { sales, users } from "../../drizzle/schema";
 import { and, asc, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -93,13 +93,12 @@ export const consultoraRouter = router({
         clientBirthDate: sales.clientBirthDate,
         clientPhone: sales.clientPhone,
         productName: sales.productName,
-        productCategory: products.category,
+        productCategory: sales.productCategory,
         saleDate: sales.saleDate,
         notes: sales.notes,
         createdAt: sales.createdAt,
         sellerName: sales.sellerName,
       }).from(sales) as any)
-        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt));
 
@@ -140,13 +139,12 @@ export const consultoraRouter = router({
         clientBirthDate: sales.clientBirthDate,
         clientPhone: sales.clientPhone,
         productName: sales.productName,
-        productCategory: products.category,
+        productCategory: sales.productCategory,
         saleDate: sales.saleDate,
         notes: sales.notes,
         writtenAt: sales.writtenAt,
         sellerName: sales.sellerName,
       }).from(sales) as any)
-        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate));
 
@@ -165,7 +163,7 @@ export const consultoraRouter = router({
             sellerName: s.sellerName,
             ...urgency,
           };
-        }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);;
+        }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
     }),
 
   // ─── Aba 3: Feitos (mais recentes no topo para fácil reversão) ────────────────
@@ -191,13 +189,12 @@ export const consultoraRouter = router({
         clientBirthDate: sales.clientBirthDate,
         clientPhone: sales.clientPhone,
         productName: sales.productName,
-        productCategory: products.category,
+        productCategory: sales.productCategory,
         saleDate: sales.saleDate,
         notes: sales.notes,
         completedAt: sales.completedAt,
         sellerName: sales.sellerName,
       }).from(sales) as any)
-        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(desc(sales.completedAt)); // mais recentes no topo
 

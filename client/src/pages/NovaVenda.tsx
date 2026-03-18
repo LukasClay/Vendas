@@ -41,6 +41,7 @@ export default function NovaVenda() {
     clientBirthDate: "",
     clientPhone: "",
     productName: "",
+    productId: null as number | null,
     saleDate: new Date().toISOString().split("T")[0],
     amountFormatted: "",
     notes: "",
@@ -161,6 +162,7 @@ export default function NovaVenda() {
       clientBirthDate: form.clientBirthDate || undefined,
       clientPhone: form.clientPhone.replace(/\D/g, "") || undefined,
       productName: form.productName,
+      productId: form.productId ?? undefined,
       saleDate: form.saleDate,
       amount: parseCurrencyToNumber(form.amountFormatted),
       notes: form.notes || undefined,
@@ -177,6 +179,7 @@ export default function NovaVenda() {
       clientBirthDate: "",
       clientPhone: "",
       productName: "",
+      productId: null,
       saleDate: new Date().toISOString().split("T")[0],
       amountFormatted: "",
       notes: "",
@@ -322,7 +325,10 @@ export default function NovaVenda() {
                 </label>
                 <select
                   value={form.productName}
-                  onChange={e => setForm(f => ({ ...f, productName: e.target.value }))}
+                  onChange={e => {
+                    const selectedProduct = products.find(p => p.name === e.target.value);
+                    setForm(f => ({ ...f, productName: e.target.value, productId: selectedProduct?.id ?? null }));
+                  }}
                   className={`${inputClass} cursor-pointer`}
                   style={{ ...inputStyle, color: form.productName ? "oklch(0.15 0.02 260)" : "oklch(0.60 0.01 260)" }}
                   required>

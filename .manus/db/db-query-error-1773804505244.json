@@ -1,0 +1,8 @@
+{
+  "query": "\nUPDATE sales s\nJOIN products p ON s.productId = p.id\nSET s.productCategory = p.category\nWHERE s.productCategory IS NULL;\n\nSELECT id, productName, productCategory FROM sales ORDER BY id DESC LIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nUPDATE sales s\nJOIN products p ON s.productId = p.id\nSET s.productCategory = p.category\nWHERE s.productCategory IS NULL;\n\nSELECT id, productName, productCategory FROM sales ORDER BY id DESC LIMIT 10;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 's.productcategory' in 'where clause'"
+  ]
+}
