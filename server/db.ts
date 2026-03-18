@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, like, lte, gte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, like, lte, gte, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
@@ -67,7 +67,7 @@ export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
   // Filtra usuários excluídos (soft delete) — deletedAt IS NULL
-  return db.select().from(users).where(sql`${users.deletedAt} IS NULL`).orderBy(asc(users.name));
+  return db.select().from(users).where(isNull(users.deletedAt)).orderBy(asc(users.name));
 }
 
 export async function getUserById(id: number) {
@@ -105,8 +105,8 @@ export async function getAllProducts(includeInactive = false) {
   const db = await getDb();
   if (!db) return [];
   // Sempre filtra produtos com soft delete (deletedAt IS NULL)
-  if (includeInactive) return db.select().from(products).where(sql`${products.deletedAt} IS NULL`).orderBy(asc(products.name));
-  return db.select().from(products).where(and(eq(products.active, true), sql`${products.deletedAt} IS NULL`)).orderBy(asc(products.name));
+  if (includeInactive) return db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
+  return db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
 }
 
 export async function getProductById(id: number) {
@@ -157,10 +157,9 @@ export async function upsertClient(data: InsertClient) {
       return existing[0].id;
     }
   }
-  const result = await db.insert(clients).values(data);
-  const rawC = (result as any);
-  const rawCId = Array.isArray(rawC) ? rawC[0]?.insertId : rawC.insertId;
-  return parseInt(String(rawCId), 10);
+  // PostgreSQL: usar .returning() para obter o ID gerado
+  const result = await db.insert(clients).values(data).returning({ id: clients.id });
+  return result[0].id;
 }
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
@@ -177,12 +176,9 @@ export interface SaleFilters {
 export async function createSale(data: InsertSale) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(sales).values(data);
-  // O drizzle com mysql2 retorna [ResultSetHeader, fields] — insertId está em result[0].insertId
-  // Pode ser bigint, number ou string dependendo da versão do driver
-  const raw = (result as any);
-  const rawId = Array.isArray(raw) ? raw[0]?.insertId : raw.insertId;
-  return parseInt(String(rawId), 10);
+  // PostgreSQL: usar .returning() para obter o ID gerado
+  const result = await db.insert(sales).values(data).returning({ id: sales.id });
+  return result[0].id;
 }
 
 export async function getSales(filters: SaleFilters = {}) {
