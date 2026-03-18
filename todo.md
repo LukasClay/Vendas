@@ -220,11 +220,12 @@
 - [x] Testes: 32 testes passando (4 novos para updateSeller e listActiveSellers)
 
 ## Categorias de Trabalho (Individual, Promoção, Coletivo)
-- [ ] Migration: campo category (individual/promocao/coletivo) na tabela products
-- [ ] Backend: atualizar procedures create/update/list de products para incluir category
-- [ ] Backend: incluir productCategory nas procedures de vendas (toWrite/pending/done/sales)
-- [ ] Frontend ADM - Trabalhos Espirituais: 3 abas (Individuais, Promoção, Coletivos)
-- [ ] Frontend ADM - Trabalhos Espirituais: campo de categoria no formulário de adicionar/editar
-- [ ] Frontend Nova Venda: tag visual "Promoção" e "Coletivo" no select de trabalhos
-- [ ] Frontend cards de trabalhos (ADM e Consultora): exibir tag de categoria nos cards
-- [ ] Frontend painel Trabalhos (ADM e Consultora): sub-filtro de categoria (Todos/Promoção/Coletivos)
+- [x] Migration: campo category (individual/promocao/coletivo) na tabela products
+- [x] Backend: atualizar procedures create/update/list de products para incluir category
+- [x] Backend: incluir productCategory nas procedures de vendas (toWrite/pending/done/sales) via JOIN
+- [x] Frontend ADM - Trabalhos Espirituais: 3 abas (Individuais, Promoção, Coletivos)
+- [x] Frontend ADM - Trabalhos Espirituais: campo de categoria no formulário de adicionar/editar
+- [x] Frontend Nova Venda: tag visual "Promoção" e "Coletivo" no select de trabalhos
+- [x] Frontend cards de trabalhos (ADM e Consultora): exibir tag de categoria nos cards
+- [x] Frontend painel Trabalhos (ADM e Consultora): sub-filtro de categoria (Todos/Promoção/Coletivos)
+- [x] 32 testes passando

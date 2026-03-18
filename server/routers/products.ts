@@ -8,6 +8,8 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+const categoryEnum = z.enum(["individual", "promocao", "coletivo"]);
+
 export const productsRouter = router({
   list: protectedProcedure.query(async () => {
     return getAllProducts(false);
@@ -21,9 +23,15 @@ export const productsRouter = router({
     .input(z.object({
       name: z.string().min(1, "Nome é obrigatório"),
       description: z.string().optional(),
+      category: categoryEnum.default("individual"),
     }))
     .mutation(async ({ input }) => {
-      await createProduct({ name: input.name, description: input.description ?? null, active: true });
+      await createProduct({
+        name: input.name,
+        description: input.description ?? null,
+        category: input.category,
+        active: true,
+      });
       return { success: true };
     }),
 
@@ -32,6 +40,7 @@ export const productsRouter = router({
       id: z.number(),
       name: z.string().min(1).optional(),
       description: z.string().optional(),
+      category: categoryEnum.optional(),
       active: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {

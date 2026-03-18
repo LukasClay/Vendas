@@ -77,7 +77,7 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
 
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
   onMarkWritten: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -106,7 +106,11 @@ function ToWriteCard({ item, onMarkWritten }: {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <p className="text-xs truncate" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.50 0.12 65)" }}>
@@ -249,7 +253,7 @@ function ToWriteCard({ item, onMarkWritten }: {
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
 function PendingCard({ item, onMarkDone }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
   onMarkDone: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -284,7 +288,11 @@ function PendingCard({ item, onMarkDone }: {
             <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
           </div>
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <p className="text-xs truncate" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+          </div>
         </div>
         <div className="shrink-0 mt-1">
           {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "oklch(0.52 0.015 260)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "oklch(0.52 0.015 260)" }} />}
@@ -423,7 +431,7 @@ function PendingCard({ item, onMarkDone }: {
 
 // ─── Card: Feito ──────────────────────────────────────────────────────────────
 function DoneCard({ item, onUndo }: {
-  item: { id: number; clientName: string; productName: string; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; productName: string; productCategory?: string | null; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
   onUndo: (id: number) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -437,7 +445,11 @@ function DoneCard({ item, onUndo }: {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <p className="text-xs truncate" style={{ color: "oklch(0.52 0.015 260)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+          </div>
           <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.01 260)" }}>Feito em {formatDate(item.completedAt)}</p>
         </div>
         {!confirming ? (
@@ -467,6 +479,7 @@ export default function ConsultoraPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -515,16 +528,24 @@ export default function ConsultoraPage() {
 
   // Derivar tipos únicos da aba ativa
   const activeItems = activeTab === "para_escrever" ? toWriteItems : activeTab === "pendente" ? pendingItems : doneItems;
-  const uniqueTypes = Array.from(new Set((activeItems as Array<{ productName: string }>).map(i => i.productName))).sort();
+  // Sub-filtro por categoria
+  const categoryFilteredItems = selectedCategory ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === selectedCategory) : activeItems;
+  const uniqueTypes = Array.from(new Set((categoryFilteredItems as Array<{ productName: string }>).map(i => i.productName))).sort();
 
-  // Filtrar por tipo selecionado
-  const filteredToWrite = selectedType ? toWriteItems.filter(i => i.productName === selectedType) : toWriteItems;
-  const filteredPending = selectedType ? pendingItems.filter(i => i.productName === selectedType) : pendingItems;
-  const filteredDone = selectedType ? doneItems.filter(i => i.productName === selectedType) : doneItems;
+  // Filtrar por tipo e categoria
+  const applyFilters = (items: any[]) => {
+    let result = items;
+    if (selectedCategory) result = result.filter(i => (i.productCategory ?? "individual") === selectedCategory);
+    if (selectedType) result = result.filter(i => i.productName === selectedType);
+    return result;
+  };
+  const filteredToWrite = applyFilters(toWriteItems);
+  const filteredPending = applyFilters(pendingItems);
+  const filteredDone = applyFilters(doneItems);
 
   function handleCopyAllToWrite() {
     if (toWriteItems.length === 0) { toast.error("Nenhum item para copiar"); return; }
-    const text = toWriteItems.map((item, i) =>
+    const text = toWriteItems.map((item: any, i: number) =>
       `${i + 1}. ${item.productName}\n   Nome: ${item.clientName}\n   Nasc: ${formatBirthDate(item.clientBirthDate)}${item.clientPhone ? `\n   Tel: ${item.clientPhone}` : ""}${item.notes ? `\n   Obs: ${item.notes}` : ""}`
     ).join("\n\n");
     const doFallback = () => {
@@ -591,6 +612,26 @@ export default function ConsultoraPage() {
           ))}
         </div>
 
+        {/* Sub-filtro por categoria */}
+        {!isLoading && (activeItems as any[]).some(i => (i.productCategory ?? "individual") !== "individual") && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {[{ key: null, label: "Todos" }, { key: "individual", label: "Individuais" }, { key: "promocao", label: "⭐ Promoção" }, { key: "coletivo", label: "👥 Coletivos" }].map(cat => {
+              const count = cat.key ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === cat.key).length : activeItems.length;
+              if (cat.key && count === 0) return null;
+              return (
+                <button key={String(cat.key)}
+                  onClick={() => { setSelectedCategory(cat.key); setSelectedType(null); }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedCategory === cat.key
+                    ? { background: "oklch(0.45 0.15 260)", color: "white" }
+                    : { background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)" }}>
+                  {cat.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Filtro por tipo de trabalho (chips dinâmicos) */}
         {!isLoading && uniqueTypes.length > 1 && (
           <div className="flex gap-2 flex-wrap mb-3">
@@ -652,17 +693,17 @@ export default function ConsultoraPage() {
             {activeTab === "para_escrever" && (
               filteredToWrite.length === 0
                 ? <EmptyState icon={<Pencil className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" para escrever` : "Nenhum trabalho para escrever"} sub={selectedType ? "Tente outro filtro" : "Novos trabalhos vendidos aparecerão aqui"} />
-                : filteredToWrite.map(item => <ToWriteCard key={item.id} item={item} onMarkWritten={id => markWritten.mutate({ id })} />)
+                : filteredToWrite.map((item: any) => <ToWriteCard key={item.id} item={item} onMarkWritten={id => markWritten.mutate({ id })} />)
             )}
             {activeTab === "pendente" && (
               filteredPending.length === 0
                 ? <EmptyState icon={<Hourglass className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" pendente` : "Nenhum trabalho pendente"} sub={selectedType ? "Tente outro filtro" : "Trabalhos marcados como escritos aparecerão aqui"} />
-                : filteredPending.map(item => <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ id })} />)
+                : filteredPending.map((item: any) => <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ id })} />)
             )}
             {activeTab === "feito" && (
               filteredDone.length === 0
                 ? <EmptyState icon={<BookCheck className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"} sub={selectedType ? "Tente outro filtro" : "Trabalhos concluídos aparecerão aqui"} />
-                : filteredDone.map(item => <DoneCard key={item.id} item={item} onUndo={id => undoDone.mutate({ id })} />)
+                : filteredDone.map((item: any) => <DoneCard key={item.id} item={item} onUndo={id => undoDone.mutate({ id })} />)
             )}
           </div>
         )}

@@ -326,9 +326,10 @@ export default function NovaVenda() {
                   ) : products.length === 0 ? (
                     <option disabled>Nenhum trabalho cadastrado</option>
                   ) : (
-                    products.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))
+                      products.map(p => {
+                      const tag = p.category === "promocao" ? " ⭐ Promoção" : p.category === "coletivo" ? " 👥 Coletivo" : "";
+                      return <option key={p.id} value={p.name}>{p.name}{tag}</option>;
+                    })
                   )}
                 </select>
               </div>

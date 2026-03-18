@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { sales, users } from "../../drizzle/schema";
+import { sales, users, products } from "../../drizzle/schema";
 import { and, asc, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -87,16 +87,29 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await db.select().from(sales)
+      const rows = await (db.select({
+        id: sales.id,
+        clientName: sales.clientName,
+        clientBirthDate: sales.clientBirthDate,
+        clientPhone: sales.clientPhone,
+        productName: sales.productName,
+        productCategory: products.category,
+        saleDate: sales.saleDate,
+        notes: sales.notes,
+        createdAt: sales.createdAt,
+        sellerName: sales.sellerName,
+      }).from(sales) as any)
+        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt));
 
-      return rows.map(s => ({
+      return rows.map((s: any) => ({
         id: s.id,
         clientName: s.clientName,
         clientBirthDate: s.clientBirthDate,
         clientPhone: s.clientPhone,
         productName: s.productName,
+        productCategory: s.productCategory ?? "individual",
         saleDate: s.saleDate,
         notes: s.notes,
         createdAt: s.createdAt,
@@ -121,26 +134,38 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await db.select().from(sales)
+      const rows = await (db.select({
+        id: sales.id,
+        clientName: sales.clientName,
+        clientBirthDate: sales.clientBirthDate,
+        clientPhone: sales.clientPhone,
+        productName: sales.productName,
+        productCategory: products.category,
+        saleDate: sales.saleDate,
+        notes: sales.notes,
+        writtenAt: sales.writtenAt,
+        sellerName: sales.sellerName,
+      }).from(sales) as any)
+        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate));
 
-      return rows.map(s => {
-        const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().slice(0, 10) : String(s.saleDate);
-        const urgency = calcBusinessDaysFromSale(saleDateStr);
-        return {
-          id: s.id,
-          clientName: s.clientName,
-          clientBirthDate: s.clientBirthDate,
-          clientPhone: s.clientPhone,
-          productName: s.productName,
-          saleDate: s.saleDate,
-          notes: s.notes,
-          writtenAt: s.writtenAt,
-          sellerName: s.sellerName,
-          ...urgency,
-        };
-      }).sort((a, b) => b.urgencyScore - a.urgencyScore);
+      return rows.map((s: any) => {
+          const urgency = calcBusinessDaysFromSale(s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate));
+          return {
+            id: s.id,
+            clientName: s.clientName,
+            clientBirthDate: s.clientBirthDate,
+            clientPhone: s.clientPhone,
+            productName: s.productName,
+            productCategory: s.productCategory ?? "individual",
+            saleDate: s.saleDate,
+            notes: s.notes,
+            writtenAt: s.writtenAt,
+            sellerName: s.sellerName,
+            ...urgency,
+          };
+        }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);;
     }),
 
   // ─── Aba 3: Feitos (mais recentes no topo para fácil reversão) ────────────────
@@ -160,16 +185,29 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await db.select().from(sales)
+      const rows = await (db.select({
+        id: sales.id,
+        clientName: sales.clientName,
+        clientBirthDate: sales.clientBirthDate,
+        clientPhone: sales.clientPhone,
+        productName: sales.productName,
+        productCategory: products.category,
+        saleDate: sales.saleDate,
+        notes: sales.notes,
+        completedAt: sales.completedAt,
+        sellerName: sales.sellerName,
+      }).from(sales) as any)
+        .leftJoin(products, eq(sales.productId, products.id))
         .where(and(...conditions))
         .orderBy(desc(sales.completedAt)); // mais recentes no topo
 
-      return rows.map(s => ({
+      return rows.map((s: any) => ({
         id: s.id,
         clientName: s.clientName,
         clientBirthDate: s.clientBirthDate,
         clientPhone: s.clientPhone,
         productName: s.productName,
+        productCategory: s.productCategory ?? "individual",
         saleDate: s.saleDate,
         notes: s.notes,
         completedAt: s.completedAt,

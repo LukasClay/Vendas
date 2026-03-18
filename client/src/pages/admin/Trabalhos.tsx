@@ -136,7 +136,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
 
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten, sellers }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
   onMarkWritten: (id: number) => void;
   sellers: Seller[];
 }) {
@@ -162,7 +162,11 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
-            <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+            </div>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
           <button onClick={() => setExpanded(e => !e)} className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
@@ -242,7 +246,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
 function PendingCard({ item, onMarkDone, sellers }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; saleDate: Date | string | null; notes: string | null; writtenAt: Date | string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; writtenAt: Date | string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
   onMarkDone: (id: number) => void;
   sellers: Seller[];
 }) {
@@ -271,7 +275,11 @@ function PendingCard({ item, onMarkDone, sellers }: {
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
-            <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+            </div>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
           <button onClick={() => setExpanded(e => !e)} className="p-1 rounded-lg shrink-0 mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
@@ -339,7 +347,7 @@ function PendingCard({ item, onMarkDone, sellers }: {
 
 // ─── Card: Feito ──────────────────────────────────────────────────────────────
 function DoneCard({ item, onUndo, sellers }: {
-  item: { id: number; clientName: string; productName: string; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; productName: string; productCategory?: string | null; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null };
   onUndo: (id: number) => void;
   sellers: Seller[];
 }) {
@@ -353,7 +361,11 @@ function DoneCard({ item, onUndo, sellers }: {
             <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
             <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
           </div>
-          <p className="text-xs mt-0.5 font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <p className="text-xs font-medium" style={{ color: "oklch(0.55 0.12 65)" }}>{item.productName}</p>
+            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
+          </div>
           <p className="text-xs mt-0.5" style={{ color: "oklch(0.60 0.01 260)" }}>
             Venda: {formatDate(item.saleDate)} · Feito: {formatDate(item.completedAt)}
           </p>
@@ -393,6 +405,7 @@ export default function AdminTrabalhos() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   // Debounce simples
@@ -455,14 +468,22 @@ export default function AdminTrabalhos() {
 
   // Derivar tipos únicos da aba ativa
   const activeItems = activeTab === "para_escrever" ? toWriteItems : activeTab === "pendente" ? pendingItems : doneItems;
-  const uniqueTypes = Array.from(new Set((activeItems as Array<{ productName: string }>).map(i => i.productName))).sort();
+  // Sub-filtro por categoria
+  const categoryFilteredItems = selectedCategory ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === selectedCategory) : activeItems;
+  const uniqueTypes = Array.from(new Set((categoryFilteredItems as Array<{ productName: string }>).map(i => i.productName))).sort();
 
-  // Filtrar por tipo selecionado
-  const filteredToWrite = selectedType ? toWriteItems.filter((i: any) => i.productName === selectedType) : toWriteItems;
-  const filteredPending = selectedType ? pendingItems.filter((i: any) => i.productName === selectedType) : pendingItems;
-  const filteredDone = selectedType ? doneItems.filter((i: any) => i.productName === selectedType) : doneItems;
+  // Filtrar por tipo e categoria
+  const applyFilters = (items: any[]) => {
+    let result = items;
+    if (selectedCategory) result = result.filter(i => (i.productCategory ?? "individual") === selectedCategory);
+    if (selectedType) result = result.filter(i => i.productName === selectedType);
+    return result;
+  };
+  const filteredToWrite = applyFilters(toWriteItems);
+  const filteredPending = applyFilters(pendingItems);
+  const filteredDone = applyFilters(doneItems);
 
-  function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setDebouncedSearch(""); setSelectedType(null); }
+  function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setDebouncedSearch(""); setSelectedType(null); setSelectedCategory(null); }
 
   return (
     <DashboardLayout>
@@ -498,6 +519,26 @@ export default function AdminTrabalhos() {
             </button>
           ))}
         </div>
+
+        {/* Sub-filtro por categoria */}
+        {!isLoading && (activeItems as any[]).some(i => (i.productCategory ?? "individual") !== "individual") && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {[{ key: null, label: "Todos" }, { key: "individual", label: "Individuais" }, { key: "promocao", label: "⭐ Promoção" }, { key: "coletivo", label: "👥 Coletivos" }].map(cat => {
+              const count = cat.key ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === cat.key).length : activeItems.length;
+              if (cat.key && count === 0) return null;
+              return (
+                <button key={String(cat.key)}
+                  onClick={() => { setSelectedCategory(cat.key); setSelectedType(null); }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedCategory === cat.key
+                    ? { background: "oklch(0.45 0.15 260)", color: "white" }
+                    : { background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)" }}>
+                  {cat.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Filtro por tipo de trabalho (chips dinâmicos) */}
         {!isLoading && uniqueTypes.length > 1 && (
