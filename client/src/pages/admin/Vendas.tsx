@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2 } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 
@@ -30,6 +30,27 @@ export default function AdminVendas() {
   }), [filters.startDate, filters.endDate, filters.sellerId, filters.productName]);
 
   const { data: rawSalesData = [], isLoading } = trpc.sales.list.useQuery(queryFilters);
+
+  // Exportar CSV com os filtros ativos
+  const [csvLoading, setCsvLoading] = useState(false);
+  const exportCsvQuery = trpc.sales.exportCsv.useQuery(queryFilters, { enabled: false });
+  async function handleExportCsv() {
+    setCsvLoading(true);
+    try {
+      const result = await exportCsvQuery.refetch();
+      if (!result.data?.csv) { toast.error('Nenhum dado para exportar'); return; }
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + result.data.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vendas_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${result.data.total} vendas exportadas`);
+    } catch { toast.error('Erro ao exportar CSV'); }
+    finally { setCsvLoading(false); }
+  }
 
   // Filtro client-side por categoria
   const salesData = useMemo(() => {
@@ -124,14 +145,25 @@ export default function AdminVendas() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-            Todas as Vendas
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-            {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
-            {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
-          </p>
+        <div className="mb-4 sm:mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+              Todas as Vendas
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+              {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
+              {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
+            </p>
+          </div>
+          <button
+            onClick={handleExportCsv}
+            disabled={csvLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition-opacity hover:opacity-80 disabled:opacity-50 shrink-0"
+            style={{ background: "oklch(0.55 0.15 145)", color: "white" }}
+          >
+            {csvLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Exportar CSV
+          </button>
         </div>
 
         {/* Filtros */}

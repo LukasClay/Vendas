@@ -189,6 +189,48 @@ export const salesRouter = router({
       return { success: true };
     }),
 
+  // Exportar todas as vendas como CSV (ADM)
+  exportCsv: adminProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      sellerId: z.number().optional(),
+      productName: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const rows = await getSales({
+        startDate: input?.startDate ? new Date(input.startDate) : undefined,
+        endDate: input?.endDate ? new Date(input.endDate) : undefined,
+        sellerId: input?.sellerId,
+        productName: input?.productName,
+        limit: 10000,
+        offset: 0,
+      });
+
+      const header = ['ID', 'Data', 'Cliente', 'Nascimento', 'Telefone', 'Trabalho', 'Tipo', 'Vendedor', 'Valor (R$)', 'Status', 'Observação'];
+      const escape = (v: unknown) => {
+        const s = v == null ? '' : String(v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = [
+        header.join(','),
+        ...rows.map((r: typeof rows[number]) => [
+          r.id,
+          r.saleDate,
+          r.clientName,
+          r.clientBirthDate ?? '',
+          r.clientPhone ?? '',
+          r.productName,
+          r.productCategory ?? 'individual',
+          r.sellerName ?? '',
+          Number(r.amount).toFixed(2).replace('.', ','),
+          r.workStatus,
+          r.notes ?? '',
+        ].map(escape).join(',')),
+      ];
+      return { csv: lines.join('\n'), total: rows.length };
+    }),
+
   // Histórico de uma cliente (ADM) — trabalhos normais + consultas separadas
   clientHistory: adminProcedure
     .input(z.object({ clientName: z.string().min(1) }))

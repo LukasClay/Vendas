@@ -333,3 +333,7 @@
 
 ## Varredura de Inputs Instáveis
 - [ ] Varrer e corrigir inputs instáveis em Vendas, Relatórios e Funcionários
+
+## Novas Funcionalidades (18/03/2026)
+- [x] Botão "Exportar para CSV" na página Todas as Vendas
+- [x] Filtro rápido por período (hoje/semana/mês) no dashboard

@@ -68,30 +68,48 @@ export default function AdminDashboard() {
             </p>
           </div>
           {/* Filtro de datas */}
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
-              value={dateFilter.startDate}
-              onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
-              className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
-            />
-            <span className="text-sm shrink-0" style={{ color: "oklch(0.52 0.015 260)" }}>até</span>
-            <input
-              type="date"
-              value={dateFilter.endDate}
-              onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
-              className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
-            />
-            {(dateFilter.startDate || dateFilter.endDate) && (
-              <button
-                onClick={() => setDateFilter({ startDate: "", endDate: "" })}
-                className="px-3 py-2.5 rounded-xl text-sm font-medium transition-colors shrink-0"
-                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
-                Limpar
-              </button>
-            )}
+          <div className="flex flex-col gap-2">
+            {/* Atalhos rápidos */}
+            <div className="flex flex-wrap gap-2">
+              {([
+                { label: 'Hoje', fn: () => { const t = new Date().toISOString().slice(0,10); setDateFilter({ startDate: t, endDate: t }); } },
+                { label: 'Esta semana', fn: () => { const now = new Date(); const day = now.getDay(); const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1)); const sun = new Date(mon); sun.setDate(mon.getDate() + 6); setDateFilter({ startDate: mon.toISOString().slice(0,10), endDate: sun.toISOString().slice(0,10) }); } },
+                { label: 'Este mês', fn: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1); const last = new Date(now.getFullYear(), now.getMonth() + 1, 0); setDateFilter({ startDate: first.toISOString().slice(0,10), endDate: last.toISOString().slice(0,10) }); } },
+                { label: 'Mês passado', fn: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth() - 1, 1); const last = new Date(now.getFullYear(), now.getMonth(), 0); setDateFilter({ startDate: first.toISOString().slice(0,10), endDate: last.toISOString().slice(0,10) }); } },
+              ] as { label: string; fn: () => void }[]).map(({ label, fn }) => (
+                <button key={label} onClick={fn}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
+                  style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)", border: "1px solid oklch(0.88 0.012 65)" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Inputs de data */}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={dateFilter.startDate}
+                onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
+                className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
+              />
+              <span className="text-sm shrink-0" style={{ color: "oklch(0.52 0.015 260)" }}>até</span>
+              <input
+                type="date"
+                value={dateFilter.endDate}
+                onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
+                className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
+                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
+              />
+              {(dateFilter.startDate || dateFilter.endDate) && (
+                <button
+                  onClick={() => setDateFilter({ startDate: "", endDate: "" })}
+                  className="px-3 py-2.5 rounded-xl text-sm font-medium transition-colors shrink-0"
+                  style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                  Limpar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
