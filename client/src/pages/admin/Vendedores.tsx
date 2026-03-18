@@ -24,6 +24,252 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   admin: { bg: "oklch(0.94 0.02 65)", text: "oklch(0.45 0.10 65)" },
 };
 
+const inputStyle = {
+  border: "1.5px solid oklch(0.88 0.012 65)",
+  background: "oklch(0.98 0.006 65)",
+  color: "oklch(0.15 0.02 260)",
+  fontSize: "16px",
+};
+
+// ─── UserCard definido FORA do componente principal para evitar re-criação a cada render ───
+type UserCardProps = {
+  user: any;
+  editingId: number | null;
+  editForm: EditEmployeeForm;
+  setEditForm: React.Dispatch<React.SetStateAction<EditEmployeeForm>>;
+  setEditingId: (id: number | null) => void;
+  onSave: (userId: number) => void;
+  isSaving: boolean;
+  resetId: number | null;
+  resetForm: ResetForm;
+  setResetForm: React.Dispatch<React.SetStateAction<ResetForm>>;
+  setResetId: (id: number | null) => void;
+  showResetPassword: boolean;
+  setShowResetPassword: (v: boolean) => void;
+  onReset: (userId: number) => void;
+  isResetting: boolean;
+  onDeactivate: (id: number) => void;
+  onReactivate: (id: number) => void;
+};
+
+function UserCard({
+  user,
+  editingId,
+  editForm,
+  setEditForm,
+  setEditingId,
+  onSave,
+  isSaving,
+  resetId,
+  resetForm,
+  setResetForm,
+  setResetId,
+  showResetPassword,
+  setShowResetPassword,
+  onReset,
+  isResetting,
+  onDeactivate,
+  onReactivate,
+}: UserCardProps) {
+  const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.user;
+  const isEditing = editingId === user.id;
+  const isResettingThis = resetId === user.id;
+
+  return (
+    <div
+      className="px-4 sm:px-6 py-4 transition-colors"
+      style={{ opacity: user.active ? 1 : 0.55 }}
+      onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >
+      <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+        {/* Avatar */}
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
+          style={{
+            background:
+              user.role === "admin"
+                ? "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))"
+                : user.role === "consultora"
+                  ? "linear-gradient(135deg, oklch(0.50 0.18 290), oklch(0.60 0.20 295))"
+                  : "oklch(0.22 0.03 265)",
+            color: "white",
+          }}
+        >
+          {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
+        </div>
+
+        {/* Info / Edit inline */}
+        {isEditing ? (
+          <div className="flex-1 flex flex-col gap-2">
+            <input
+              type="text"
+              value={editForm.name}
+              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Nome completo"
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+              style={inputStyle}
+            />
+            <input
+              type="text"
+              value={editForm.username}
+              onChange={e => setEditForm(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
+              placeholder="nome_usuario"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+              style={inputStyle}
+            />
+            <select
+              value={editForm.role}
+              onChange={e => setEditForm(f => ({ ...f, role: e.target.value as "user" | "consultora" | "admin" }))}
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+              style={inputStyle}
+            >
+              <option value="user">Funcionário</option>
+              <option value="consultora">Consultora</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onSave(user.id)}
+                disabled={isSaving}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50 active:scale-95"
+                style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}
+              >
+                <Check className="w-3.5 h-3.5" /> Salvar
+              </button>
+              <button
+                onClick={() => setEditingId(null)}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm active:scale-95"
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
+                {user.displayName || user.name || "Sem nome"}
+              </p>
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ background: roleColor.bg, color: roleColor.text }}
+              >
+                {ROLE_LABELS[user.role] ?? user.role}
+              </span>
+              {!user.active && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: "oklch(0.93 0.04 30)", color: "oklch(0.55 0.20 30)" }}
+                >
+                  Inativo
+                </span>
+              )}
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
+              @{user.username || user.email || "sem-usuario"}
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        {!isEditing && (
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            <button
+              onClick={() => {
+                setEditingId(user.id);
+                setEditForm({
+                  name: user.name ?? user.displayName ?? "",
+                  username: user.username ?? "",
+                  role: user.role as "user" | "consultora" | "admin",
+                  active: user.active ?? true,
+                });
+              }}
+              className="p-2.5 sm:p-2 rounded-lg hover:bg-blue-50 transition-colors"
+              style={{ color: "oklch(0.50 0.18 250)" }}
+              title="Editar funcionário"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setResetId(user.id); setResetForm({ newPassword: "" }); }}
+              className="p-2.5 sm:p-2 rounded-lg hover:bg-yellow-50 transition-colors"
+              style={{ color: "oklch(0.60 0.13 65)" }}
+              title="Redefinir senha"
+            >
+              <KeyRound className="w-4 h-4" />
+            </button>
+            {user.active ? (
+              <button
+                onClick={() => onDeactivate(user.id)}
+                className="p-2.5 sm:p-2 rounded-lg hover:bg-red-50 transition-colors"
+                style={{ color: "oklch(0.58 0.22 25)" }}
+                title="Desativar acesso"
+              >
+                <UserX className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => onReactivate(user.id)}
+                className="p-2.5 sm:p-2 rounded-lg transition-colors"
+                style={{ color: "oklch(0.55 0.15 160)" }}
+                title="Reativar acesso"
+              >
+                <UserCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Reset password inline */}
+      {isResettingThis && (
+        <div className="mt-3 ml-0 sm:ml-14 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type={showResetPassword ? "text" : "password"}
+              value={resetForm.newPassword}
+              onChange={e => setResetForm({ newPassword: e.target.value })}
+              placeholder="Nova senha (mín. 6 caracteres)"
+              className="w-full px-3 py-2.5 pr-10 rounded-lg outline-none"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => setShowResetPassword(!showResetPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
+              style={{ color: "oklch(0.52 0.015 260)" }}
+            >
+              {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onReset(user.id)}
+              disabled={resetForm.newPassword.length < 6 || isResetting}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
+              style={{ background: "oklch(0.60 0.13 65)", fontSize: "16px" }}
+            >
+              {isResetting ? "Salvando..." : "Salvar senha"}
+            </button>
+            <button
+              onClick={() => setResetId(null)}
+              className="flex-1 sm:flex-none px-3 py-2.5 rounded-lg active:scale-95"
+              style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Componente principal ───────────────────────────────────────────────────
 export default function AdminVendedores() {
   const utils = trpc.useUtils();
   const { data: users = [], isLoading } = trpc.users.listAll.useQuery();
@@ -86,186 +332,35 @@ export default function AdminVendedores() {
   const consultoras = users.filter(u => u.role === "consultora");
   const admins = users.filter(u => u.role === "admin");
 
-  const inputStyle = {
-    background: "oklch(0.97 0.005 260)",
-    border: "2px solid oklch(0.88 0.012 65)",
-    color: "oklch(0.15 0.02 260)",
-    fontSize: "16px",
+  const cardProps = {
+    editingId,
+    editForm,
+    setEditForm,
+    setEditingId,
+    onSave: (userId: number) =>
+      updateUserMutation.mutate({
+        userId,
+        name: editForm.name || undefined,
+        username: editForm.username || undefined,
+        role: editForm.role,
+      }),
+    isSaving: updateUserMutation.isPending,
+    resetId,
+    resetForm,
+    setResetForm,
+    setResetId,
+    showResetPassword,
+    setShowResetPassword,
+    onReset: (userId: number) =>
+      resetPassword.mutate({ userId, newPassword: resetForm.newPassword }),
+    isResetting: resetPassword.isPending,
+    onDeactivate: (id: number) => deactivateUser.mutate({ id }),
+    onReactivate: (id: number) => reactivateUser.mutate({ id, active: true }),
   };
 
   const selectStyle = {
     ...inputStyle,
     cursor: "pointer",
-  };
-
-  const UserCard = ({ user }: { user: any }) => {
-    const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.user;
-    return (
-      <div className="px-4 sm:px-6 py-4 transition-colors" style={{ opacity: user.active ? 1 : 0.55 }}
-        onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
-        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-
-        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          {/* Avatar */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
-            style={{
-              background: user.role === "admin"
-                ? "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))"
-                : user.role === "consultora"
-                  ? "linear-gradient(135deg, oklch(0.50 0.18 290), oklch(0.60 0.20 295))"
-                  : "oklch(0.22 0.03 265)",
-              color: "white",
-            }}>
-            {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
-          </div>
-
-          {/* Info / Edit inline */}
-          {editingId === user.id ? (
-            <div className="flex-1 flex flex-col gap-2">
-              <input
-                type="text"
-                value={editForm.name}
-                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Nome completo"
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
-              />
-              <input
-                type="text"
-                value={editForm.username}
-                onChange={e => setEditForm(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
-                placeholder="nome_usuario"
-                autoCapitalize="none"
-                autoCorrect="off"
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
-              />
-              <select
-                value={editForm.role}
-                onChange={e => setEditForm(f => ({ ...f, role: e.target.value as "user" | "consultora" | "admin" }))}
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
-              >
-                <option value="user">Funcionário</option>
-                <option value="consultora">Consultora</option>
-                <option value="admin">Administrador</option>
-              </select>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => updateUserMutation.mutate({
-                    userId: user.id,
-                    name: editForm.name || undefined,
-                    username: editForm.username || undefined,
-                    role: editForm.role,
-                  })}
-                  disabled={updateUserMutation.isPending}
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50 active:scale-95"
-                  style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}>
-                  <Check className="w-3.5 h-3.5" /> Salvar
-                </button>
-                <button onClick={() => setEditingId(null)} className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm active:scale-95"
-                  style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
-                  {user.displayName || user.name || "Sem nome"}
-                </p>
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: roleColor.bg, color: roleColor.text }}>
-                  {ROLE_LABELS[user.role] ?? user.role}
-                </span>
-                {!user.active && (
-                  <span className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: "oklch(0.93 0.04 30)", color: "oklch(0.55 0.20 30)" }}>
-                    Inativo
-                  </span>
-                )}
-              </div>
-              <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
-                @{user.username || user.email || "sem-usuario"}
-              </p>
-            </div>
-          )}
-
-          {/* Actions */}
-          {editingId !== user.id && (
-            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-              <button
-                onClick={() => {
-                  setEditingId(user.id);
-                  setEditForm({
-                    name: user.name ?? user.displayName ?? "",
-                    username: user.username ?? "",
-                    role: user.role as "user" | "consultora" | "admin",
-                    active: user.active ?? true,
-                  });
-                }}
-                className="p-2.5 sm:p-2 rounded-lg hover:bg-blue-50 transition-colors"
-                style={{ color: "oklch(0.50 0.18 250)" }} title="Editar funcionário">
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => { setResetId(user.id); setResetForm({ newPassword: "" }); }}
-                className="p-2.5 sm:p-2 rounded-lg hover:bg-yellow-50 transition-colors"
-                style={{ color: "oklch(0.60 0.13 65)" }} title="Redefinir senha">
-                <KeyRound className="w-4 h-4" />
-              </button>
-              {user.active ? (
-                <button onClick={() => deactivateUser.mutate({ id: user.id })}
-                  className="p-2.5 sm:p-2 rounded-lg hover:bg-red-50 transition-colors"
-                  style={{ color: "oklch(0.58 0.22 25)" }} title="Desativar acesso">
-                  <UserX className="w-4 h-4" />
-                </button>
-              ) : (
-                <button onClick={() => reactivateUser.mutate({ id: user.id, active: true })}
-                  className="p-2.5 sm:p-2 rounded-lg transition-colors"
-                  style={{ color: "oklch(0.55 0.15 160)" }} title="Reativar acesso">
-                  <UserCheck className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Reset password inline */}
-        {resetId === user.id && (
-          <div className="mt-3 ml-0 sm:ml-14 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showResetPassword ? "text" : "password"}
-                value={resetForm.newPassword}
-                onChange={e => setResetForm({ newPassword: e.target.value })}
-                placeholder="Nova senha (mín. 6 caracteres)"
-                className="w-full px-3 py-2.5 pr-10 rounded-lg outline-none"
-                style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.97 0.005 260)", color: "oklch(0.15 0.02 260)", fontSize: "16px" }}
-              />
-              <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-                {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
-                disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-                style={{ background: "oklch(0.60 0.13 65)", fontSize: "16px" }}>
-                {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
-              </button>
-              <button onClick={() => setResetId(null)} className="flex-1 sm:flex-none px-3 py-2.5 rounded-lg active:scale-95"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -274,7 +369,10 @@ export default function AdminVendedores() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1
+              className="text-xl sm:text-2xl font-bold"
+              style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}
+            >
               Funcionários
             </h1>
             <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
@@ -288,7 +386,8 @@ export default function AdminVendedores() {
               setNewEmployee({ name: "", username: "", password: "", phone: "" });
             }}
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
+            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}
+          >
             <Plus className="w-4 h-4" />
             Novo Funcionário
           </button>
@@ -301,7 +400,6 @@ export default function AdminVendedores() {
               Novo Funcionário
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Tipo de cargo */}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Cargo *</label>
                 <select
@@ -316,7 +414,6 @@ export default function AdminVendedores() {
                 </select>
               </div>
 
-              {/* Nome */}
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Nome completo *</label>
                 <input
@@ -329,7 +426,6 @@ export default function AdminVendedores() {
                 />
               </div>
 
-              {/* Username */}
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
                   Nome de usuário *
@@ -351,7 +447,6 @@ export default function AdminVendedores() {
                 </p>
               </div>
 
-              {/* Senha */}
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Senha *</label>
                 <div className="relative">
@@ -363,14 +458,17 @@ export default function AdminVendedores() {
                     className="w-full px-4 py-3 pr-12 rounded-xl outline-none"
                     style={inputStyle}
                   />
-                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "oklch(0.52 0.015 260)" }}
+                  >
                     {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Telefone */}
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Telefone (opcional)</label>
                 <input
@@ -386,13 +484,15 @@ export default function AdminVendedores() {
 
             <div className="flex flex-col sm:flex-row gap-3 mt-5">
               <button
-                onClick={() => createEmployee.mutate({
-                  name: newEmployee.name,
-                  username: newEmployee.username,
-                  password: newEmployee.password,
-                  phone: newEmployee.phone || undefined,
-                  role: createRole,
-                })}
+                onClick={() =>
+                  createEmployee.mutate({
+                    name: newEmployee.name,
+                    username: newEmployee.username,
+                    password: newEmployee.password,
+                    phone: newEmployee.phone || undefined,
+                    role: createRole,
+                  })
+                }
                 disabled={
                   !newEmployee.name ||
                   newEmployee.username.length < 3 ||
@@ -400,13 +500,15 @@ export default function AdminVendedores() {
                   createEmployee.isPending
                 }
                 className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
+                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}
+              >
                 {createEmployee.isPending ? "Criando..." : `Criar ${ROLE_LABELS[createRole]}`}
               </button>
               <button
                 onClick={() => setShowCreateForm(false)}
                 className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
+                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
+              >
                 Cancelar
               </button>
             </div>
@@ -431,7 +533,7 @@ export default function AdminVendedores() {
                   </span>
                 </div>
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {admins.map(u => <UserCard key={u.id} user={u} />)}
+                  {admins.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
                 </div>
               </div>
             )}
@@ -456,7 +558,7 @@ export default function AdminVendedores() {
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {sellers.map(u => <UserCard key={u.id} user={u} />)}
+                  {sellers.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
                 </div>
               )}
             </div>
@@ -481,7 +583,7 @@ export default function AdminVendedores() {
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {consultoras.map(u => <UserCard key={u.id} user={u} />)}
+                  {consultoras.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
                 </div>
               )}
             </div>

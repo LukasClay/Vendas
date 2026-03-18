@@ -197,3 +197,6 @@
 - [x] Frontend: exibir motivo do cancelamento no card cancelado
 - [x] Backend: notificação ao ADM (dono do projeto) quando consulta for cancelada (plataforma não suporta notif. para usuários individuais)
 - [x] Corrigir bug de data salva com 1 dia a menos no banco (saleDate gravada como D-1)
+
+## Bug: Perda de foco nos inputs de edição de funcionários
+- [x] Corrigir campos de input que perdem foco a cada caractere digitado na tela de Funcionários (UserCard movido para fora do componente principal)
