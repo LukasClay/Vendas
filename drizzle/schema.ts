@@ -126,3 +126,18 @@ export const reportSchedules = mysqlTable("report_schedules", {
 
 export type ReportSchedule = typeof reportSchedules.$inferSelect;
 export type InsertReportSchedule = typeof reportSchedules.$inferInsert;
+
+// ─── Push Subscriptions (Web Push / PWA) ────────────────────────────────────────────────────────────────────────────────
+export const pushSubscriptions = mysqlTable("push_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),                        // FK → users.id
+  endpoint: text("endpoint").notNull(),                   // URL do push service
+  p256dh: text("p256dh").notNull(),                       // chave pública do cliente
+  auth: text("auth").notNull(),                           // segredo de autenticação
+  userAgent: text("userAgent"),                           // browser/device info
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;

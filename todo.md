@@ -272,3 +272,12 @@
 ## Bug: Status dos Trabalhos no Dashboard ADM
 - [x] Prazo e Dias Restantes aparecem como — para status "Para Escrever" (corrigido: backend agora retorna daysRemaining/deadline/isOverdue/isUrgent para toWrite igual ao pending)
 - [x] Prazo calculado como data da venda + 7 dias úteis com feriados brasileiros (Carnaval, Sexta Santa, Páscoa, Corpus Christi, fixos nacionais) via shared/businessDays.ts
+
+## Alertas, PWA e Restrição de Data
+- [x] Corrigir cálculo de dias restantes: não contar o dia da venda (mostrar 7d quando venda é hoje)
+- [x] Borda colorida nos cards Para Escrever: laranja (1-2 dias), vermelha (atrasado) — ADM e Consultora
+- [x] Aba Alertas no painel ADM (/admin/alertas): lista permanente de trabalhos urgentes/atrasados (Para Escrever + Pendentes)
+- [x] Aba Alertas no painel Consultora: nova aba na página Consultora
+- [x] Web Push + PWA: service worker (sw.js), manifest.json, subscription no banco (push_subscriptions), botão Bell no DashboardLayout, job automático alertsJob.ts (a cada hora)
+- [x] Restringir data de venda: vendedor e consultora só visualizam (readonly), ADM pode editar
+- [x] 32 testes passando, TypeScript sem erros

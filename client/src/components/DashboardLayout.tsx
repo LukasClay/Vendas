@@ -2,12 +2,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  BarChart3, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
+  BarChart3, Bell, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
   PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles, Calendar,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import { PushNotificationButton } from "./PushNotificationButton";
 
 const sellerMenuItems = [
   { icon: PlusCircle, label: "Nova Venda", path: "/venda" },
@@ -29,6 +30,7 @@ const adminMenuItems = [
   { icon: Package, label: "Trabalhos", path: "/admin/produtos" },
   { icon: ClipboardList, label: "Painel Trabalhos", path: "/admin/trabalhos" },
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
+  { icon: Bell, label: "Alertas", path: "/admin/alertas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
 ];
@@ -124,13 +126,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               {activeMenuItem?.label ?? "Mundo Da Magia"}
             </span>
           </div>
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl"
-            style={{ color: "oklch(0.75 0.06 65)" }}
-            aria-label="Abrir menu">
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-1">
+            <div style={{ color: "oklch(0.75 0.06 65)" }}>
+              <PushNotificationButton />
+            </div>
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl"
+              style={{ color: "oklch(0.75 0.06 65)" }}
+              aria-label="Abrir menu">
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </header>
 
         {/* Drawer menu mobile */}
@@ -276,6 +283,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate" style={{ color: "oklch(0.92 0.01 65)" }}>{displayName}</p>
               <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 65)" }}>{(user as any)?.username || user?.email || ""}</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-1 mb-1">
+            <div style={{ color: "oklch(0.65 0.06 65)" }}>
+              <PushNotificationButton />
             </div>
           </div>
           <button

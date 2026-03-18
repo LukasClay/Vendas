@@ -19,6 +19,7 @@ import AdminVendedores from "./pages/admin/Vendedores";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminConsultas from "./pages/admin/Consultas";
 import AdminTrabalhos from "./pages/admin/Trabalhos";
+import AdminAlertas from "./pages/admin/Alertas";
 import ConsultoraPage from "./pages/Consultora";
 import ConsultasPage from "./pages/Consultas";
 
@@ -120,6 +121,9 @@ function Router() {
       </Route>
       <Route path="/admin/nova-venda">
         <AuthGuard adminOnly><NovaVenda /></AuthGuard>
+      </Route>
+      <Route path="/admin/alertas">
+        <AuthGuard adminOnly><AdminAlertas /></AuthGuard>
       </Route>
 
       <Route path="/404" component={NotFound} />

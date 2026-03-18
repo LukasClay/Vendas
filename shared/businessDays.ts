@@ -109,8 +109,10 @@ export function calcBusinessDaysFromSale(saleDateStr: string, businessDays = 7) 
   let daysRemaining = 0;
 
   if (today <= deadline) {
-    // Conta dias úteis de hoje até o deadline (inclusive)
+    // Conta dias úteis de amanhã até o deadline (inclusive)
+    // O dia de hoje não conta — o prazo é calculado a partir do dia seguinte à venda
     const cursor = new Date(today);
+    cursor.setDate(cursor.getDate() + 1); // começa amanhã
     while (cursor <= deadline) {
       if (isBusinessDay(cursor)) daysRemaining++;
       cursor.setDate(cursor.getDate() + 1);

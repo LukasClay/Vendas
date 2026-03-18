@@ -6,11 +6,11 @@ import {
   CheckCircle2, Clock, AlertTriangle, Search, Copy, Check,
   ChevronDown, ChevronUp, User, Phone, Calendar, FileText,
   ShoppingBag, X, Pencil, Hourglass, BookCheck, ClipboardList,
-  RotateCcw, Loader2
+  RotateCcw, Loader2, Bell, RefreshCw
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 
-type Tab = "para_escrever" | "pendente" | "feito";
+type Tab = "para_escrever" | "pendente" | "feito" | "alertas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatBirthDate(d: Date | string | null | undefined): string {
@@ -77,7 +77,7 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
 
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null; daysRemaining?: number; isOverdue?: boolean; isUrgent?: boolean };
   onMarkWritten: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -97,11 +97,17 @@ function ToWriteCard({ item, onMarkWritten }: {
     </button>
   );
 
+  const isOverdue = item.isOverdue ?? false;
+  const isUrgent = item.isUrgent ?? false;
+  const daysRemaining = item.daysRemaining ?? 7;
+  const borderColor = isOverdue ? "oklch(0.80 0.12 25)" : isUrgent ? "oklch(0.82 0.10 55)" : "oklch(0.88 0.012 65)";
+  const avatarBg = isOverdue ? "oklch(0.58 0.22 25)" : isUrgent ? "oklch(0.60 0.18 55)" : "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))";
+
   return (
-    <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "white", border: "1.5px solid oklch(0.88 0.012 65)" }}>
+    <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "white", border: `1.5px solid ${borderColor}` }}>
       <button className="w-full flex items-center gap-3 px-4 py-4 text-left" onClick={() => setExpanded(e => !e)}>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm"
-          style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))" }}>
+          style={{ background: avatarBg }}>
           {item.clientName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -111,6 +117,7 @@ function ToWriteCard({ item, onMarkWritten }: {
             {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.95 0.05 25)", color: "oklch(0.50 0.18 25)", border: "1px solid oklch(0.88 0.08 25)" }}>⭐ Promoção</span>}
             {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "oklch(0.94 0.03 260)", color: "oklch(0.45 0.15 260)", border: "1px solid oklch(0.86 0.06 260)" }}>👥 Coletivo</span>}
           </div>
+          <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.50 0.12 65)" }}>
@@ -499,6 +506,9 @@ export default function ConsultoraPage() {
   const { data: doneItems = [], isLoading: loadingDone } = trpc.consultora.done.useQuery(
     { search: debouncedSearch || undefined }, { enabled: activeTab === "feito" }
   );
+  const { data: alertItems = [], isLoading: loadingAlerts, refetch: refetchAlerts, isFetching: isFetchingAlerts } = trpc.consultora.alerts.useQuery(
+    undefined, { enabled: activeTab === "alertas", refetchInterval: 5 * 60 * 1000 }
+  );
 
   const invalidateAll = () => {
     utils.consultora.toWrite.invalidate();
@@ -565,13 +575,15 @@ export default function ConsultoraPage() {
     }
   }
 
+  const alertCount = (alertItems as any[]).length;
   const tabs = [
     { id: "para_escrever" as Tab, label: "Para Escrever", icon: <Pencil className="w-4 h-4" />, count: counts?.para_escrever ?? 0 },
     { id: "pendente" as Tab, label: "Pendentes", icon: <Hourglass className="w-4 h-4" />, count: counts?.pendente ?? 0 },
     { id: "feito" as Tab, label: "Feitos", icon: <BookCheck className="w-4 h-4" />, count: counts?.feito ?? 0 },
+    { id: "alertas" as Tab, label: "Alertas", icon: <Bell className="w-4 h-4" />, count: alertCount },
   ];
 
-  const isLoading = activeTab === "para_escrever" ? loadingWrite : activeTab === "pendente" ? loadingPending : loadingDone;
+  const isLoading = activeTab === "para_escrever" ? loadingWrite : activeTab === "pendente" ? loadingPending : activeTab === "feito" ? loadingDone : loadingAlerts;
 
   // Reset tipo ao trocar aba
   function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setSelectedType(null); }
@@ -704,6 +716,49 @@ export default function ConsultoraPage() {
               filteredDone.length === 0
                 ? <EmptyState icon={<BookCheck className="w-10 h-10" />} text={selectedType ? `Nenhum "${selectedType}" feito` : "Nenhum trabalho feito ainda"} sub={selectedType ? "Tente outro filtro" : "Trabalhos concluídos aparecerão aqui"} />
                 : filteredDone.map((item: any) => <DoneCard key={item.id} item={item} onUndo={id => undoDone.mutate({ id })} />)
+            )}
+            {activeTab === "alertas" && (
+              (alertItems as any[]).length === 0
+                ? <EmptyState icon={<Bell className="w-10 h-10" />} text="Nenhum alerta no momento" sub="Todos os trabalhos estão dentro do prazo" />
+                : <div className="space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>{(alertItems as any[]).filter((a: any) => a.isOverdue).length} atrasados • {(alertItems as any[]).filter((a: any) => !a.isOverdue).length} urgentes</p>
+                      <button onClick={() => refetchAlerts()} disabled={isFetchingAlerts}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs active:scale-95"
+                        style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.40 0.10 65)" }}>
+                        <RefreshCw className={`w-3 h-3 ${isFetchingAlerts ? "animate-spin" : ""}`} />
+                        Atualizar
+                      </button>
+                    </div>
+                    {(alertItems as any[]).map((item: any) => {
+                      const borderColor = item.isOverdue ? "oklch(0.80 0.12 25)" : "oklch(0.82 0.10 55)";
+                      const bgColor = item.isOverdue ? "oklch(0.99 0.015 25)" : "oklch(0.99 0.010 55)";
+                      return (
+                        <div key={item.id} className="rounded-2xl p-4" style={{ background: bgColor, border: `1.5px solid ${borderColor}` }}>
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {item.isOverdue
+                                  ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.96 0.04 25)", color: "oklch(0.50 0.20 25)", border: "1px solid oklch(0.88 0.10 25)" }}><AlertTriangle className="w-3 h-3" />{Math.abs(item.daysRemaining)}d atrasado</span>
+                                  : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "oklch(0.97 0.04 55)", color: "oklch(0.45 0.18 55)", border: "1px solid oklch(0.88 0.10 55)" }}><Clock className="w-3 h-3" />{item.daysRemaining}d restante{item.daysRemaining !== 1 ? "s" : ""}</span>
+                                }
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: item.workStatus === "para_escrever" ? "oklch(0.94 0.02 260)" : "oklch(0.94 0.04 55)", color: item.workStatus === "para_escrever" ? "oklch(0.40 0.10 260)" : "oklch(0.45 0.12 55)" }}>
+                                  {item.workStatus === "para_escrever" ? "✏️ Para Escrever" : "⏳ Pendente"}
+                                </span>
+                              </div>
+                              <p className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</p>
+                              <p className="text-xs" style={{ color: "oklch(0.50 0.12 65)" }}>{item.productName}{item.productCategory === "promocao" ? " ⭐" : item.productCategory === "coletivo" ? " 👥" : ""}</p>
+                              {item.clientPhone && <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>📞 {item.clientPhone}</p>}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-xs" style={{ color: "oklch(0.55 0.01 260)" }}>Prazo</p>
+                              <p className="text-sm font-bold" style={{ color: item.isOverdue ? "oklch(0.50 0.20 25)" : "oklch(0.45 0.18 55)" }}>{formatDate(item.deadline)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
             )}
           </div>
         )}

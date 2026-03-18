@@ -9,6 +9,7 @@ import { reportsRouter } from "./routers/reports";
 import { ownAuthRouter } from "./routers/auth";
 import { consultoraRouter } from "./routers/consultora";
 import { consultationSlotsRouter } from "./routers/consultationSlots";
+import { pushRouter } from "./routers/push";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   ownAuth: ownAuthRouter,
   consultora: consultoraRouter,
   consultationSlots: consultationSlotsRouter,
+  push: pushRouter,
 });
 
 export type AppRouter = typeof appRouter;

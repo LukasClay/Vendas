@@ -146,9 +146,9 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
   );
 }
 
-// ─── Card: Para Escrever ──────────────────────────────────────────────────────
+// ─── Card: Para Escrever ───────────────────────────────────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten, sellers }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null; daysRemaining?: number; isOverdue?: boolean; isUrgent?: boolean };
   onMarkWritten: (id: number) => void;
   sellers: Seller[];
 }) {
@@ -164,12 +164,20 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
     </button>
   );
 
+  const isOverdue = item.isOverdue ?? false;
+  const isUrgent = item.isUrgent ?? false;
+  const daysRemaining = item.daysRemaining ?? 7;
+  const borderColor = isOverdue ? "oklch(0.80 0.12 25)" : isUrgent ? "oklch(0.82 0.10 55)" : "oklch(0.90 0.012 65)";
+
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1.5px solid oklch(0.90 0.012 65)", boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${borderColor}`, boxShadow: "0 1px 4px oklch(0 0 0 / 0.05)" }}>
       {/* Cabeçalho clicavel para expandir */}
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
+            </div>
             <div className="flex items-center gap-2 flex-wrap" >
               <span className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />

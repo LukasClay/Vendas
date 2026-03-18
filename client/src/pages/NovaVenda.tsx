@@ -379,16 +379,25 @@ export default function NovaVenda() {
               {/* Data da Venda */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Data da Venda {requiredStar}
+                  Data da Venda {user?.role === "admin" ? requiredStar : null}
                 </label>
-                <input
-                  type="date"
-                  value={form.saleDate}
-                  onChange={e => setForm(f => ({ ...f, saleDate: e.target.value }))}
-                  className={inputClass}
-                  style={inputStyle}
-                  required
-                />
+                {user?.role === "admin" ? (
+                  <input
+                    type="date"
+                    value={form.saleDate}
+                    onChange={e => setForm(f => ({ ...f, saleDate: e.target.value }))}
+                    className={inputClass}
+                    style={inputStyle}
+                    required
+                  />
+                ) : (
+                  <div
+                    className={inputClass}
+                    style={{ ...inputStyle, background: "oklch(0.95 0.006 65)", color: "oklch(0.45 0.02 260)", cursor: "not-allowed" }}
+                  >
+                    {fmtDate(form.saleDate)}
+                  </div>
+                )}
               </div>
 
               {/* Horário da Consulta — exibido apenas para Consulta Cartas */}
