@@ -39,10 +39,13 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  // M4: SameSite condicional — evita rejeição silenciosa de cookie em HTTP (dev local)
+  const secure = isSecureRequest(req);
+
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    secure,
+    sameSite: secure ? ("none" as const) : ("lax" as const),
   };
 }
