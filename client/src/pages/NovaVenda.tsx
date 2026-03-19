@@ -8,6 +8,12 @@ import { useIsMobile } from "@/hooks/useMobile";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
+// Retorna a data de hoje no fuso local (evita bug das 21h com UTC)
+function getLocalToday() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 // Formata string "YYYY-MM-DD" para "DD/MM/AAAA"
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "";
@@ -43,7 +49,7 @@ export default function NovaVenda() {
     productName: "",
     productId: null as number | null,
     productCategory: "individual" as "individual" | "promocao" | "coletivo",
-    saleDate: new Date().toISOString().split("T")[0],
+    saleDate: getLocalToday(),
     amountFormatted: "",
     notes: "",
   });
@@ -188,7 +194,7 @@ export default function NovaVenda() {
       productName: "",
       productId: null,
       productCategory: "individual",
-      saleDate: new Date().toISOString().split("T")[0],
+      saleDate: getLocalToday(),
       amountFormatted: "",
       notes: "",
     });
