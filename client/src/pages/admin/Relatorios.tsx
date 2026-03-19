@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
@@ -22,9 +22,12 @@ export default function AdminRelatorios() {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({ frequency: "daily" as "daily" | "weekly" | "monthly", recipientEmail: "" });
 
-  const { data: reportData, isLoading } = trpc.reports.summary.useQuery(
-    dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined
+  const summaryInput = useMemo(
+    () => (dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined),
+    [dateFilter.startDate, dateFilter.endDate]
   );
+
+  const { data: reportData, isLoading } = trpc.reports.summary.useQuery(summaryInput);
   const { data: exportData = [] } = trpc.reports.exportData.useQuery(dateFilter);
   const { data: schedules = [], isLoading: loadingSchedules } = trpc.reports.schedules.useQuery();
 
