@@ -248,24 +248,6 @@ export const ownAuthRouter = router({
       return { success: true };
     }),
 
-  // Admin lista todos os funcionários
-  listUsers: adminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-    const result = await db.select({
-      id: users.id,
-      name: users.name,
-      username: users.username,
-      email: users.email,
-      role: users.role,
-      active: users.active,
-      createdAt: users.createdAt,
-      lastSignedIn: users.lastSignedIn,
-    }).from(users).orderBy(users.createdAt);
-
-    return result;
-  }),
 
   // Admin exclui funcionário (Soft Delete Seguro — preserva histórico de vendas)
   deleteUser: adminProcedure
