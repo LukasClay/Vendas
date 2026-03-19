@@ -123,8 +123,12 @@ export async function deleteUser(id: number) {
   await db.update(sales).set({ sellerName: snapshotName }).where(
     and(eq(sales.sellerId, id), sql`${sales.sellerName} IS NULL`)
   );
-  // 3. Marcar como deletado e inativo
-  await db.update(users).set({ active: false, deletedAt: new Date() }).where(eq(users.id, id));
+  // 3. Marcar como deletado, inativo e invalidar sessões ativas
+  await db.update(users).set({
+    active: false,
+    deletedAt: new Date(),
+    sessionVersion: sql`${users.sessionVersion} + 1`
+  }).where(eq(users.id, id));
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────

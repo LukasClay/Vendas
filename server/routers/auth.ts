@@ -239,7 +239,12 @@ export const ownAuthRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const passwordHash = await bcrypt.hash(input.newPassword, 12);
-      await db.update(users).set({ passwordHash }).where(eq(users.id, input.userId));
+      await db.update(users)
+        .set({
+          passwordHash,
+          sessionVersion: sql`${users.sessionVersion} + 1` // Invalida tokens antigos instantaneamente
+        })
+        .where(eq(users.id, input.userId));
       return { success: true };
     }),
 
