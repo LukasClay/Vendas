@@ -167,6 +167,17 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-core": ["react", "react-dom", "wouter"],
+          "trpc-query": ["@trpc/client", "@trpc/react-query", "@tanstack/react-query"],
+          "radix-ui": ["@radix-ui/react-dialog", "@radix-ui/react-select", "@radix-ui/react-popover"],
+          "charts": ["recharts"],
+          "exports": ["jspdf", "jspdf-autotable", "xlsx"]
+        },
+      },
+    },
   },
   server: {
     host: true,
