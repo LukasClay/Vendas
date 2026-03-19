@@ -295,6 +295,11 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
+    // BLOQUEIO DE SEGURANÇA: Impede acesso de usuários inativos ou excluídos
+    if (!user.active || user.deletedAt !== null) {
+      throw ForbiddenError("Sua conta foi desativada. Entre em contato com a administração.");
+    }
+
     // A2: verificar se sessionVersion do token bate com a do banco
     const tokenVersion = (session as any).sessionVersion ?? 1;
     if (user.sessionVersion !== undefined && user.sessionVersion !== tokenVersion) {
