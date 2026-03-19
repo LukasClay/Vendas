@@ -5,7 +5,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb, withRetry } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -123,7 +123,12 @@ export const ownAuthRouter = router({
       // Gera JWT de sessão usando o SDK existente
       const expiresInMs = input.rememberMe ? REMEMBER_ME_MS : SESSION_MS;
       const token = await sdk.signSession(
-        { openId: user.openId, appId: ENV.appId, name: user.name ?? user.username ?? user.email ?? "" },
+        {
+          openId: user.openId,
+          appId: ENV.appId,
+          name: user.name ?? user.username ?? user.email ?? "",
+          sessionVersion: user.sessionVersion ?? 1, // A2: incluir versão no JWT
+        },
         { expiresInMs }
       );
 
@@ -137,6 +142,20 @@ export const ownAuthRouter = router({
       });
 
       return { success: true, role: user.role };
+    }),
+
+  // A2: Logout — incrementa sessionVersion para invalidar todos os JWTs anteriores
+  logout: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const db = await getDb();
+      if (db) {
+        await db.update(users)
+          .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+          .where(eq(users.id, ctx.user.id));
+      }
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+      return { success: true };
     }),
 
   // Admin cria novo funcionário (vendedor, consultora ou admin) com username e senha

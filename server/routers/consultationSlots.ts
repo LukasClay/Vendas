@@ -336,6 +336,16 @@ export const consultationSlotsRouter = router({
       if (ctx.user.role !== "admin" && ctx.user.role !== "consultora") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para criar horários." });
       }
+
+      // A3: impedir criação de slots em datas passadas
+      const today = new Date().toISOString().slice(0, 10);
+      if (input.consultationDate < today) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Não é possível criar horários em datas passadas.",
+        });
+      }
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
 
