@@ -23,9 +23,37 @@ export async function getDb() {
   return _db;
 }
 
-// Mantido para compatibilidade com chamadas existentes — Postgres é estável, sem retry necessário
-export async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  return await fn();
+// M2: retry real com backoff exponencial para erros transitórios de conexão
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Só faz retry em erros transitórios de conexão
+      const message = String(error).toLowerCase();
+      const isTransient =
+        message.includes("connection") ||
+        message.includes("timeout") ||
+        message.includes("econnreset") ||
+        message.includes("econnrefused") ||
+        message.includes("terminating");
+
+      if (!isTransient || attempt === maxAttempts) throw error;
+
+      // Backoff exponencial: 200ms, 400ms
+      const delay = 200 * Math.pow(2, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
