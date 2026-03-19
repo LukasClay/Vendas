@@ -94,8 +94,20 @@ export async function getUserByOpenId(openId: string) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  // Filtra usuários excluídos (soft delete) — deletedAt IS NULL
-  return db.select().from(users).where(isNull(users.deletedAt)).orderBy(asc(users.name));
+  // Retorna apenas dados seguros, blindando o passwordHash e sessionVersion
+  return db.select({
+    id: users.id,
+    openId: users.openId,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    displayName: users.displayName,
+    phone: users.phone,
+    active: users.active,
+    username: users.username,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn
+  }).from(users).where(isNull(users.deletedAt)).orderBy(asc(users.name));
 }
 
 export async function getUserById(id: number) {
