@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT cs.id as slot_id, cs.sold, cs.sale_id, cs.consultation_date, cs.consultation_time,\n       s.id as sale_id_in_sales, s.client_name, s.client_phone, s.seller_id,\n       u.display_name as seller_name, u.username\nFROM consultation_slots cs\nLEFT JOIN sales s ON cs.sale_id = s.id\nLEFT JOIN users u ON s.seller_id = u.id\nWHERE cs.sold = true\nLIMIT 10;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nSELECT cs.id as slot_id, cs.sold, cs.sale_id, cs.consultation_date, cs.consultation_time,\n       s.id as sale_id_in_sales, s.client_name, s.client_phone, s.seller_id,\n       u.display_name as seller_name, u.username\nFROM consultation_slots cs\nLEFT JOIN sales s ON cs.sale_id = s.id\nLEFT JOIN users u ON s.seller_id = u.id\nWHERE cs.sold = true\nLIMIT 10;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'cs.sale_id' in 'on clause'"
-  ]
-}

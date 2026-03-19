@@ -1,9 +1,0 @@
-{
-  "query": "\n-- Resetar slots que estavam associados às vendas de teste\nUPDATE consultation_slots SET sold = 0, saleId = NULL, status = 'pendente', cancelledBy = NULL, cancelledAt = NULL WHERE saleId IN (1, 30004);\n\n-- Apagar todas as vendas de teste\nDELETE FROM sales WHERE id IN (1, 30004);\n\n-- Apagar clientes de teste\nDELETE FROM clients WHERE fullName IN ('Maria da silva', 'maria2', 'Maria2');\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \n-- Resetar slots que estavam associados às vendas de teste\nUPDATE consultation_slots SET sold = 0, saleId = NULL, status = 'pendente', cancelledBy = NULL, cancelledAt = NULL WHERE saleId IN (1, 30004);\n\n-- Apagar todas as vendas de teste\nDELETE FROM sales WHERE id IN (1, 30004);\n\n-- Apagar clientes de teste\nDELETE FROM clients WHERE fullName IN ('Maria da silva', 'maria2', 'Maria2');\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 89
-}

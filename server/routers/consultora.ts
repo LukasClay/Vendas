@@ -29,7 +29,7 @@ export const consultoraRouter = router({
       // GROUP BY no banco é muito mais eficiente que SELECT * + contar em JS
       const rows = await db.select({ workStatus: sales.workStatus, total: count() })
         .from(sales)
-        .where(ne(sales.productName, "Consulta Cartas"))
+        .where(and(ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
         .groupBy(sales.workStatus);
       const counts = { para_escrever: 0, pendente: 0, feito: 0 };
       for (const row of rows) {
@@ -45,7 +45,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas")];
+      const conditions = [eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
         conditions.push(
           or(
@@ -101,7 +101,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas")];
+      const conditions = [eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
         conditions.push(
           or(
@@ -156,7 +156,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "feito"), ne(sales.productName, "Consulta Cartas")];
+      const conditions = [eq(sales.workStatus, "feito"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
         conditions.push(
           or(
@@ -283,7 +283,7 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
         workStatus: sales.workStatus,
       }).from(sales)
-        .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas")))
+        .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
         .orderBy(desc(sales.saleDate))
         .limit(50);
 
@@ -295,7 +295,7 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
       }).from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
-        .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true)))
+        .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true), isNull(sales.deletedAt)))
         .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
         .limit(20);
 
@@ -320,7 +320,7 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
         sellerName: sales.sellerName,
       }).from(sales) as any)
-        .where(and(eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas")))
+        .where(and(eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
         .orderBy(asc(sales.saleDate)),
       (db.select({
         id: sales.id,
@@ -330,7 +330,7 @@ export const consultoraRouter = router({
         saleDate: sales.saleDate,
         sellerName: sales.sellerName,
       }).from(sales) as any)
-        .where(and(eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas")))
+        .where(and(eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
         .orderBy(asc(sales.saleDate)),
     ]);
     const mapUrgency = (s: any) => {
@@ -361,7 +361,8 @@ export const consultoraRouter = router({
       .where(
         and(
           or(eq(sales.workStatus, "para_escrever"), eq(sales.workStatus, "pendente")),
-          ne(sales.productName, "Consulta Cartas")
+          ne(sales.productName, "Consulta Cartas"),
+          isNull(sales.deletedAt)
         )
       )
       .orderBy(asc(sales.saleDate))

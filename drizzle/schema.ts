@@ -96,6 +96,8 @@ export const sales = pgTable("sales", {
   completedAt: timestamp("completedAt"), // quando passou de pendente → feito
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
+  // M1: soft delete — null = ativa, preenchido = deletada
+  deletedAt: timestamp("deletedAt"),
 });
 
 export type Sale = typeof sales.$inferSelect;

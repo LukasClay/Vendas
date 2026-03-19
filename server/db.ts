@@ -212,7 +212,7 @@ export async function createSale(data: InsertSale) {
 export async function getSales(filters: SaleFilters = {}) {
   const db = await getDb();
   if (!db) return [];
-  const conditions = [];
+  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (filters.startDate) conditions.push(sql`${sales.saleDate} >= ${filters.startDate.toISOString().split('T')[0]}`);
   if (filters.endDate) conditions.push(sql`${sales.saleDate} <= ${filters.endDate.toISOString().split('T')[0]}`);
   if (filters.sellerId) conditions.push(eq(sales.sellerId, filters.sellerId));
@@ -240,14 +240,14 @@ export async function getSales(filters: SaleFilters = {}) {
 export async function getSaleById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(sales).where(eq(sales.id, id)).limit(1);
+  const result = await db.select().from(sales).where(and(eq(sales.id, id), isNull(sales.deletedAt))).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getSalesBySeller(sellerId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(sales).where(eq(sales.sellerId, sellerId)).orderBy(desc(sales.saleDate));
+  return db.select().from(sales).where(and(eq(sales.sellerId, sellerId), isNull(sales.deletedAt))).orderBy(desc(sales.saleDate));
 }
 
 export async function updateSale(id: number, data: Partial<InsertSale>) {
@@ -265,8 +265,10 @@ export async function deleteSale(id: number) {
     .set({ sold: false, saleId: null, status: "pendente" })
     .where(eq(consultationSlots.saleId, id));
 
-  // Remove a venda
-  await db.delete(sales).where(eq(sales.id, id));
+  // M1: soft delete — preserva o registro no banco
+  await db.update(sales)
+    .set({ deletedAt: new Date() })
+    .where(eq(sales.id, id));
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
@@ -275,7 +277,7 @@ export async function getReportSummary(startDate?: Date, endDate?: Date) {
   const db = await getDb();
   if (!db) return { totalAmount: 0, totalSales: 0 };
 
-  const conditions = [];
+  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -295,7 +297,7 @@ export async function getTopSellers(startDate?: Date, endDate?: Date, limit = 10
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [];
+  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -320,7 +322,7 @@ export async function getTopClients(startDate?: Date, endDate?: Date, limit = 10
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [];
+  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -342,7 +344,7 @@ export async function getTopProducts(startDate?: Date, endDate?: Date, limit = 1
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [];
+  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -364,7 +366,7 @@ export async function getSalesByMonth(year: number) {
   if (!db) return [];
 
   const result = await db.execute(
-    sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} GROUP BY EXTRACT(MONTH FROM "saleDate") ORDER BY EXTRACT(MONTH FROM "saleDate")`
+    sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} AND "deletedAt" IS NULL GROUP BY EXTRACT(MONTH FROM "saleDate") ORDER BY EXTRACT(MONTH FROM "saleDate")`
   );
   const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
   return (rows as any[]).map((r: any) => ({
@@ -385,7 +387,7 @@ export async function getPendingSales(productNameFilter?: string) {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [sql`${sales.completedAt} IS NULL`];
+  const conditions: any[] = [sql`${sales.completedAt} IS NULL`, isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (productNameFilter) conditions.push(like(sales.productName, `%${productNameFilter}%`));
 
   const result = await (db.select({
@@ -436,7 +438,7 @@ export async function getClientPurchaseHistory(clientName: string) {
     saleDate: sales.saleDate,
     completedAt: sales.completedAt,
   }).from(sales)
-    .where(like(sales.clientName, `%${clientName}%`))
+    .where(and(like(sales.clientName, `%${clientName}%`), isNull(sales.deletedAt))) // M1: filtra vendas ativas
     .orderBy(desc(sales.saleDate))
     .limit(50);
 

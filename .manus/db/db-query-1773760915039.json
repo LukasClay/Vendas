@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO products (name, description, active, createdAt, updatedAt)\nSELECT 'Consulta Cartas', 'Consulta com cartas — horário agendado', true, NOW(), NOW()\nWHERE NOT EXISTS (SELECT 1 FROM products WHERE name = 'Consulta Cartas');",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute INSERT INTO products (name, description, active, createdAt, updatedAt)\nSELECT 'Consulta Cartas', 'Consulta com cartas — horário agendado', true, NOW(), NOW()\nWHERE NOT EXISTS (SELECT 1 FROM products WHERE name = 'Consulta Cartas');",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 86
-}

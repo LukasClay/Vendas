@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE users \nSET username = CASE \n  WHEN email IS NOT NULL AND email != '' THEN LOWER(REPLACE(SUBSTRING_INDEX(email, '@', 1), '.', '_'))\n  WHEN name IS NOT NULL AND name != '' THEN LOWER(REPLACE(REPLACE(name, ' ', '_'), '-', '_'))\n  ELSE CONCAT('user_', id)\nEND\nWHERE username IS NULL OR username = '';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute \nUPDATE users \nSET username = CASE \n  WHEN email IS NOT NULL AND email != '' THEN LOWER(REPLACE(SUBSTRING_INDEX(email, '@', 1), '.', '_'))\n  WHEN name IS NOT NULL AND name != '' THEN LOWER(REPLACE(REPLACE(name, ' ', '_'), '-', '_'))\n  ELSE CONCAT('user_', id)\nEND\nWHERE username IS NULL OR username = '';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 80
-}

@@ -1,9 +1,0 @@
-{
-  "query": "ALTER TABLE `consultation_slots` ADD `status` enum('pendente','realizada','cancelada') DEFAULT 'pendente' NOT NULL;\nALTER TABLE `consultation_slots` ADD `cancelledBy` int;\nALTER TABLE `consultation_slots` ADD `cancelledAt` timestamp;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Qk8FEgRQJGgwE5.root --database VMQBuSbqLUhZrmgL6kdvrP --execute ALTER TABLE `consultation_slots` ADD `status` enum('pendente','realizada','cancelada') DEFAULT 'pendente' NOT NULL;\nALTER TABLE `consultation_slots` ADD `cancelledBy` int;\nALTER TABLE `consultation_slots` ADD `cancelledAt` timestamp;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 2585
-}

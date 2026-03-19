@@ -5,7 +5,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import { consultationSlots, sales, products } from "../../drizzle/schema";
-import { eq, and, like, ne, desc } from "drizzle-orm";
+import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -256,7 +256,7 @@ export const salesRouter = router({
           workStatus: sales.workStatus,
           amount: sales.amount,
         }).from(sales)
-          .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas")))
+          .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
           .orderBy(desc(sales.saleDate))
           .limit(50)
       );
@@ -271,7 +271,7 @@ export const salesRouter = router({
           saleDate: sales.saleDate,
         }).from(consultationSlots)
           .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
-          .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true)))
+          .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true), isNull(sales.deletedAt)))
           .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
           .limit(20)
       );
