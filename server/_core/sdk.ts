@@ -22,6 +22,7 @@ export type SessionPayload = {
   openId: string;
   appId: string;
   name: string;
+  sessionVersion?: number; // A2: versão de sessão para invalidação no logout
 };
 
 const EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
@@ -191,6 +192,7 @@ class SDKServer {
       openId: payload.openId,
       appId: payload.appId,
       name: payload.name,
+      sessionVersion: payload.sessionVersion ?? 1, // A2
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime(expirationSeconds)
@@ -199,7 +201,7 @@ class SDKServer {
 
   async verifySession(
     cookieValue: string | undefined | null
-  ): Promise<{ openId: string; appId: string; name: string } | null> {
+  ): Promise<{ openId: string; appId: string; name: string; sessionVersion?: number } | null> {
     if (!cookieValue) {
       console.warn("[Auth] Missing session cookie");
       return null;
@@ -210,7 +212,7 @@ class SDKServer {
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      const { openId, appId, name } = payload as Record<string, unknown>;
+      const { openId, appId, name, sessionVersion } = payload as Record<string, unknown>;
 
       if (
         !isNonEmptyString(openId) ||
@@ -225,6 +227,7 @@ class SDKServer {
         openId,
         appId,
         name,
+        sessionVersion: typeof sessionVersion === "number" ? sessionVersion : undefined, // A2
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));
@@ -290,6 +293,12 @@ class SDKServer {
 
     if (!user) {
       throw ForbiddenError("User not found");
+    }
+
+    // A2: verificar se sessionVersion do token bate com a do banco
+    const tokenVersion = (session as any).sessionVersion ?? 1;
+    if (user.sessionVersion !== undefined && user.sessionVersion !== tokenVersion) {
+      throw ForbiddenError("Session invalidated");
     }
 
     await db.upsertUser({
