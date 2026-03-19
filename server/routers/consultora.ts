@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { sales, users } from "../../drizzle/schema";
+import { sales, users, consultationSlots } from "../../drizzle/schema";
 import { and, asc, count, desc, eq, isNull, like, ne, or } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
@@ -288,16 +288,15 @@ export const consultoraRouter = router({
         .limit(50);
 
       // Consultas Cartas desta cliente (via consultation_slots) — correspondência exata
-      const { consultationSlots: csTable } = await import("../../drizzle/schema");
       const consultaRows = await db.select({
-        id: csTable.id,
-        consultationDate: csTable.consultationDate,
-        consultationTime: csTable.consultationTime,
+        id: consultationSlots.id,
+        consultationDate: consultationSlots.consultationDate,
+        consultationTime: consultationSlots.consultationTime,
         saleDate: sales.saleDate,
-      }).from(csTable)
-        .leftJoin(sales, eq(csTable.saleId, sales.id))
-        .where(and(eq(sales.clientName, input.clientName), eq(csTable.sold, true)))
-        .orderBy(desc(csTable.consultationDate), desc(csTable.consultationTime))
+      }).from(consultationSlots)
+        .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+        .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true)))
+        .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
         .limit(20);
 
       return {
