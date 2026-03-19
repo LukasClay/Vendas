@@ -5,7 +5,7 @@
  */
 import { getDb } from "../db";
 import { sales } from "../../drizzle/schema";
-import { inArray } from "drizzle-orm";
+import { and, inArray, isNull } from "drizzle-orm";
 import { calcBusinessDaysFromSale } from "../../shared/businessDays";
 import { sendPushToRoles } from "../webpush";
 
@@ -26,7 +26,10 @@ async function checkAndNotify() {
       workStatus: sales.workStatus,
     })
       .from(sales)
-      .where(inArray(sales.workStatus, ["para_escrever", "pendente"])) as any);
+      .where(and(
+        inArray(sales.workStatus, ["para_escrever", "pendente"]),
+        isNull(sales.deletedAt) // Garante que não enviará alerta de vendas deletadas
+      )) as any);
 
     const urgent: string[] = [];
     const overdue: string[] = [];
