@@ -33,6 +33,12 @@ export const salesRouter = router({
       attachmentName: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // A1: vendedor/consultora não pode escolher a data — servidor força hoje
+      let saleDate = input.saleDate;
+      if (ctx.user.role !== "admin") {
+        saleDate = new Date().toISOString().split("T")[0];
+      }
+
       let attachmentUrl: string | null = null;
       let attachmentKey: string | null = null;
       let attachmentMime: string | null = null;
@@ -94,7 +100,7 @@ export const salesRouter = router({
         productId: input.productId ?? undefined,
         productName: input.productName,
         productCategory,
-        saleDate: input.saleDate as any,
+        saleDate: saleDate as any,
         amount: String(input.amount),
         notes: input.notes ?? null,
         attachmentUrl,
