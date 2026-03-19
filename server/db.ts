@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, like, lte, gte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, like, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
