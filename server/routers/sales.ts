@@ -69,6 +69,11 @@ export const salesRouter = router({
         // Non-critical: continue without clientId
       }
 
+      // Regra de negócio: Consulta Cartas OBRIGA horário reservado
+      if (input.productName === "Consulta Cartas" && !input.consultationSlotId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta Cartas exige um horário reservado. Selecione um horário disponível." });
+      }
+
       // Se for Consulta Cartas, valida e reserva o slot
       if (input.consultationSlotId) {
         const db = await getDb();
