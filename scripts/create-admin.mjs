@@ -24,10 +24,11 @@ async function run() {
 
     console.log(`[AdminSetup] Criando administrador: ${username}...`);
 
+    // No schema do banco, a coluna de senha se chama "passwordHash" e não "password"
     await client.query(`
-      INSERT INTO users (username, password, role, name, active, "createdAt", "updatedAt")
+      INSERT INTO users (username, "passwordHash", role, name, active, "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-      ON CONFLICT (username) DO UPDATE SET password = $2, role = $3, name = $4, active = $5, "updatedAt" = NOW()
+      ON CONFLICT (username) DO UPDATE SET "passwordHash" = $2, role = $3, name = $4, active = $5, "updatedAt" = NOW()
     `, [
       username,
       hash,
