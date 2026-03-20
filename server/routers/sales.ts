@@ -113,15 +113,31 @@ export const salesRouter = router({
         attachmentMime,
       });
 
-      // Marca o slot como vendido
+      // MARCA O SLOT COMO VENDIDO DE FORMA ATÔMICA E SEGURA
       if (input.consultationSlotId) {
         const db = await getDb();
         if (db) {
-          await withRetry(() =>
+          const updatedSlot = await withRetry(() =>
             db.update(consultationSlots)
               .set({ sold: true, saleId })
-              .where(eq(consultationSlots.id, input.consultationSlotId!))
+              .where(
+                and(
+                  eq(consultationSlots.id, input.consultationSlotId!),
+                  eq(consultationSlots.sold, false) // Garante que não foi vendido nestes milissegundos
+                )
+              )
+              .returning({ id: consultationSlots.id })
           );
+
+          // Se retornou vazio, alguém pegou a vaga no mesmo milissegundo.
+          if (updatedSlot.length === 0) {
+            // Rollback (Hard Delete) da venda que acabamos de criar, pois não tem horário
+            await withRetry(() => db.delete(sales).where(eq(sales.id, saleId)));
+            throw new TRPCError({ 
+              code: "CONFLICT", 
+              message: "Este horário foi reservado por outro vendedor neste exato momento. A venda foi cancelada. Por favor, selecione outro horário." 
+            });
+          }
         }
       }
 
