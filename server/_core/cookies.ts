@@ -24,7 +24,7 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    secure,
-    sameSite: "lax" as const,
+    secure: true, // Força secure: true já que o Railway sempre usa HTTPS
+    sameSite: "none" as const, // Permite cookies cross-site necessários para subdomínios do Railway
   };
 }
