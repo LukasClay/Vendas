@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
@@ -495,16 +495,22 @@ export default function ConsultoraPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // Cache seguro do input para evitar re-render loops no tRPC
+  const queryInput = useMemo(
+    () => ({ search: debouncedSearch || undefined }),
+    [debouncedSearch]
+  );
+
   const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, { staleTime: 2 * 60 * 1000 });
 
   const { data: toWriteItems = [], isLoading: loadingWrite } = trpc.consultora.toWrite.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "para_escrever" }
+    queryInput, { enabled: activeTab === "para_escrever" }
   );
   const { data: pendingItems = [], isLoading: loadingPending } = trpc.consultora.pending.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "pendente" }
+    queryInput, { enabled: activeTab === "pendente" }
   );
   const { data: doneItems = [], isLoading: loadingDone } = trpc.consultora.done.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "feito" }
+    queryInput, { enabled: activeTab === "feito" }
   );
   const { data: alertItems = [], isLoading: loadingAlerts, refetch: refetchAlerts, isFetching: isFetchingAlerts } = trpc.consultora.alerts.useQuery(
     undefined, { enabled: activeTab === "alertas", staleTime: 3 * 60 * 1000 }
