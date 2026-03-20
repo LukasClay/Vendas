@@ -105,3 +105,5 @@ CREATE TABLE "users" (
 ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp;
 --> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sessionVersion" integer NOT NULL DEFAULT 1;
+--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isSystem" boolean NOT NULL DEFAULT false;

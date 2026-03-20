@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
+import { ensureSystemProducts } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -57,6 +58,9 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Garante que produtos do sistema existam no banco antes de aceitar requests
+  await ensureSystemProducts();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

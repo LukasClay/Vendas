@@ -50,6 +50,7 @@ export const products = pgTable("products", {
   name: varchar("name", { length: 256 }).notNull(),
   description: text("description"),
   active: boolean("active").default(true).notNull(),
+  isSystem: boolean("isSystem").default(false).notNull(),  // true = produto do sistema, não pode ser excluído/editado
   deletedAt: timestamp("deletedAt"),  // soft delete: preenchido quando excluído
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),

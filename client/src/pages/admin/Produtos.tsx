@@ -68,8 +68,8 @@ export default function AdminProdutos() {
     setForm({ name: "", description: "" });
   };
 
-  // Exclui Consulta Cartas da lista (é gerenciado separadamente)
-  const displayProducts = products.filter(p => p.name !== "Consulta Cartas");
+  // Oculta produtos do sistema (ex: Consulta Cartas) — são gerenciados automaticamente
+  const displayProducts = products.filter(p => !(p as any).isSystem);
 
   return (
     <DashboardLayout>

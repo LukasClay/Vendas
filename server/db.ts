@@ -180,8 +180,56 @@ export async function updateProduct(id: number, data: Partial<InsertProduct>) {
 export async function deleteProduct(id: number) {
   const db = await getDb();
   if (!db) return;
+  // Bloqueia exclusão de produtos do sistema
+  const product = await getProductById(id);
+  if (product?.isSystem) throw new Error("Produto do sistema não pode ser excluído.");
   // Soft delete: marca deletedAt e desativa — productName já é snapshot nas vendas
   await db.update(products).set({ active: false, deletedAt: new Date() }).where(eq(products.id, id));
+}
+
+// ─── Garante que produtos do sistema existam no banco ─────────────────────────
+export const SYSTEM_PRODUCTS = [
+  {
+    name: "Consulta Cartas",
+    description: "Consulta espiritual com horário agendado (produto do sistema)",
+    isSystem: true,
+    active: true,
+  },
+] as const;
+
+export async function ensureSystemProducts() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[SystemProducts] Banco não disponível, pulando criação de produtos do sistema.");
+    return;
+  }
+  for (const sp of SYSTEM_PRODUCTS) {
+    // Verifica se já existe (incluindo soft-deleted)
+    const existing = await db.select().from(products).where(eq(products.name, sp.name)).limit(1);
+    if (existing.length > 0) {
+      // Garante que está ativo, não deletado e marcado como sistema
+      const p = existing[0];
+      if (!p.isSystem || !p.active || p.deletedAt) {
+        await db.update(products).set({
+          isSystem: true,
+          active: true,
+          deletedAt: null,
+        }).where(eq(products.id, p.id));
+        console.log(`[SystemProducts] Produto "${sp.name}" restaurado/atualizado (id=${p.id}).`);
+      } else {
+        console.log(`[SystemProducts] Produto "${sp.name}" já existe (id=${p.id}). OK.`);
+      }
+    } else {
+      // Cria o produto do sistema
+      await db.insert(products).values({
+        name: sp.name,
+        description: sp.description,
+        active: true,
+        isSystem: true,
+      });
+      console.log(`[SystemProducts] Produto "${sp.name}" criado com sucesso.`);
+    }
+  }
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────

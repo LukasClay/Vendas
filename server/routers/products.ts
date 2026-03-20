@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createProduct, deleteProduct, getAllProducts, updateProduct } from "../db";
+import { createProduct, deleteProduct, getAllProducts, getProductById, updateProduct } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -39,6 +39,14 @@ export const productsRouter = router({
       active: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
+      // Bloqueia edição de produtos do sistema
+      const product = await getProductById(input.id);
+      if (product?.isSystem) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Este trabalho é gerenciado pelo sistema e não pode ser editado.",
+        });
+      }
       const { id, ...data } = input;
       await updateProduct(id, data);
       return { success: true };
@@ -47,6 +55,14 @@ export const productsRouter = router({
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
+      // Bloqueia exclusão de produtos do sistema
+      const product = await getProductById(input.id);
+      if (product?.isSystem) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Este trabalho é gerenciado pelo sistema e não pode ser excluído.",
+        });
+      }
       await deleteProduct(input.id);
       return { success: true };
     }),
