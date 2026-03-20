@@ -182,14 +182,6 @@ export async function deleteProduct(id: number) {
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
-export async function searchClients(query: string) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(clients)
-    .where(or(like(clients.fullName, `%${query}%`), like(clients.phone, `%${query}%`)))
-    .limit(10);
-}
-
 export async function upsertClient(data: InsertClient) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -390,78 +382,6 @@ export async function getSalesByMonth(year: number) {
     totalAmount: Number(r.totalAmount),
     totalSales: Number(r.totalSales),
   }));
-}
-
-// ─── Consultora ─────────────────────────────────────────────────────────────────
-
-/**
- * Retorna vendas pendentes (sem completedAt) ordenadas por prioridade:
- * prazo de 7 dias úteis a partir da data de venda.
- * Mais urgentes (mais próximos do vencimento) primeiro.
- */
-export async function getPendingSales(productNameFilter?: string) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const conditions: any[] = [sql`${sales.completedAt} IS NULL`, isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (productNameFilter) conditions.push(like(sales.productName, `%${productNameFilter}%`));
-
-  const result = await (db.select({
-    id: sales.id,
-    clientName: sales.clientName,
-    clientBirthDate: sales.clientBirthDate,
-    clientPhone: sales.clientPhone,
-    productName: sales.productName,
-    saleDate: sales.saleDate,
-    notes: sales.notes,
-    createdAt: sales.createdAt,
-  }).from(sales) as any)
-    .where(and(...conditions))
-    .orderBy(asc(sales.saleDate), asc(sales.createdAt))
-    .limit(200);
-
-  return result as Array<{
-    id: number;
-    clientName: string;
-    clientBirthDate: Date | null;
-    clientPhone: string | null;
-    productName: string;
-    saleDate: Date;
-    notes: string | null;
-    createdAt: Date;
-  }>;
-}
-
-/**
- * Marca uma venda como concluída.
- */
-export async function completeSale(id: number) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(sales).set({ completedAt: new Date() }).where(eq(sales.id, id));
-}
-
-/**
- * Retorna quantas vezes um cliente (por nome) já comprou, sem expor valores.
- */
-export async function getClientPurchaseHistory(clientName: string) {
-  const db = await getDb();
-  if (!db) return { totalPurchases: 0, purchases: [] };
-
-  const rows = await db.select({
-    id: sales.id,
-    productName: sales.productName,
-    saleDate: sales.saleDate,
-    completedAt: sales.completedAt,
-  }).from(sales)
-    .where(and(like(sales.clientName, `%${clientName}%`), isNull(sales.deletedAt))) // M1: filtra vendas ativas
-    .orderBy(desc(sales.saleDate))
-    .limit(50);
-
-  return {
-    totalPurchases: rows.length,
-    purchases: rows,
-  };
 }
 
 // ─── Report Schedules ─────────────────────────────────────────────────────────

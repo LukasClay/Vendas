@@ -44,7 +44,6 @@ async function checkAndNotify() {
     }
 
     if (overdue.length === 0 && urgent.length === 0) {
-      console.log("[AlertsJob] Nenhum trabalho urgente ou atrasado.");
       return;
     }
 
@@ -98,8 +97,6 @@ function msUntilNextTrigger(): number {
  */
 function scheduleNext() {
   const delay = msUntilNextTrigger();
-  const nextDate = new Date(Date.now() + delay);
-  console.log(`[AlertsJob] Próximo disparo: ${nextDate.toLocaleString("pt-BR")}`);
   setTimeout(async () => {
     await checkAndNotify();
     scheduleNext(); // agendar o próximo após executar
