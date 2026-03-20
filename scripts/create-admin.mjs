@@ -18,37 +18,28 @@ const pool = new Pool({
 async function run() {
   const client = await pool.connect();
   try {
-    // Verificar se já existe um admin
-    const existing = await client.query(
-      `SELECT id, username, role FROM users WHERE role = 'admin' LIMIT 1`
-    );
-    if (existing.rows.length > 0) {
-      console.log('✅ Admin já existe:', existing.rows[0]);
-      return;
-    }
-
-    const username = 'admin';
-    const password = 'MundoDaMagia@2026';
+    const username = 'LucasCattani';
+    const password = 'Binario00123@';
     const hash = await bcrypt.hash(password, 12);
 
+    console.log(`[AdminSetup] Criando administrador: ${username}...`);
+
     await client.query(`
-      INSERT INTO users ("openId", name, "loginMethod", role, "displayName", active, username, "passwordHash", "createdAt", "updatedAt", "lastSignedIn")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW())
+      INSERT INTO users (username, password, role, name, active, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      ON CONFLICT (username) DO UPDATE SET password = $2, role = $3, name = $4, active = $5, "updatedAt" = NOW()
     `, [
-      `local_admin_${Date.now()}`,
-      'Administrador',
-      'local',
-      'admin',
-      'Administrador',
-      true,
       username,
       hash,
+      'admin',
+      'Lucas Cattani',
+      true
     ]);
 
-    console.log('\n✅ Usuário ADM criado com sucesso!');
+    console.log('\n✅ Usuário Administrador configurado com sucesso!');
     console.log('   Usuário:', username);
     console.log('   Senha:  ', password);
-    console.log('\n⚠️  Troque a senha após o primeiro login!');
+    console.log('\n⚠️  Você já pode logar no sistema!');
   } finally {
     client.release();
     await pool.end();
