@@ -203,31 +203,43 @@ export async function ensureSystemProducts() {
     console.warn("[SystemProducts] Banco não disponível, pulando criação de produtos do sistema.");
     return;
   }
+
+  // 1. Garante que a coluna isSystem existe (auto-migração)
+  try {
+    await db.execute(sql`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isSystem" boolean NOT NULL DEFAULT false`);
+    console.log("[SystemProducts] Coluna isSystem verificada/criada.");
+  } catch (e: any) {
+    // Se der erro (ex: versão antiga do PG sem IF NOT EXISTS), ignora
+    console.warn("[SystemProducts] Aviso ao verificar coluna isSystem:", e.message);
+  }
+
+  // 2. Garante que cada produto do sistema existe
   for (const sp of SYSTEM_PRODUCTS) {
-    // Verifica se já existe (incluindo soft-deleted)
-    const existing = await db.select().from(products).where(eq(products.name, sp.name)).limit(1);
-    if (existing.length > 0) {
-      // Garante que está ativo, não deletado e marcado como sistema
-      const p = existing[0];
-      if (!p.isSystem || !p.active || p.deletedAt) {
-        await db.update(products).set({
-          isSystem: true,
-          active: true,
-          deletedAt: null,
-        }).where(eq(products.id, p.id));
-        console.log(`[SystemProducts] Produto "${sp.name}" restaurado/atualizado (id=${p.id}).`);
+    try {
+      // Usa SQL direto para ser resiliente a qualquer estado do schema
+      const existing = await db.execute(
+        sql`SELECT id, active, "isSystem", "deletedAt" FROM products WHERE name = ${sp.name} LIMIT 1`
+      );
+      const rows = Array.isArray((existing as any).rows) ? (existing as any).rows : (Array.isArray(existing) ? existing : []);
+
+      if (rows.length > 0) {
+        const p = rows[0];
+        if (!p.isSystem || !p.active || p.deletedAt) {
+          await db.execute(
+            sql`UPDATE products SET "isSystem" = true, active = true, "deletedAt" = NULL, "updatedAt" = NOW() WHERE id = ${p.id}`
+          );
+          console.log(`[SystemProducts] Produto "${sp.name}" restaurado/atualizado (id=${p.id}).`);
+        } else {
+          console.log(`[SystemProducts] Produto "${sp.name}" já existe (id=${p.id}). OK.`);
+        }
       } else {
-        console.log(`[SystemProducts] Produto "${sp.name}" já existe (id=${p.id}). OK.`);
+        await db.execute(
+          sql`INSERT INTO products (name, description, active, "isSystem", "createdAt", "updatedAt") VALUES (${sp.name}, ${sp.description}, true, true, NOW(), NOW())`
+        );
+        console.log(`[SystemProducts] Produto "${sp.name}" criado com sucesso.`);
       }
-    } else {
-      // Cria o produto do sistema
-      await db.insert(products).values({
-        name: sp.name,
-        description: sp.description,
-        active: true,
-        isSystem: true,
-      });
-      console.log(`[SystemProducts] Produto "${sp.name}" criado com sucesso.`);
+    } catch (e: any) {
+      console.error(`[SystemProducts] Erro ao processar "${sp.name}":`, e.message);
     }
   }
 }
