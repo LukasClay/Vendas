@@ -33,10 +33,12 @@ export const salesRouter = router({
       attachmentName: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // A1: vendedor/consultora não pode escolher a data — servidor força hoje
+      // A1: vendedor/consultora não pode escolher a data — servidor força hoje (fuso Brasil)
       let saleDate = input.saleDate;
       if (ctx.user.role !== "admin") {
-        saleDate = new Date().toISOString().split("T")[0];
+        const now = new Date();
+        const br = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+        saleDate = `${br.getFullYear()}-${String(br.getMonth() + 1).padStart(2, "0")}-${String(br.getDate()).padStart(2, "0")}`;
       }
 
       let attachmentUrl: string | null = null;
