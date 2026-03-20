@@ -24,17 +24,19 @@ async function run() {
 
     console.log(`[AdminSetup] Criando administrador: ${username}...`);
 
-    // No schema do banco, a coluna de senha se chama "passwordHash" e não "password"
+    // Adicionando openId, loginMethod e name para satisfazer as restrições de not-null
     await client.query(`
-      INSERT INTO users (username, "passwordHash", role, name, active, "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      INSERT INTO users (username, "passwordHash", role, name, active, "openId", "loginMethod", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       ON CONFLICT (username) DO UPDATE SET "passwordHash" = $2, role = $3, name = $4, active = $5, "updatedAt" = NOW()
     `, [
       username,
       hash,
       'admin',
       'Lucas Cattani',
-      true
+      true,
+      `local_${username.toLowerCase()}`,
+      'local'
     ]);
 
     console.log('\n✅ Usuário Administrador configurado com sucesso!');
