@@ -9,11 +9,6 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 export const usersRouter = router({
-  listSellers: adminProcedure.query(async () => {
-    const all = await getAllUsers();
-    return all.filter(u => u.role === "user");
-  }),
-
   listAll: adminProcedure.query(async () => {
     return getAllUsers();
   }),
@@ -29,7 +24,7 @@ export const usersRouter = router({
       id: z.number(),
       displayName: z.string().optional(),
       phone: z.string().optional(),
-      role: z.enum(["user", "admin"]).optional(),
+      role: z.enum(["user", "consultora", "admin"]).optional(),
       active: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
@@ -42,13 +37,6 @@ export const usersRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await deleteUser(input.id);
-      return { success: true };
-    }),
-
-  promoteToAdmin: adminProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      await updateUser(input.id, { role: "admin" });
       return { success: true };
     }),
 });

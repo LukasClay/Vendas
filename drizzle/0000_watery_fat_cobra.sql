@@ -101,3 +101,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_openId_unique" UNIQUE("openId"),
 	CONSTRAINT "users_username_unique" UNIQUE("username")
 );
+--> statement-breakpoint
+ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp;
+--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sessionVersion" integer NOT NULL DEFAULT 1;

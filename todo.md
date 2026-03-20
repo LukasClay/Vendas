@@ -332,7 +332,7 @@
 - [x] Alertas da Consultora são uma aba dentro de Trabalhos (sem problema de navegação)
 
 ## Varredura de Inputs Instáveis
-- [ ] Varrer e corrigir inputs instáveis em Vendas, Relatórios e Funcionários
+- [x] Varrer e corrigir inputs instáveis em Vendas, Relatórios e Funcionários (QA-A: Vendedores/Vendas isolados, P2/P5: useMemo em Relatórios/Consultora/Trabalhos)
 
 ## Novas Funcionalidades (18/03/2026)
 - [x] Botão "Exportar para CSV" na página Todas as Vendas
