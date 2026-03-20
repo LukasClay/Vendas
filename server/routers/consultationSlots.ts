@@ -8,18 +8,29 @@ import { notifyOwner } from "../_core/notification";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Converte a data do servidor (seja qual for o fuso) para o horário do Brasil.
+ * Essencial para Railway/produção que roda em UTC.
+ */
+function getBrazilTime() {
+  const now = new Date();
+  const tzString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+  return new Date(tzString);
+}
+
 function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const d = getBrazilTime();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /**
- * Retorna o horário atual no formato "HH:MM" no fuso local do servidor.
+ * Retorna o horário atual no formato "HH:MM" no fuso de São Paulo.
  * Usado para filtrar slots que já passaram no dia de hoje.
  */
 function nowTimeStr() {
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
+  const d = getBrazilTime();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
