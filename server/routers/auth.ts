@@ -5,7 +5,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb, withRetry } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq, or, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -178,8 +178,10 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
-      // Verifica se username já existe
-      const existing = await db.select().from(users).where(eq(users.username, input.username)).limit(1);
+      // Verifica se username já existe (ignora usuários excluídos via soft delete)
+      const existing = await db.select().from(users).where(
+        and(eq(users.username, input.username), isNull(users.deletedAt))
+      ).limit(1);
       if (existing.length > 0) {
         throw new TRPCError({ code: "CONFLICT", message: "Já existe um usuário com este nome de usuário." });
       }
@@ -219,7 +221,7 @@ export const ownAuthRouter = router({
       // Verifica conflito de username
       if (input.username) {
         const existing = await db.select().from(users)
-          .where(eq(users.username, input.username)).limit(1);
+          .where(and(eq(users.username, input.username), isNull(users.deletedAt))).limit(1);
         if (existing.length > 0 && existing[0].id !== input.userId) {
           throw new TRPCError({ code: "CONFLICT", message: "Este nome de usuário já está em uso." });
         }
