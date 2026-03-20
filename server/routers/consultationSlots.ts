@@ -348,8 +348,8 @@ export const consultationSlotsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para criar horários." });
       }
 
-      // A3: impedir criação de slots em datas passadas
-      const today = new Date().toISOString().slice(0, 10);
+      // A3: impedir criação de slots em datas passadas (considerando fuso do Brasil)
+      const today = todayStr();
       if (input.consultationDate < today) {
         throw new TRPCError({
           code: "BAD_REQUEST",
