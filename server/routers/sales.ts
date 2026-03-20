@@ -28,7 +28,7 @@ export const salesRouter = router({
       notes: z.string().optional(),
       consultationSlotId: z.number().optional(), // Para Consulta Cartas
       // Attachment: base64 encoded file
-      attachmentBase64: z.string().optional(),
+      attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
       attachmentMime: z.string().optional(),
       attachmentName: z.string().optional(),
     }))
