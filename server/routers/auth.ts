@@ -91,19 +91,24 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
-      // Busca por username OU email (compatibilidade com contas antigas)
+      // Busca por username OU email (compatibilidade com contas antigas) - Usando SQL direto para busca case-insensitive
       const result = await withRetry(() =>
         db.select().from(users).where(
           or(
-            eq(users.username, input.username),
-            eq(users.email, input.username)
+            sql`LOWER(${users.username}) = LOWER(${input.username})`,
+            sql`LOWER(${users.email}) = LOWER(${input.username})`
           )
         ).limit(1)
       );
       const user = result[0];
 
-      if (!user || !user.passwordHash) {
-        // NÃO limpar o rate limit em falha — intencional
+      if (!user) {
+        console.error(`[Login] Usuário não encontrado: ${input.username}`);
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
+      }
+
+      if (!user.passwordHash) {
+        console.error(`[Login] Usuário sem senha definida (passwordHash null): ${input.username}`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
@@ -113,9 +118,11 @@ export const ownAuthRouter = router({
 
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
-        // NÃO limpar o rate limit em falha — intencional
+        console.error(`[Login] Senha incorreta para o usuário: ${input.username}`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
+
+      console.log(`[Login] Login bem-sucedido para: ${input.username} (Role: ${user.role})`);
 
       // Login bem-sucedido: limpar contador
       clearRateLimit(ip, input.username);
