@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -445,15 +445,21 @@ export default function AdminTrabalhos() {
   // Vendedores ativos para o select de edição
   const { data: sellers = [] } = trpc.consultora.listActiveSellers.useQuery();
 
+  // Cache seguro do input para evitar re-render loops no tRPC
+  const queryInput = useMemo(
+    () => ({ search: debouncedSearch || undefined }),
+    [debouncedSearch]
+  );
+
   const { data: counts } = trpc.consultora.statusCounts.useQuery();
   const { data: toWriteItems = [], isLoading: loadingWrite } = trpc.consultora.toWrite.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "para_escrever" }
+    queryInput, { enabled: activeTab === "para_escrever" }
   );
   const { data: pendingItems = [], isLoading: loadingPending } = trpc.consultora.pending.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "pendente" }
+    queryInput, { enabled: activeTab === "pendente" }
   );
   const { data: doneItems = [], isLoading: loadingDone } = trpc.consultora.done.useQuery(
-    { search: debouncedSearch || undefined }, { enabled: activeTab === "feito" }
+    queryInput, { enabled: activeTab === "feito" }
   );
 
   const invalidateAll = () => {
