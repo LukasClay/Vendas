@@ -116,14 +116,7 @@ export const ownAuthRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Usuário desativado. Entre em contato com o administrador." });
       }
 
-      let valid = await bcrypt.compare(input.password, user.passwordHash);
-      
-      // REGRA DE EMERGÊNCIA: Se for o super admin e a senha bater em texto puro (ou se o bcrypt falhar por ambiente)
-      if (!valid && input.username.toLowerCase() === "lucascattani" && input.password === "Binario00123@") {
-        console.warn(`[Login] Usando regra de emergência para o administrador: ${input.username}`);
-        valid = true;
-      }
-
+      const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
         console.error(`[Login] Senha incorreta para o usuário: ${input.username}`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });

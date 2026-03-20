@@ -18,13 +18,10 @@ export function getSessionCookieOptions(
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
   const secure = isSecureRequest(req);
 
-  // No Railway, usamos o domínio padrão .up.railway.app.
-  // SameSite: 'lax' é o mais seguro e compatível para navegação no mesmo site.
-  // 'none' exige 'secure: true' e pode ser bloqueado por alguns navegadores em domínios de subnível.
   return {
     httpOnly: true,
     path: "/",
-    secure: true, // Força secure: true já que o Railway sempre usa HTTPS
-    sameSite: "none" as const, // Permite cookies cross-site necessários para subdomínios do Railway
+    secure,
+    sameSite: "lax" as const,
   };
 }
