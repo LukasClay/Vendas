@@ -31,49 +31,67 @@ const inputStyle = {
   fontSize: "16px",
 };
 
-// ─── UserCard definido FORA do componente principal para evitar re-criação a cada render ───
+// ─── UserCard com estado de edição e reset ISOLADO para evitar re-render em cascata ───
 type UserCardProps = {
   user: any;
-  editingId: number | null;
-  editForm: EditEmployeeForm;
-  setEditForm: React.Dispatch<React.SetStateAction<EditEmployeeForm>>;
-  setEditingId: (id: number | null) => void;
-  onSave: (userId: number) => void;
-  isSaving: boolean;
-  resetId: number | null;
-  resetForm: ResetForm;
-  setResetForm: React.Dispatch<React.SetStateAction<ResetForm>>;
-  setResetId: (id: number | null) => void;
-  showResetPassword: boolean;
-  setShowResetPassword: (v: boolean) => void;
-  onReset: (userId: number) => void;
-  isResetting: boolean;
   onDeactivate: (id: number) => void;
   onReactivate: (id: number) => void;
 };
 
-function UserCard({
-  user,
-  editingId,
-  editForm,
-  setEditForm,
-  setEditingId,
-  onSave,
-  isSaving,
-  resetId,
-  resetForm,
-  setResetForm,
-  setResetId,
-  showResetPassword,
-  setShowResetPassword,
-  onReset,
-  isResetting,
-  onDeactivate,
-  onReactivate,
-}: UserCardProps) {
+function UserCard({ user, onDeactivate, onReactivate }: UserCardProps) {
+  const utils = trpc.useUtils();
+
+  // Estado de edição isolado dentro do card
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditEmployeeForm>({ name: "", username: "", role: "user", active: true });
+
+  // Estado de reset de senha isolado dentro do card
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
+    onSuccess: () => {
+      toast.success("Funcionário atualizado!");
+      utils.users.listAll.invalidate();
+      setIsEditing(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const resetPassword = trpc.ownAuth.resetPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha redefinida com sucesso!");
+      setIsResetting(false);
+      setResetForm({ newPassword: "" });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.user;
-  const isEditing = editingId === user.id;
-  const isResettingThis = resetId === user.id;
+
+  const startEditing = () => {
+    setEditForm({
+      name: user.name ?? user.displayName ?? "",
+      username: user.username ?? "",
+      role: user.role as "user" | "consultora" | "admin",
+      active: user.active ?? true,
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    updateUserMutation.mutate({
+      userId: user.id,
+      name: editForm.name || undefined,
+      username: editForm.username || undefined,
+      role: editForm.role,
+    });
+  };
+
+  const handleReset = () => {
+    resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword });
+  };
 
   return (
     <div
@@ -132,15 +150,15 @@ function UserCard({
             </select>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => onSave(user.id)}
-                disabled={isSaving}
+                onClick={handleSave}
+                disabled={updateUserMutation.isPending}
                 className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50 active:scale-95"
                 style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}
               >
                 <Check className="w-3.5 h-3.5" /> Salvar
               </button>
               <button
-                onClick={() => setEditingId(null)}
+                onClick={() => setIsEditing(false)}
                 className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm active:scale-95"
                 style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
               >
@@ -179,15 +197,7 @@ function UserCard({
         {!isEditing && (
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             <button
-              onClick={() => {
-                setEditingId(user.id);
-                setEditForm({
-                  name: user.name ?? user.displayName ?? "",
-                  username: user.username ?? "",
-                  role: user.role as "user" | "consultora" | "admin",
-                  active: user.active ?? true,
-                });
-              }}
+              onClick={startEditing}
               className="p-2.5 sm:p-2 rounded-lg hover:bg-blue-50 transition-colors"
               style={{ color: "oklch(0.50 0.18 250)" }}
               title="Editar funcionário"
@@ -195,7 +205,7 @@ function UserCard({
               <Pencil className="w-4 h-4" />
             </button>
             <button
-              onClick={() => { setResetId(user.id); setResetForm({ newPassword: "" }); }}
+              onClick={() => { setIsResetting(true); setResetForm({ newPassword: "" }); }}
               className="p-2.5 sm:p-2 rounded-lg hover:bg-yellow-50 transition-colors"
               style={{ color: "oklch(0.60 0.13 65)" }}
               title="Redefinir senha"
@@ -226,7 +236,7 @@ function UserCard({
       </div>
 
       {/* Reset password inline */}
-      {isResettingThis && (
+      {isResetting && (
         <div className="mt-3 ml-0 sm:ml-14 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
             <input
@@ -248,15 +258,15 @@ function UserCard({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onReset(user.id)}
-              disabled={resetForm.newPassword.length < 6 || isResetting}
+              onClick={handleReset}
+              disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
               className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
               style={{ background: "oklch(0.60 0.13 65)", fontSize: "16px" }}
             >
-              {isResetting ? "Salvando..." : "Salvar senha"}
+              {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
             </button>
             <button
-              onClick={() => setResetId(null)}
+              onClick={() => setIsResetting(false)}
               className="flex-1 sm:flex-none px-3 py-2.5 rounded-lg active:scale-95"
               style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
             >
@@ -274,29 +284,11 @@ export default function AdminVendedores() {
   const utils = trpc.useUtils();
   const { data: users = [], isLoading } = trpc.users.listAll.useQuery();
 
-  // Edit state
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<EditEmployeeForm>({ name: "", username: "", role: "user", active: true });
-
   // Create state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
   const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
   const [showNewPassword, setShowNewPassword] = useState(false);
-
-  // Reset password state
-  const [resetId, setResetId] = useState<number | null>(null);
-  const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
-  const [showResetPassword, setShowResetPassword] = useState(false);
-
-  const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
-    onSuccess: () => {
-      toast.success("Funcionário atualizado!");
-      utils.users.listAll.invalidate();
-      setEditingId(null);
-    },
-    onError: (err) => toast.error(err.message),
-  });
 
   const deactivateUser = trpc.users.deactivate.useMutation({
     onSuccess: () => { toast.success("Funcionário desativado."); utils.users.listAll.invalidate(); },
@@ -319,44 +311,9 @@ export default function AdminVendedores() {
     onError: (err) => toast.error(err.message),
   });
 
-  const resetPassword = trpc.ownAuth.resetPassword.useMutation({
-    onSuccess: () => {
-      toast.success("Senha redefinida com sucesso!");
-      setResetId(null);
-      setResetForm({ newPassword: "" });
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const sellers = users.filter(u => u.role === "user");
   const consultoras = users.filter(u => u.role === "consultora");
   const admins = users.filter(u => u.role === "admin");
-
-  const cardProps = {
-    editingId,
-    editForm,
-    setEditForm,
-    setEditingId,
-    onSave: (userId: number) =>
-      updateUserMutation.mutate({
-        userId,
-        name: editForm.name || undefined,
-        username: editForm.username || undefined,
-        role: editForm.role,
-      }),
-    isSaving: updateUserMutation.isPending,
-    resetId,
-    resetForm,
-    setResetForm,
-    setResetId,
-    showResetPassword,
-    setShowResetPassword,
-    onReset: (userId: number) =>
-      resetPassword.mutate({ userId, newPassword: resetForm.newPassword }),
-    isResetting: resetPassword.isPending,
-    onDeactivate: (id: number) => deactivateUser.mutate({ id }),
-    onReactivate: (id: number) => reactivateUser.mutate({ id, active: true }),
-  };
 
   const selectStyle = {
     ...inputStyle,
@@ -533,7 +490,14 @@ export default function AdminVendedores() {
                   </span>
                 </div>
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {admins.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
+                  {admins.map(u => (
+                    <UserCard
+                      key={u.id}
+                      user={u}
+                      onDeactivate={(id) => deactivateUser.mutate({ id })}
+                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -558,7 +522,14 @@ export default function AdminVendedores() {
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {sellers.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
+                  {sellers.map(u => (
+                    <UserCard
+                      key={u.id}
+                      user={u}
+                      onDeactivate={(id) => deactivateUser.mutate({ id })}
+                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -583,7 +554,14 @@ export default function AdminVendedores() {
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {consultoras.map(u => <UserCard key={u.id} user={u} {...cardProps} />)}
+                  {consultoras.map(u => (
+                    <UserCard
+                      key={u.id}
+                      user={u}
+                      onDeactivate={(id) => deactivateUser.mutate({ id })}
+                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
+                    />
+                  ))}
                 </div>
               )}
             </div>
