@@ -3,10 +3,8 @@ import { trpc } from "@/lib/trpc";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ChevronsUpDown, Check } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -22,6 +20,21 @@ function fmtDate(d: string | null | undefined): string {
   const match = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return String(d);
   return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+// Converte "DD/MM/AAAA" → "YYYY-MM-DD" para salvar no estado interno
+function parseDateMask(masked: string): string {
+  const m = masked.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return "";
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+// Aplica máscara dd/mm/aaaa a partir de dígitos puros
+function applyDateMask(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
 function parseCurrencyToNumber(formatted: string): number {
@@ -43,6 +56,16 @@ export default function NovaVenda() {
   const utils = trpc.useUtils();
   const isMobile = useIsMobile();
   const { data: products = [], isLoading: loadingProducts } = trpc.products.list.useQuery();
+
+  // Estado do campo de data de nascimento como texto mascarado
+  const [birthDateMasked, setBirthDateMasked] = useState("");
+  const birthDateInputRef = useRef<HTMLInputElement>(null);
+  const birthDateNativeRef = useRef<HTMLInputElement>(null);
+
+  // Estado do combobox de produtos
+  const [productQuery, setProductQuery] = useState("");
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false);
+  const productInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     clientName: "",
@@ -66,12 +89,18 @@ export default function NovaVenda() {
   );
 
   // Agrupa slots por data (consultationDate é string "YYYY-MM-DD")
-  const slotsByDate = availableSlots.reduce<Record<string, typeof availableSlots>>((acc, slot) => {
+  const slotsByDate = (availableSlots ?? []).reduce<Record<string, typeof availableSlots>>((acc, slot) => {
     const key = String(slot.consultationDate).slice(0, 10);
     if (!acc[key]) acc[key] = [];
     acc[key].push(slot);
     return acc;
   }, {});
+
+  // Lista filtrada de produtos para o combobox
+  const safeProducts = products ?? [];
+  const filteredProducts = productQuery.trim()
+    ? safeProducts.filter(p => p.name.toLowerCase().includes(productQuery.toLowerCase()))
+    : safeProducts;
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -133,6 +162,24 @@ export default function NovaVenda() {
     setForm(f => ({ ...f, clientPhone: v }));
   };
 
+  // Handler da máscara de data de nascimento
+  const handleBirthDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = applyDateMask(e.target.value);
+    setBirthDateMasked(masked);
+    const iso = parseDateMask(masked);
+    setForm(f => ({ ...f, clientBirthDate: iso }));
+  };
+
+  // Quando o input nativo (calendário) muda, sincroniza a máscara
+  const handleBirthDateNative = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const iso = e.target.value; // "YYYY-MM-DD"
+    setForm(f => ({ ...f, clientBirthDate: iso }));
+    if (iso) {
+      const [y, mo, d] = iso.split("-");
+      setBirthDateMasked(`${d}/${mo}/${y}`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.clientName.trim()) { toast.error("Nome do cliente é obrigatório."); return; }
@@ -152,12 +199,11 @@ export default function NovaVenda() {
     let attachmentName: string | undefined;
 
     if (file) {
-      // FileReader é nativo e não bloqueia a UI thread — seguro em celulares com pouca RAM
       attachmentBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          resolve(result.split(",")[1]); // extrai só o base64, sem o prefixo data:...
+          resolve(result.split(",")[1]);
         };
         reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
         reader.readAsDataURL(file);
@@ -200,6 +246,9 @@ export default function NovaVenda() {
       amountFormatted: "",
       notes: "",
     });
+    setBirthDateMasked("");
+    setProductQuery("");
+    setProductDropdownOpen(false);
     setFile(null);
     setFilePreview(null);
     setConsultationSlotId(null);
@@ -290,19 +339,51 @@ export default function NovaVenda() {
                 />
               </div>
 
-              {/* Data de nascimento — campo inteiro em coluna única no mobile */}
+              {/* Data de Nascimento — input text com máscara dd/mm/aaaa + botão calendário */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
                   Data de Nascimento {requiredStar}
                 </label>
-                <input
-                  type="date"
-                  value={form.clientBirthDate}
-                  onChange={e => setForm(f => ({ ...f, clientBirthDate: e.target.value }))}
-                  className={inputClass}
-                  style={inputStyle}
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={birthDateInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    value={birthDateMasked}
+                    onChange={handleBirthDateInput}
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
+                    className={inputClass}
+                    style={inputStyle}
+                    autoComplete="off"
+                  />
+                  {/* Botão calendário — abre o input nativo oculto */}
+                  <button
+                    type="button"
+                    onClick={() => birthDateNativeRef.current?.showPicker?.()}
+                    className="shrink-0 flex items-center justify-center rounded-xl transition-all active:scale-95"
+                    style={{
+                      width: isMobile ? 52 : 44,
+                      height: isMobile ? 52 : 44,
+                      background: "#faf8f4",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--primary)",
+                    }}
+                    aria-label="Abrir calendário"
+                  >
+                    <Calendar className="w-5 h-5" />
+                  </button>
+                  {/* Input nativo oculto — usado apenas pelo botão calendário */}
+                  <input
+                    ref={birthDateNativeRef}
+                    type="date"
+                    value={form.clientBirthDate}
+                    onChange={handleBirthDateNative}
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                </div>
               </div>
 
               {/* Telefone */}
@@ -334,68 +415,83 @@ export default function NovaVenda() {
             </h2>
             <div className="space-y-4">
 
-              {/* Trabalho Espiritual — Combobox com filtro */}
-              <div>
+              {/* Trabalho Espiritual — input único com autocomplete */}
+              <div className="relative">
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
                   Trabalho Espiritual {requiredStar}
                 </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      role="combobox"
-                      className={`${inputClass} flex items-center justify-between cursor-pointer`}
-                      style={{
-                        ...inputStyle,
-                        color: form.productName ? "var(--foreground)" : "var(--muted-foreground)",
-                        textAlign: "left",
-                      }}
-                    >
-                      <span className="truncate">
-                        {loadingProducts
-                          ? "Carregando..."
-                          : form.productName || "Selecione o trabalho..."}
-                      </span>
-                      <ChevronsUpDown className="w-4 h-4 shrink-0 opacity-50 ml-2" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="p-0"
-                    style={{ width: "var(--radix-popover-trigger-width)", maxWidth: "100vw" }}
-                    align="start"
+                <input
+                  ref={productInputRef}
+                  type="text"
+                  value={productDropdownOpen ? productQuery : form.productName}
+                  onChange={e => {
+                    setProductQuery(e.target.value);
+                    setProductDropdownOpen(true);
+                    // Se o utilizador apagar tudo, limpa a seleção
+                    if (!e.target.value) {
+                      setForm(f => ({ ...f, productName: "", productId: null }));
+                    }
+                  }}
+                  onFocus={() => {
+                    setProductQuery("");
+                    setProductDropdownOpen(true);
+                  }}
+                  onBlur={() => {
+                    // Pequeno delay para permitir o click no item da lista
+                    setTimeout(() => setProductDropdownOpen(false), 150);
+                  }}
+                  placeholder={loadingProducts ? "Carregando..." : "Digite ou selecione o trabalho..."}
+                  readOnly={loadingProducts}
+                  className={inputClass}
+                  style={{
+                    ...inputStyle,
+                    color: form.productName && !productDropdownOpen ? "var(--foreground)" : "var(--foreground)",
+                  }}
+                  autoComplete="off"
+                />
+
+                {/* Dropdown de sugestões */}
+                {productDropdownOpen && !loadingProducts && (
+                  <div
+                    className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
+                    style={{
+                      background: "white",
+                      border: "1.5px solid var(--border)",
+                      maxHeight: 240,
+                      overflowY: "auto",
+                    }}
                   >
-                    <Command>
-                      <CommandInput placeholder="Buscar trabalho..." autoFocus />
-                      <CommandList>
-                        <CommandEmpty>Nenhum trabalho encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {products.map(p => (
-                            <CommandItem
-                              key={p.id}
-                              value={p.name}
-                              onSelect={value => {
-                                const selectedProduct = products.find(prod => prod.name.toLowerCase() === value.toLowerCase());
-                                setForm(f => ({
-                                  ...f,
-                                  productName: selectedProduct?.name ?? value,
-                                  productId: selectedProduct?.id ?? null,
-                                }));
-                              }}
-                              className={`${isMobile ? "py-3 text-base" : "py-2 text-sm"} cursor-pointer`}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 shrink-0 ${
-                                  form.productName === p.name ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {p.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                    {filteredProducts.length === 0 ? (
+                      <div className="px-4 py-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                        Nenhum trabalho encontrado.
+                      </div>
+                    ) : (
+                      filteredProducts.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseDown={e => e.preventDefault()} // evita blur antes do click
+                          onClick={() => {
+                            setForm(f => ({ ...f, productName: p.name, productId: p.id }));
+                            setProductQuery("");
+                            setProductDropdownOpen(false);
+                            productInputRef.current?.blur();
+                          }}
+                          className="w-full text-left transition-colors"
+                          style={{
+                            padding: isMobile ? "14px 16px" : "10px 16px",
+                            fontSize: isMobile ? 16 : 14,
+                            background: form.productName === p.name ? "var(--accent)" : "white",
+                            color: "var(--foreground)",
+                            borderBottom: "1px solid var(--border)",
+                          }}
+                        >
+                          {p.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
@@ -481,7 +577,7 @@ export default function NovaVenda() {
                             {fmtDate(dateKey)}
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {slots.map(slot => (
+                            {(slots ?? []).map(slot => (
                               <button
                                 key={slot.id}
                                 type="button"
