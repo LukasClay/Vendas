@@ -2,7 +2,7 @@
  * Storage helpers — compatível com Manus proxy e S3/R2 direto.
  *
  * Modo 1 (Manus): usa BUILT_IN_FORGE_API_URL + BUILT_IN_FORGE_API_KEY
- * Modo 2 (Railway/S3): usa S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_PUBLIC_URL
+ * Modo 2 (Railway/S3): usa S3_ENDPOINT, S3_BUCKET_NAME, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_PUBLIC_URL
  *
  * Se nenhum estiver configurado, o upload falha com mensagem clara.
  */
@@ -69,12 +69,13 @@ async function manusGet(relKey: string): Promise<{ key: string; url: string }> {
 
 function getS3Config() {
   const endpoint = process.env.S3_ENDPOINT;
-  const bucket = process.env.S3_BUCKET;
-  const accessKey = process.env.S3_ACCESS_KEY;
-  const secretKey = process.env.S3_SECRET_KEY;
+  const bucket = process.env.S3_BUCKET_NAME || process.env.S3_BUCKET;
+  const accessKey = process.env.S3_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY;
+  const secretKey = process.env.S3_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY;
   const publicUrl = process.env.S3_PUBLIC_URL; // URL pública do bucket (ex: https://bucket.r2.dev)
+  const region = process.env.S3_REGION || "auto";
   if (!endpoint || !bucket || !accessKey || !secretKey) return null;
-  return { endpoint, bucket, accessKey, secretKey, publicUrl };
+  return { endpoint, bucket, accessKey, secretKey, publicUrl, region };
 }
 
 /**
@@ -104,7 +105,7 @@ async function s3Put(
 
   const client = new S3Client({
     endpoint: config.endpoint,
-    region: "auto",
+    region: config.region,
     credentials: {
       accessKeyId: config.accessKey,
       secretAccessKey: config.secretKey,
@@ -147,7 +148,7 @@ export async function storagePut(
   if (getS3Config()) return s3Put(relKey, data, contentType);
   throw new Error(
     "Nenhum serviço de storage configurado. " +
-    "Configure BUILT_IN_FORGE_API_URL (Manus) ou S3_ENDPOINT + S3_BUCKET + S3_ACCESS_KEY + S3_SECRET_KEY (Railway)."
+    "Configure BUILT_IN_FORGE_API_URL (Manus) ou S3_ENDPOINT + S3_BUCKET_NAME + S3_ACCESS_KEY_ID + S3_SECRET_ACCESS_KEY (Railway)."
   );
 }
 

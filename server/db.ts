@@ -152,9 +152,14 @@ export async function deleteUser(id: number) {
 export async function getAllProducts(includeInactive = false) {
   const db = await getDb();
   if (!db) return [];
-  // Sempre filtra produtos com soft delete (deletedAt IS NULL)
-  if (includeInactive) return db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
-  return db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
+  try {
+    // Sempre filtra produtos com soft delete (deletedAt IS NULL)
+    if (includeInactive) return await db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
+    return await db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
+  } catch (e: any) {
+    console.error("[getAllProducts] Erro:", e.message);
+    return [];
+  }
 }
 
 export async function getProductById(id: number) {
