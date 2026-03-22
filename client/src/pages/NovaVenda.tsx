@@ -3,8 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ChevronsUpDown, Check } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -332,29 +334,68 @@ export default function NovaVenda() {
             </h2>
             <div className="space-y-4">
 
-              {/* Trabalho Espiritual */}
+              {/* Trabalho Espiritual — Combobox com filtro */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
                   Trabalho Espiritual {requiredStar}
                 </label>
-                <select
-                  value={form.productName}
-                  onChange={e => {
-                    const selectedProduct = products.find(p => p.name === e.target.value);
-                    setForm(f => ({ ...f, productName: e.target.value, productId: selectedProduct?.id ?? null }));
-                  }}
-                  className={`${inputClass} cursor-pointer`}
-                  style={{ ...inputStyle, color: form.productName ? "var(--foreground)" : "var(--muted-foreground)" }}
-                  required>
-                  <option value="" disabled>Selecione o trabalho...</option>
-                  {loadingProducts ? (
-                    <option disabled>Carregando...</option>
-                  ) : products.length === 0 ? (
-                    <option disabled>Nenhum trabalho cadastrado</option>
-                  ) : (
-                    products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)
-                  )}
-                </select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      className={`${inputClass} flex items-center justify-between cursor-pointer`}
+                      style={{
+                        ...inputStyle,
+                        color: form.productName ? "var(--foreground)" : "var(--muted-foreground)",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span className="truncate">
+                        {loadingProducts
+                          ? "Carregando..."
+                          : form.productName || "Selecione o trabalho..."}
+                      </span>
+                      <ChevronsUpDown className="w-4 h-4 shrink-0 opacity-50 ml-2" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0"
+                    style={{ width: "var(--radix-popover-trigger-width)", maxWidth: "100vw" }}
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Buscar trabalho..." autoFocus />
+                      <CommandList>
+                        <CommandEmpty>Nenhum trabalho encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {products.map(p => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.name}
+                              onSelect={value => {
+                                const selectedProduct = products.find(prod => prod.name.toLowerCase() === value.toLowerCase());
+                                setForm(f => ({
+                                  ...f,
+                                  productName: selectedProduct?.name ?? value,
+                                  productId: selectedProduct?.id ?? null,
+                                }));
+                              }}
+                              className={`${isMobile ? "py-3 text-base" : "py-2 text-sm"} cursor-pointer`}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 shrink-0 ${
+                                  form.productName === p.name ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {p.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
