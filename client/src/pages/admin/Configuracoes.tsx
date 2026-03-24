@@ -10,10 +10,10 @@ export default function AdminConfiguracoes() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-            Configurações
+            Minha Conta
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-            Informações do sistema e da sua conta
+            Seu perfil e informações do sistema
           </p>
         </div>
 
@@ -58,7 +58,7 @@ export default function AdminConfiguracoes() {
             <div className="space-y-3">
               {[
                 ["Sistema", "Gestão de Vendas Espirituais"],
-                ["Versão", "1.7.1"],
+                ["Versão", "1.7.2"],
                 ["Banco de Dados", "PostgreSQL"],
                 ["Armazenamento", "S3 (5GB inicial)"],
               ].map(([label, value]) => (

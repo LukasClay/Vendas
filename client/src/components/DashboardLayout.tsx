@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   BarChart3, Bell, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
-  PlusCircle, Settings, Users, Menu, X, ChevronRight, Sparkles, Calendar,
+  PlusCircle, User, Users, Menu, X, ChevronRight, Sparkles, Calendar,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -57,7 +57,7 @@ const adminMenuItems = [
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Bell, label: "Alertas", path: "/admin/alertas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
-  { icon: Settings, label: "Configurações", path: "/admin/configuracoes" },
+  { icon: User, label: "Minha Conta", path: "/admin/configuracoes" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
