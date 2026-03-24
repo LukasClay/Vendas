@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -456,12 +456,26 @@ export default function Trabalhos() {
   const isDark = resolvedTheme === "dark";
   const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  // Debounce simples
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(v), 300);
+  };
   const utils = trpc.useUtils();
-
-  const { data: toWrite = [], isLoading: load1 } = trpc.consultora.toWrite.useQuery();
-  const { data: pending = [], isLoading: load2 } = trpc.consultora.pending.useQuery();
-  const { data: done = [], isLoading: load3 } = trpc.consultora.done.useQuery();
-  const { data: sellers = [] } = trpc.users.listSellers.useQuery();
+  const { data: sellers = [] } = trpc.consultora.listActiveSellers.useQuery();
+  const queryInput = useMemo(
+    () => ({ search: debouncedSearch || undefined }),
+    [debouncedSearch]
+  );
+  const { data: toWrite = [], isLoading: load1 } = trpc.consultora.toWrite.useQuery(queryInput);
+  const { data: pending = [], isLoading: load2 } = trpc.consultora.pending.useQuery(queryInput);
+  const { data: done = [], isLoading: load3 } = trpc.consultora.done.useQuery(queryInput);
 
   const markWritten = trpc.consultora.markWritten.useMutation({
     onSuccess: () => { toast.success("Movido para Pendentes!"); utils.consultora.toWrite.invalidate(); utils.consultora.pending.invalidate(); },
@@ -483,13 +497,23 @@ export default function Trabalhos() {
     onError: (e) => toast.error(e.message)
   });
 
-  const list = activeTab === "para_escrever" ? toWrite : activeTab === "pendente" ? pending : done;
-  const filtered = list.filter(i => 
-    i.clientName.toLowerCase().includes(search.toLowerCase()) || 
-    i.productName.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const isLoading = load1 || load2 || load3;
+  const isLoading = activeTab === "para_escrever" ? load1 : activeTab === "pendente" ? load2 : load3;
+  // Derivar tipos únicos da aba ativa
+  const activeItems = activeTab === "para_escrever" ? toWrite : activeTab === "pendente" ? pending : done;
+  // Sub-filtro por categoria
+  const categoryFilteredItems = selectedCategory ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === selectedCategory) : activeItems;
+  const uniqueTypes = Array.from(new Set((categoryFilteredItems as Array<{ productName: string }>).map(i => i.productName))).sort();
+  // Filtrar por tipo e categoria
+  const applyFilters = (items: any[]) => {
+    let result = items;
+    if (selectedCategory) result = result.filter(i => (i.productCategory ?? "individual") === selectedCategory);
+    if (selectedType) result = result.filter(i => i.productName === selectedType);
+    return result;
+  };
+  const filteredToWrite = applyFilters(toWrite);
+  const filteredPending = applyFilters(pending);
+  const filteredDone = applyFilters(done);
+  function handleTabChange(tab: Tab) { setActiveTab(tab); setSearch(""); setDebouncedSearch(""); setSelectedType(null); setSelectedCategory(null); }
 
   return (
     <DashboardLayout>
@@ -502,7 +526,7 @@ export default function Trabalhos() {
             </div>
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente ou trabalho..."
+              <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Buscar cliente ou trabalho..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl outline-none border border-[var(--border)] text-sm transition-all focus:ring-2 focus:ring-[var(--primary)]/20"
                 style={{ background: "var(--card)", color: "var(--foreground)" }} />
             </div>
@@ -516,7 +540,7 @@ export default function Trabalhos() {
             { id: "pendente", label: "Pendentes", count: pending.length, icon: Hourglass },
             { id: "feito", label: "Feitos", count: done.length, icon: CheckCircle2 }
           ].map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as Tab)}
+            <button key={tab.id} onClick={() => handleTabChange(tab.id as Tab)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === tab.id ? "bg-[var(--card)] text-[var(--primary)] shadow-sm border border-[var(--border)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
               }`}>
@@ -529,6 +553,52 @@ export default function Trabalhos() {
           ))}
         </div>
 
+        {/* Sub-filtro por categoria */}
+        {!isLoading && (activeItems as any[]).some(i => (i.productCategory ?? "individual") !== "individual") && (
+          <div className="flex gap-2 flex-wrap">
+            {[{ key: null, label: "Todos" }, { key: "individual", label: "Individuais" }, { key: "promocao", label: "⭐ Promoção" }, { key: "coletivo", label: "👥 Coletivos" }].map(cat => {
+              const count = cat.key ? (activeItems as any[]).filter(i => (i.productCategory ?? "individual") === cat.key).length : activeItems.length;
+              if (cat.key && count === 0) return null;
+              return (
+                <button key={String(cat.key)}
+                  onClick={() => { setSelectedCategory(cat.key); setSelectedType(null); }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedCategory === cat.key
+                    ? { background: "var(--primary)", color: "white" }
+                    : { background: "var(--border)", color: "var(--foreground)" }}>
+                  {cat.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {/* Filtro por tipo de trabalho (chips dinâmicos) */}
+        {!isLoading && uniqueTypes.length > 1 && (
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setSelectedType(null)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={selectedType === null
+                ? { background: "var(--primary)", color: "white" }
+                : { background: "var(--border)", color: "var(--foreground)" }}>
+              Todos ({categoryFilteredItems.length})
+            </button>
+            {uniqueTypes.map(type => {
+              const count = (categoryFilteredItems as Array<{ productName: string }>).filter(i => i.productName === type).length;
+              return (
+                <button key={type}
+                  onClick={() => setSelectedType(selectedType === type ? null : type)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={selectedType === type
+                    ? { background: "var(--primary)", color: "white" }
+                    : { background: "var(--border)", color: "var(--foreground)" }}>
+                  {type} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -540,12 +610,12 @@ export default function Trabalhos() {
             <motion.div key="empty" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
               <ClipboardList className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
-              <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum trabalho encontrado nesta categoria.</p>
+              <p className="text-sm font-medium text-[var(--muted-foreground)]">{selectedType ? `Nenhum "${selectedType}" encontrado` : "Nenhum trabalho encontrado nesta categoria."}</p>
             </motion.div>
           ) : (
             <motion.div key={activeTab} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className={activeTab === "para_escrever" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
-                {filtered.map(item => (
+                {(activeTab === "para_escrever" ? filteredToWrite : activeTab === "pendente" ? filteredPending : filteredDone).map(item => (
                   activeTab === "para_escrever" ? (
                     <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={id => markWritten.mutate({ saleId: id })} />
                   ) : activeTab === "pendente" ? (

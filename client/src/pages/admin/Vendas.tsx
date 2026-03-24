@@ -178,8 +178,36 @@ export default function AdminVendas() {
     });
   }, [rawSalesData, filters.category]);
 
+  // Exportar CSV com os filtros ativos
+  const [csvLoading, setCsvLoading] = useState(false);
+  const exportCsvQuery = trpc.sales.exportCsv.useQuery(queryFilters, { enabled: false });
+  async function handleExportCsv() {
+    setCsvLoading(true);
+    try {
+      const result = await exportCsvQuery.refetch();
+      if (!result.data?.csv) { toast.error('Nenhum dado para exportar'); return; }
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + result.data.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vendas_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${result.data.total} vendas exportadas`);
+    } catch { toast.error('Erro ao exportar CSV'); }
+    finally { setCsvLoading(false); }
+  }
+
   const [editSale, setEditSale] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+  // Estado do modal de histórico de cliente
+  const [historyClientName, setHistoryClientName] = useState<string | null>(null);
+  const { data: clientHistory, isLoading: loadingHistory } = trpc.sales.clientHistory.useQuery(
+    { clientName: historyClientName! },
+    { enabled: !!historyClientName }
+  );
 
   const deleteSale = trpc.sales.delete.useMutation({
     onSuccess: () => { toast.success("Venda excluída"); utils.sales.list.invalidate(); setDeleteConfirmId(null); },
@@ -214,9 +242,10 @@ export default function AdminVendas() {
                 <Filter className="w-4 h-4" />
                 Filtros
               </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-green-600 text-white shadow-lg shadow-green-500/20 active:scale-95">
-                <Download className="w-4 h-4" />
-                Exportar
+              <button onClick={handleExportCsv} disabled={csvLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-green-600 text-white shadow-lg shadow-green-500/20 active:scale-95 disabled:opacity-50">
+                {csvLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Exportar CSV
               </button>
             </div>
           </div>
@@ -310,7 +339,10 @@ export default function AdminVendas() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-[var(--foreground)]">{sale.clientName}</span>
+                            <button onClick={() => setHistoryClientName(sale.clientName)}
+                              className="text-left hover:underline text-sm font-bold text-[var(--primary)]" title="Ver histórico desta cliente">
+                              {sale.clientName}
+                            </button>
                             <span className="text-[10px] text-[var(--muted-foreground)]">{sale.clientPhone || "Sem telefone"}</span>
                           </div>
                         </td>
@@ -359,6 +391,85 @@ export default function AdminVendas() {
 
       <AnimatePresence>
         {editSale && <EditSaleModal sale={editSale} sellers={sellers} onClose={() => setEditSale(null)} />}
+
+        {historyClientName && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setHistoryClientName(null); }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-[var(--border)]" style={{ background: "var(--card)" }}>
+              <div className="px-6 py-5 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
+                <div>
+                  <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>Histórico da Cliente</h2>
+                  <p className="text-sm text-[var(--muted-foreground)]">{historyClientName}</p>
+                </div>
+                <button onClick={() => setHistoryClientName(null)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="px-6 py-6 max-h-[60vh] overflow-y-auto space-y-4">
+                {loadingHistory ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" /></div>
+                ) : (
+                  <>
+                    {clientHistory && clientHistory.totalPurchases > 0 && (
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[var(--muted-foreground)]">
+                          Trabalhos ({clientHistory.totalPurchases})
+                        </h3>
+                        <div className="rounded-xl overflow-hidden border border-[var(--border)]">
+                          {clientHistory.purchases.map((p: any, i: number) => (
+                            <div key={i} className="px-4 py-3 flex items-center justify-between gap-2"
+                              style={{ borderBottom: i < clientHistory.purchases.length - 1 ? "1px solid var(--border)" : "none" }}>
+                              <div>
+                                <p className="text-sm font-bold text-[var(--foreground)]">{p.productName}</p>
+                                <p className="text-xs text-[var(--muted-foreground)]">{formatDate(p.saleDate)}</p>
+                              </div>
+                              <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{
+                                background: p.workStatus === "feito" ? "oklch(0.92 0.04 160)" : p.workStatus === "pendente" ? "oklch(0.94 0.03 65)" : "oklch(0.92 0.04 250)",
+                                color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : p.workStatus === "pendente" ? "oklch(0.45 0.10 65)" : "oklch(0.40 0.14 250)",
+                              }}>
+                                {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {clientHistory && clientHistory.totalConsultas > 0 && (
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[var(--muted-foreground)]">
+                          Consultas de Cartas ({clientHistory.totalConsultas})
+                        </h3>
+                        <div className="rounded-xl overflow-hidden border border-[var(--border)]">
+                          {clientHistory.consultas.map((c: any, i: number) => (
+                            <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-2"
+                              style={{ borderBottom: i < clientHistory.consultas.length - 1 ? "1px solid var(--border)" : "none" }}>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5 shrink-0 text-[var(--primary)]" />
+                                <p className="text-sm font-bold text-[var(--foreground)]">Consulta Cartas</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
+                                  {c.consultationDate ? c.consultationDate.slice(8,10)+"/"+c.consultationDate.slice(5,7)+"/"+c.consultationDate.slice(0,4) : ""} às {c.consultationTime}
+                                </span>
+                                {c.status === "cancelada" && (
+                                  <p className="text-xs mt-0.5 text-red-500">Cancelada</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {clientHistory && clientHistory.totalPurchases === 0 && clientHistory.totalConsultas === 0 && (
+                      <p className="text-sm text-center py-6 text-[var(--muted-foreground)]">Nenhum histórico encontrado.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
         
         {deleteConfirmId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
