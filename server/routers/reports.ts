@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { sendEmail, isEmailConfigured } from "../email";
 import {
   createReportSchedule,
   deleteReportSchedule,
@@ -100,6 +101,41 @@ export const reportsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await deleteReportSchedule(input.id);
+      return { success: true };
+    }),
+
+  sendTestEmail: adminProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      if (!isEmailConfigured()) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Servico de email nao configurado. Verifique a variavel RESEND_API_KEY." });
+      }
+      const sent = await sendEmail({
+        to: input.email,
+        subject: "Mundo Da Magia - Teste de Email",
+        html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: 'Segoe UI', sans-serif; background: #fdf8f0; margin: 0; padding: 20px;">
+  <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e8dcc8;">
+    <div style="background: linear-gradient(135deg, #c17f24, #a0651a); color: white; padding: 24px; text-align: center;">
+      <h1 style="margin: 0; font-size: 22px;">Mundo Da Magia LTDA</h1>
+      <p style="margin: 8px 0 0; opacity: 0.9;">Teste de Email</p>
+    </div>
+    <div style="padding: 24px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+      <h2 style="color: #333; margin: 0 0 12px;">Email funcionando!</h2>
+      <p style="color: #666; margin: 0;">O sistema de relatorios automaticos esta configurado corretamente.<br>Voce recebera relatorios automaticos conforme o agendamento configurado.</p>
+    </div>
+    <div style="padding: 16px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #f0e8d8;">
+      Mundo Da Magia LTDA - Email automatico de teste
+    </div>
+  </div>
+</body>
+</html>`,
+      });
+      if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar email. Verifique os logs do servidor." });
       return { success: true };
     }),
 });

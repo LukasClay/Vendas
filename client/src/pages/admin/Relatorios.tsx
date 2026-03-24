@@ -49,6 +49,11 @@ export default function AdminRelatorios() {
     onError: (err) => toast.error(err.message),
   });
 
+  const sendTestEmail = trpc.reports.sendTestEmail.useMutation({
+    onSuccess: () => toast.success("Email de teste enviado! Verifique sua caixa de entrada."),
+    onError: (err) => toast.error(err.message),
+  });
+
   const toggleSchedule = trpc.reports.updateSchedule.useMutation({
     onSuccess: () => utils.reports.schedules.invalidate(),
     onError: (err) => toast.error(err.message),
@@ -393,6 +398,14 @@ export default function AdminRelatorios() {
                         color: schedule.active ? "oklch(0.55 0.20 30)" : "oklch(0.45 0.15 160)",
                       }}>
                       {schedule.active ? "Pausar" : "Ativar"}
+                    </button>
+                    <button
+                      onClick={() => sendTestEmail.mutate({ email: schedule.recipientEmail })}
+                      disabled={sendTestEmail.isPending}
+                      title="Enviar email de teste agora"
+                      className="p-2 rounded-lg transition-colors hover:bg-amber-50"
+                      style={{ color: "oklch(0.60 0.13 65)" }}>
+                      {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => deleteSchedule.mutate({ id: schedule.id })}
