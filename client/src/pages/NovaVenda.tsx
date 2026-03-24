@@ -43,9 +43,9 @@ function parseCurrencyToNumber(formatted: string): number {
 }
 
 const inputStyle = {
-  border: "1.5px solid var(--border)",
+  border: "1.5px solid #ddd5c4",
   background: "#faf8f4",
-  color: "var(--foreground)",
+  color: "#1a1a2e",
 };
 
 const labelStyle = { color: "#2a2a40" };
@@ -265,10 +265,10 @@ export default function NovaVenda() {
               style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
               <CheckCircle2 className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+            <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", color: "#1a1a2e" }}>
               Venda Registrada!
             </h2>
-            <p className="text-base mb-2" style={{ color: "var(--muted-foreground)" }}>
+            <p className="text-base mb-2" style={{ color: "#737390" }}>
               A venda foi salva com sucesso no sistema.
             </p>
             <p className="text-sm mb-8" style={{ color: "#8888a0" }}>
@@ -277,7 +277,7 @@ export default function NovaVenda() {
             <button
               onClick={resetForm}
               className="w-full py-5 px-8 rounded-2xl text-white font-semibold text-lg transition-all active:scale-[0.98] shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
+              style={{ background: "linear-gradient(135deg, #c17f24, #d4932a)" }}>
               Registrar Nova Venda
             </button>
           </div>
@@ -289,7 +289,7 @@ export default function NovaVenda() {
   // ── Classe base dos inputs ─────────────────────────────────────
   const inputClass = `w-full px-4 rounded-xl text-base transition-all focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${isMobile ? "py-4 text-[16px]" : "py-3"}`;
   const cardClass = "rounded-2xl p-5 shadow-sm";
-  const cardStyle = { background: "white", border: "1px solid var(--border)" };
+  const cardStyle = { background: "white", border: "1px solid #ddd5c4" };
 
   return (
     <DashboardLayout>
@@ -298,14 +298,14 @@ export default function NovaVenda() {
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
+            style={{ background: "linear-gradient(135deg, #c17f24, #d4932a)" }}>
             <Star className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#1a1a2e" }}>
               Nova Venda
             </h1>
-            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+            <p className="text-sm" style={{ color: "#737390" }}>
               Olá, <strong>{user?.name?.split(" ")[0] || "Vendedor"}</strong>! Preencha os dados abaixo.
             </p>
           </div>
@@ -315,9 +315,9 @@ export default function NovaVenda() {
 
           {/* ── Card 1: Dados do Cliente ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>1</span>
+                style={{ background: "#c17f24" }}>1</span>
               Dados do Cliente
             </h2>
             <div className="space-y-4">
@@ -366,8 +366,8 @@ export default function NovaVenda() {
                       width: isMobile ? 52 : 44,
                       height: isMobile ? 52 : 44,
                       background: "#faf8f4",
-                      border: "1.5px solid var(--border)",
-                      color: "var(--primary)",
+                      border: "1.5px solid #ddd5c4",
+                      color: "#c17f24",
                     }}
                     aria-label="Abrir calendário"
                   >
@@ -408,9 +408,9 @@ export default function NovaVenda() {
 
           {/* ── Card 2: Dados do Trabalho ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>2</span>
+                style={{ background: "#c17f24" }}>2</span>
               Dados do Trabalho
             </h2>
             <div className="space-y-4">
@@ -447,7 +447,7 @@ export default function NovaVenda() {
                     style={{
                       ...inputStyle,
                       paddingRight: "2.5rem",
-                      color: form.productName && !productDropdownOpen ? "var(--foreground)" : "var(--foreground)",
+                      color: "#1a1a2e",
                     }}
                     autoComplete="off"
                   />
@@ -466,7 +466,7 @@ export default function NovaVenda() {
                       }
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-transform"
-                    style={{ color: "var(--muted-foreground)", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
+                    style={{ color: "#737390", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
                     aria-label="Abrir lista de trabalhos">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -480,13 +480,13 @@ export default function NovaVenda() {
                     className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
                     style={{
                       background: "white",
-                      border: "1.5px solid var(--border)",
+                      border: "1.5px solid #ddd5c4",
                       maxHeight: 240,
                       overflowY: "auto",
                     }}
                   >
                     {filteredProducts.length === 0 ? (
-                      <div className="px-4 py-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                      <div className="px-4 py-3 text-sm" style={{ color: "#737390" }}>
                         Nenhum trabalho encontrado.
                       </div>
                     ) : (
@@ -505,9 +505,9 @@ export default function NovaVenda() {
                           style={{
                             padding: isMobile ? "14px 16px" : "10px 16px",
                             fontSize: isMobile ? 16 : 14,
-                            background: form.productName === p.name ? "var(--accent)" : "white",
-                            color: "var(--foreground)",
-                            borderBottom: "1px solid var(--border)",
+                            background: form.productName === p.name ? "#ede8de" : "white",
+                            color: "#1a1a2e",
+                            borderBottom: "1px solid #ddd5c4",
                           }}
                         >
                           {p.name}
@@ -536,10 +536,10 @@ export default function NovaVenda() {
                       onClick={() => setForm(f => ({ ...f, productCategory: opt.value }))}
                       className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 border-2"
                       style={form.productCategory === opt.value
-                        ? { background: opt.value === "promocao" ? "var(--accent)" : opt.value === "coletivo" ? "#e0e0f8" : "var(--border)",
+                        ? { background: opt.value === "promocao" ? "#ede8de" : opt.value === "coletivo" ? "#e0e0f8" : "#ddd5c4",
                             color: opt.value === "promocao" ? "#7a5518" : opt.value === "coletivo" ? "#4040b0" : "#2a2a40",
-                            borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "var(--muted-foreground)" }
-                        : { background: "white", color: "var(--muted-foreground)", borderColor: "var(--border)" }
+                            borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "#737390" }
+                        : { background: "white", color: "#737390", borderColor: "#ddd5c4" }
                       }>
                       {opt.icon}{opt.label}
                     </button>
@@ -582,15 +582,15 @@ export default function NovaVenda() {
                     </span>
                   </label>
                   {loadingSlots ? (
-                    <div className="flex items-center gap-2 py-3" style={{ color: "var(--muted-foreground)" }}>
+                    <div className="flex items-center gap-2 py-3" style={{ color: "#737390" }}>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm">Carregando horários...</span>
                     </div>
                   ) : availableSlots.length === 0 ? (
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f5f0e8", border: "1.5px solid var(--border)" }}>
-                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: "var(--muted-foreground)" }} />
+                    <div className="rounded-xl p-4 text-center" style={{ background: "#f5f0e8", border: "1.5px solid #ddd5c4" }}>
+                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: "#737390" }} />
                       <p className="text-sm font-medium" style={{ color: "#3a3a50" }}>Nenhum horário disponível</p>
-                      <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
+                      <p className="text-xs mt-1" style={{ color: "#737390" }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -647,7 +647,7 @@ export default function NovaVenda() {
               {/* Observações */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Observações <span className="font-normal text-xs" style={{ color: "var(--muted-foreground)" }}>(opcional)</span>
+                  Observações <span className="font-normal text-xs" style={{ color: "#737390" }}>(opcional)</span>
                 </label>
                 <textarea
                   value={form.notes}
@@ -663,27 +663,27 @@ export default function NovaVenda() {
 
           {/* ── Card 3: Comprovante ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>3</span>
+                style={{ background: "#c17f24" }}>3</span>
               Comprovante
-              <span className="text-xs font-normal ml-1" style={{ color: "var(--muted-foreground)" }}>(opcional)</span>
+              <span className="text-xs font-normal ml-1" style={{ color: "#737390" }}>(opcional)</span>
             </h2>
 
             {file ? (
               /* Arquivo selecionado */
-              <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "#f5f0e8", border: "1.5px solid var(--border)" }}>
+              <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "#f5f0e8", border: "1.5px solid #ddd5c4" }}>
                 {filePreview ? (
                   <img src={filePreview} alt="Preview" className="w-16 h-16 object-cover rounded-lg shadow-sm shrink-0" />
                 ) : (
                   <div className="w-16 h-16 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "var(--border)" }}>
-                    <FileText className="w-8 h-8" style={{ color: "var(--primary)" }} />
+                    style={{ background: "#ddd5c4" }}>
+                    <FileText className="w-8 h-8" style={{ color: "#c17f24" }} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{file.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  <p className="text-sm font-medium truncate" style={{ color: "#1a1a2e" }}>{file.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#737390" }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -700,16 +700,16 @@ export default function NovaVenda() {
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "var(--accent)", border: "1.5px solid var(--border)" }}>
-                  <Camera className="w-7 h-7" style={{ color: "var(--primary)" }} />
+                  style={{ background: "#ede8de", border: "1.5px solid #ddd5c4" }}>
+                  <Camera className="w-7 h-7" style={{ color: "#c17f24" }} />
                   <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Tirar Foto</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "var(--accent)", border: "1.5px solid var(--border)" }}>
-                  <Upload className="w-7 h-7" style={{ color: "var(--primary)" }} />
+                  style={{ background: "#ede8de", border: "1.5px solid #ddd5c4" }}>
+                  <Upload className="w-7 h-7" style={{ color: "#c17f24" }} />
                   <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Galeria / PDF</span>
                 </button>
               </div>
@@ -722,19 +722,19 @@ export default function NovaVenda() {
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all"
                 style={{
-                  borderColor: isDragging ? "var(--primary)" : "var(--border)",
-                  background: isDragging ? "var(--accent)" : "#faf8f4",
+                  borderColor: isDragging ? "#c17f24" : "#ddd5c4",
+                  background: isDragging ? "#ede8de" : "#faf8f4",
                 }}>
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--accent)" }}>
-                    <Upload className="w-6 h-6" style={{ color: "var(--primary)" }} />
+                    style={{ background: "#ede8de" }}>
+                    <Upload className="w-6 h-6" style={{ color: "#c17f24" }} />
                   </div>
                   <div>
                     <p className="text-sm font-medium" style={{ color: "#2a2a40" }}>
                       Clique ou arraste o comprovante aqui
                     </p>
-                    <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
+                    <p className="text-xs mt-1" style={{ color: "#737390" }}>
                       JPG, PNG, WEBP ou PDF — máx. 5MB
                     </p>
                   </div>
@@ -766,7 +766,7 @@ export default function NovaVenda() {
             type="submit"
             disabled={createSale.isPending}
             className={`w-full rounded-2xl text-white font-semibold transition-all active:scale-[0.98] shadow-lg disabled:opacity-60 disabled:cursor-not-allowed ${isMobile ? "py-5 text-lg" : "py-4 text-base"}`}
-            style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
+            style={{ background: "linear-gradient(135deg, #c17f24, #d4932a)" }}>
             {createSale.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />

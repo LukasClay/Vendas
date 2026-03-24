@@ -68,7 +68,7 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
   );
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "var(--accent)", color: "#7a5a20" }}>
+      style={{ background: "#ede8de", color: "#7a5a20" }}>
       <Clock className="w-3 h-3" />
       {daysRemaining}d restantes
     </span>
@@ -92,7 +92,7 @@ function ToWriteCard({ item, onMarkWritten }: {
   const CopyBtn = ({ text, field }: { text: string; field: string }) => (
     <button onClick={() => copy(text, `${item.id}-${field}`)}
       className="p-2 rounded-lg active:scale-95 shrink-0 transition-all"
-      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "var(--border)", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
+      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "#ddd5c4", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
       {copiedKey === `${item.id}-${field}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
     </button>
   );
@@ -100,8 +100,8 @@ function ToWriteCard({ item, onMarkWritten }: {
   const isOverdue = item.isOverdue ?? false;
   const isUrgent = item.isUrgent ?? false;
   const daysRemaining = item.daysRemaining ?? 7;
-  const borderColor = isOverdue ? "#e88080" : isUrgent ? "#e8b060" : "var(--border)";
-  const avatarBg = isOverdue ? "#c0392b" : isUrgent ? "#d4850a" : "linear-gradient(135deg, var(--primary), #d4932a)";
+  const borderColor = isOverdue ? "#e88080" : isUrgent ? "#e8b060" : "#ddd5c4";
+  const avatarBg = isOverdue ? "#c0392b" : isUrgent ? "#d4850a" : "linear-gradient(135deg, #c17f24, #d4932a)";
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "white", border: `1.5px solid ${borderColor}` }}>
@@ -111,64 +111,64 @@ function ToWriteCard({ item, onMarkWritten }: {
           {item.clientName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+          <p className="font-semibold text-sm truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            <p className="text-xs truncate" style={{ color: "#737390" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
             {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
             {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
           </div>
           <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--accent)", color: "#8a6520" }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#ede8de", color: "#8a6520" }}>
             {formatDate(item.saleDate)}
           </span>
-          {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />}
+          {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "#737390" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "#737390" }} />}
         </div>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid #ddd5c4" }}>
           <div className="space-y-2 pt-3">
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
               <div className="flex items-center gap-2 min-w-0">
-                <User className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                <User className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                 <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Nome</p>
-                  <p className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+                  <p className="text-xs" style={{ color: "#737390" }}>Nome</p>
+                  <p className="text-sm font-semibold truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
                 </div>
               </div>
               <CopyBtn text={item.clientName} field="name" />
             </div>
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
               <div className="flex items-center gap-2 min-w-0">
-                <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                <Calendar className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                 <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Nascimento</p>
-                  <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{formatBirthDate(item.clientBirthDate)}</p>
+                  <p className="text-xs" style={{ color: "#737390" }}>Nascimento</p>
+                  <p className="text-sm font-semibold" style={{ color: "#1a1a2e" }}>{formatBirthDate(item.clientBirthDate)}</p>
                 </div>
               </div>
               <CopyBtn text={formatBirthDate(item.clientBirthDate)} field="birth" />
             </div>
             {item.clientPhone && (
-              <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+              <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                   <div className="min-w-0">
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Telefone</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{item.clientPhone}</p>
+                    <p className="text-xs" style={{ color: "#737390" }}>Telefone</p>
+                    <p className="text-sm font-semibold" style={{ color: "#1a1a2e" }}>{item.clientPhone}</p>
                   </div>
                 </div>
                 <CopyBtn text={item.clientPhone} field="phone" />
               </div>
             )}
             {item.notes && (
-              <div className="flex items-start justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+              <div className="flex items-start justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#c17f24" }} />
                   <div className="min-w-0">
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Observação</p>
-                    <p className="text-sm" style={{ color: "var(--foreground)" }}>{item.notes}</p>
+                    <p className="text-xs" style={{ color: "#737390" }}>Observação</p>
+                    <p className="text-sm" style={{ color: "#1a1a2e" }}>{item.notes}</p>
                   </div>
                 </div>
                 <CopyBtn text={item.notes} field="notes" />
@@ -179,7 +179,7 @@ function ToWriteCard({ item, onMarkWritten }: {
               const all = [`Nome: ${item.clientName}`, `Nascimento: ${formatBirthDate(item.clientBirthDate)}`, item.clientPhone ? `Telefone: ${item.clientPhone}` : null, item.notes ? `Obs: ${item.notes}` : null].filter(Boolean).join("\n");
               copy(all, `${item.id}-all`);
             }} className="w-full py-3 rounded-xl text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              style={{ background: copiedKey === `${item.id}-all` ? "#d4f5e9" : "var(--accent)", color: copiedKey === `${item.id}-all` ? "#1a7a4a" : "#6b4c18", border: "1px solid var(--border)" }}>
+              style={{ background: copiedKey === `${item.id}-all` ? "#d4f5e9" : "#ede8de", color: copiedKey === `${item.id}-all` ? "#1a7a4a" : "#6b4c18", border: "1px solid #ddd5c4" }}>
               {copiedKey === `${item.id}-all` ? <><Check className="w-4 h-4" /> Copiado!</> : <><ClipboardList className="w-4 h-4" /> Copiar Todos os Dados</>}
             </button>
           </div>
@@ -196,15 +196,15 @@ function ToWriteCard({ item, onMarkWritten }: {
                 <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "#f7f3ec", borderBottom: "1px solid #e0d8cc" }}>
                   <span className="text-xs font-semibold" style={{ color: "#2a2a40" }}>{history.totalPurchases} trabalho{history.totalPurchases !== 1 ? "s" : ""} no total</span>
                 </div>
-                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "var(--muted-foreground)" }}>Nenhum trabalho registrado</p>}
+                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "#737390" }}>Nenhum trabalho registrado</p>}
                 {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
                   <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid #ede8e0" }}>
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: "#1a1a2e" }}>{p.productName}</p>
-                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatDate(p.saleDate)}</p>
+                      <p className="text-xs" style={{ color: "#737390" }}>{formatDate(p.saleDate)}</p>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
-                      style={{ background: p.workStatus === "feito" ? "#d4f5e9" : "var(--accent)", color: p.workStatus === "feito" ? "#1a7a4a" : "#8a6520" }}>
+                      style={{ background: p.workStatus === "feito" ? "#d4f5e9" : "#ede8de", color: p.workStatus === "feito" ? "#1a7a4a" : "#8a6520" }}>
                       {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
                     </span>
                   </div>
@@ -246,7 +246,7 @@ function ToWriteCard({ item, onMarkWritten }: {
                 </button>
                 <button onClick={() => setConfirming(false)}
                   className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "var(--border)", color: "#2a2a40" }}>
+                  style={{ background: "#ddd5c4", color: "#2a2a40" }}>
                   <X className="w-4 h-4" /> Cancelar
                 </button>
               </div>
@@ -275,79 +275,79 @@ function PendingCard({ item, onMarkDone }: {
   const CopyBtn = ({ text, field }: { text: string; field: string }) => (
     <button onClick={() => copy(text, `${item.id}-${field}`)}
       className="p-2 rounded-lg active:scale-95 shrink-0 transition-all"
-      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "var(--border)", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
+      style={{ background: copiedKey === `${item.id}-${field}` ? "#d4f5e9" : "#ddd5c4", color: copiedKey === `${item.id}-${field}` ? "#1a7a4a" : "#7a5518" }}>
       {copiedKey === `${item.id}-${field}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
     </button>
   );
 
   const cardBg = item.isOverdue ? "#fff5f5" : item.isUrgent ? "#fffbf0" : "white";
-  const borderColor = item.isOverdue ? "#f0a0a0" : item.isUrgent ? "#f0d090" : "var(--border)";
+  const borderColor = item.isOverdue ? "#f0a0a0" : item.isUrgent ? "#f0d090" : "#ddd5c4";
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: cardBg, border: `1.5px solid ${borderColor}` }}>
       <button className="w-full flex items-start gap-3 px-4 py-4 text-left" onClick={() => setExpanded(e => !e)}>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm mt-0.5"
-          style={{ background: item.isOverdue ? "#c0392b" : item.isUrgent ? "#d4850a" : "linear-gradient(135deg, var(--primary), #d4932a)" }}>
+          style={{ background: item.isOverdue ? "#c0392b" : item.isUrgent ? "#d4850a" : "linear-gradient(135deg, #c17f24, #d4932a)" }}>
           {item.clientName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
           </div>
-          <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+          <p className="font-semibold text-sm truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            <p className="text-xs truncate" style={{ color: "#737390" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
             {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
             {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
           </div>
         </div>
         <div className="shrink-0 mt-1">
-          {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} />}
+          {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "#737390" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "#737390" }} />}
         </div>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid #ddd5c4" }}>
           <div className="space-y-2 pt-3">
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
               <div className="flex items-center gap-2 min-w-0">
-                <User className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                <User className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                 <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Nome</p>
-                  <p className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+                  <p className="text-xs" style={{ color: "#737390" }}>Nome</p>
+                  <p className="text-sm font-semibold truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
                 </div>
               </div>
               <CopyBtn text={item.clientName} field="name" />
             </div>
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
               <div className="flex items-center gap-2 min-w-0">
-                <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                <Calendar className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                 <div className="min-w-0">
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Nascimento</p>
-                  <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{formatBirthDate(item.clientBirthDate)}</p>
+                  <p className="text-xs" style={{ color: "#737390" }}>Nascimento</p>
+                  <p className="text-sm font-semibold" style={{ color: "#1a1a2e" }}>{formatBirthDate(item.clientBirthDate)}</p>
                 </div>
               </div>
               <CopyBtn text={formatBirthDate(item.clientBirthDate)} field="birth" />
             </div>
             {item.clientPhone && (
-              <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+              <div className="flex items-center justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: "#c17f24" }} />
                   <div className="min-w-0">
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Telefone</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{item.clientPhone}</p>
+                    <p className="text-xs" style={{ color: "#737390" }}>Telefone</p>
+                    <p className="text-sm font-semibold" style={{ color: "#1a1a2e" }}>{item.clientPhone}</p>
                   </div>
                 </div>
                 <CopyBtn text={item.clientPhone} field="phone" />
               </div>
             )}
             {item.notes && (
-              <div className="flex items-start justify-between gap-2 p-3 rounded-xl" style={{ background: "var(--muted)" }}>
+              <div className="flex items-start justify-between gap-2 p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#c17f24" }} />
                   <div className="min-w-0">
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Observação</p>
-                    <p className="text-sm" style={{ color: "var(--foreground)" }}>{item.notes}</p>
+                    <p className="text-xs" style={{ color: "#737390" }}>Observação</p>
+                    <p className="text-sm" style={{ color: "#1a1a2e" }}>{item.notes}</p>
                   </div>
                 </div>
                 <CopyBtn text={item.notes} field="notes" />
@@ -357,7 +357,7 @@ function PendingCard({ item, onMarkDone }: {
               const all = [`Nome: ${item.clientName}`, `Nascimento: ${formatBirthDate(item.clientBirthDate)}`, item.clientPhone ? `Telefone: ${item.clientPhone}` : null, item.notes ? `Obs: ${item.notes}` : null].filter(Boolean).join("\n");
               copy(all, `${item.id}-all`);
             }} className="w-full py-3 rounded-xl text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              style={{ background: copiedKey === `${item.id}-all` ? "#d4f5e9" : "var(--accent)", color: copiedKey === `${item.id}-all` ? "#1a7a4a" : "#6b4c18", border: "1px solid var(--border)" }}>
+              style={{ background: copiedKey === `${item.id}-all` ? "#d4f5e9" : "#ede8de", color: copiedKey === `${item.id}-all` ? "#1a7a4a" : "#6b4c18", border: "1px solid #ddd5c4" }}>
               {copiedKey === `${item.id}-all` ? <><Check className="w-4 h-4" /> Copiado!</> : <><ClipboardList className="w-4 h-4" /> Copiar Todos os Dados</>}
             </button>
           </div>
@@ -374,15 +374,15 @@ function PendingCard({ item, onMarkDone }: {
                 <div className="px-4 py-2.5" style={{ background: "#f7f3ec", borderBottom: "1px solid #e0d8cc" }}>
                   <span className="text-xs font-semibold" style={{ color: "#2a2a40" }}>{history.totalPurchases} trabalho{history.totalPurchases !== 1 ? "s" : ""} no total</span>
                 </div>
-                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "var(--muted-foreground)" }}>Nenhum trabalho registrado</p>}
+                {history.purchases.length === 0 && <p className="px-4 py-3 text-xs" style={{ color: "#737390" }}>Nenhum trabalho registrado</p>}
                 {history.purchases.slice(0, 5).map((p: { id: number; productName: string; saleDate: Date | string | null; workStatus: string }) => (
                   <div key={p.id} className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid #ede8e0" }}>
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: "#1a1a2e" }}>{p.productName}</p>
-                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatDate(p.saleDate)}</p>
+                      <p className="text-xs" style={{ color: "#737390" }}>{formatDate(p.saleDate)}</p>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
-                      style={{ background: p.workStatus === "feito" ? "#d4f5e9" : "var(--accent)", color: p.workStatus === "feito" ? "#1a7a4a" : "#8a6520" }}>
+                      style={{ background: p.workStatus === "feito" ? "#d4f5e9" : "#ede8de", color: p.workStatus === "feito" ? "#1a7a4a" : "#8a6520" }}>
                       {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
                     </span>
                   </div>
@@ -424,7 +424,7 @@ function PendingCard({ item, onMarkDone }: {
                 </button>
                 <button onClick={() => setConfirming(false)}
                   className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "var(--border)", color: "#2a2a40" }}>
+                  style={{ background: "#ddd5c4", color: "#2a2a40" }}>
                   <X className="w-4 h-4" /> Cancelar
                 </button>
               </div>
@@ -452,9 +452,9 @@ function DoneCard({ item, onUndo }: {
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+            <p className="font-semibold text-sm truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+              <p className="text-xs" style={{ color: "#737390" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
               {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
               {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
             </div>
@@ -473,7 +473,7 @@ function DoneCard({ item, onUndo }: {
               style={{ background: "#c0522a" }}>Sim</button>
             <button onClick={() => setConfirming(false)}
               className="px-3 py-2 rounded-xl text-xs font-semibold active:scale-95"
-              style={{ background: "var(--border)", color: "#2a2a40" }}>Não</button>
+              style={{ background: "#ddd5c4", color: "#2a2a40" }}>Não</button>
           </div>
         )}
         </div>
@@ -579,28 +579,28 @@ export default function ConsultoraPage() {
       <div ref={topRef} className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-5">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#1a1a2e" }}>
             Trabalhos
           </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+          <p className="text-sm mt-1" style={{ color: "#737390" }}>
             Gerencie os trabalhos espirituais
           </p>
         </div>
 
         {/* Abas */}
-        <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "var(--border)" }}>
+        <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: "#ddd5c4" }}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => handleTabChange(tab.id)}
               className="flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={activeTab === tab.id
-                ? { background: "white", color: "var(--foreground)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
-                : { color: "var(--muted-foreground)" }
+                ? { background: "white", color: "#1a1a2e", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
+                : { color: "#737390" }
               }>
               <div className="flex items-center gap-1">
                 {tab.icon}
                 {tab.count > 0 && (
                   <span className="min-w-[18px] h-[18px] rounded-full text-xs flex items-center justify-center font-bold px-1"
-                    style={{ background: activeTab === tab.id ? (tab.id === "para_escrever" ? "var(--primary)" : tab.id === "pendente" ? "#c0392b" : "#1a7a4a") : "#b8962e", color: "white" }}>
+                    style={{ background: activeTab === tab.id ? (tab.id === "para_escrever" ? "#c17f24" : tab.id === "pendente" ? "#c0392b" : "#1a7a4a") : "#b8962e", color: "white" }}>
                     {tab.count}
                   </span>
                 )}
@@ -637,8 +637,8 @@ export default function ConsultoraPage() {
               onClick={() => setSelectedType(null)}
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
               style={selectedType === null
-                ? { background: "var(--primary)", color: "white" }
-                : { background: "var(--border)", color: "#6b5020" }}>
+                ? { background: "#c17f24", color: "white" }
+                : { background: "#ddd5c4", color: "#6b5020" }}>
               Todos ({categoryFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
@@ -648,8 +648,8 @@ export default function ConsultoraPage() {
                   onClick={() => setSelectedType(selectedType === type ? null : type)}
                   className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
                   style={selectedType === type
-                    ? { background: "var(--primary)", color: "white" }
-                    : { background: "var(--border)", color: "#6b5020" }}>
+                    ? { background: "#c17f24", color: "white" }
+                    : { background: "#ddd5c4", color: "#6b5020" }}>
                   {type} ({count})
                 </button>
               );
@@ -659,14 +659,14 @@ export default function ConsultoraPage() {
 
         {/* Busca */}
         <div className="relative mb-4">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#737390" }} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome ou trabalho..."
             autoComplete="off"
             className="w-full pl-10 pr-10 py-3.5 rounded-xl outline-none text-sm"
-            style={{ background: "white", border: "1.5px solid var(--border)", color: "var(--foreground)", fontSize: "16px" }} />
+            style={{ background: "white", border: "1.5px solid #ddd5c4", color: "#1a1a2e", fontSize: "16px" }} />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: "var(--muted-foreground)" }}>
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: "#737390" }}>
               <X className="w-4 h-4" />
             </button>
           )}
@@ -675,7 +675,7 @@ export default function ConsultoraPage() {
         {/* Conteúdo */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--primary)" }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#c17f24" }} />
           </div>
         ) : (
           <div className="space-y-3 pb-24">
@@ -699,10 +699,10 @@ export default function ConsultoraPage() {
                 ? <EmptyState icon={<Bell className="w-10 h-10" />} text="Nenhum alerta no momento" sub="Todos os trabalhos estão dentro do prazo" />
                 : <div className="space-y-3">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{(alertItems as any[]).filter((a: any) => a.isOverdue).length} atrasados • {(alertItems as any[]).filter((a: any) => !a.isOverdue).length} urgentes</p>
+                      <p className="text-xs" style={{ color: "#737390" }}>{(alertItems as any[]).filter((a: any) => a.isOverdue).length} atrasados • {(alertItems as any[]).filter((a: any) => !a.isOverdue).length} urgentes</p>
                       <button onClick={() => refetchAlerts()} disabled={isFetchingAlerts}
                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs active:scale-95"
-                        style={{ background: "var(--accent)", color: "#7a5518" }}>
+                        style={{ background: "#ede8de", color: "#7a5518" }}>
                         <RefreshCw className={`w-3 h-3 ${isFetchingAlerts ? "animate-spin" : ""}`} />
                         Atualizar
                       </button>
@@ -723,9 +723,9 @@ export default function ConsultoraPage() {
                                   {item.workStatus === "para_escrever" ? "✏️ Para Escrever" : "⏳ Pendente"}
                                 </span>
                               </div>
-                              <p className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+                              <p className="font-semibold text-sm" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
                               <p className="text-xs" style={{ color: "#8a6520" }}>{item.productName}{item.productCategory === "promocao" ? " ⭐" : item.productCategory === "coletivo" ? " 👥" : ""}</p>
-                              {item.clientPhone && <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>📞 {item.clientPhone}</p>}
+                              {item.clientPhone && <p className="text-xs" style={{ color: "#737390" }}>📞 {item.clientPhone}</p>}
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs" style={{ color: "#7070a0" }}>Prazo</p>
@@ -749,7 +749,7 @@ function EmptyState({ icon, text, sub }: { icon: React.ReactNode; text: string; 
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="mb-3" style={{ color: "#c4a96a" }}>{icon}</div>
       <p className="text-sm font-medium" style={{ color: "#2a2a40" }}>{text}</p>
-      <p className="text-xs mt-1 text-center" style={{ color: "var(--muted-foreground)" }}>{sub}</p>
+      <p className="text-xs mt-1 text-center" style={{ color: "#737390" }}>{sub}</p>
     </div>
   );
 }
