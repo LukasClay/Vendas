@@ -58,7 +58,7 @@ export default function AdminConfiguracoes() {
             <div className="space-y-3">
               {[
                 ["Sistema", "Gestão de Vendas Espirituais"],
-                ["Versão", "1.0.0"],
+                ["Versão", "1.7.1"],
                 ["Banco de Dados", "PostgreSQL"],
                 ["Armazenamento", "S3 (5GB inicial)"],
               ].map(([label, value]) => (
