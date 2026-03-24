@@ -240,9 +240,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-1">
             {isAdmin && <ThemeToggle size="md" colors={C} />}
-            <div style={{ color: C.mutedFg }}>
-              <PushNotificationButton />
-            </div>
+            {(isAdmin || isConsultora) && (
+              <div style={{ color: C.mutedFg }}>
+                <PushNotificationButton />
+              </div>
+            )}
             <button
               onClick={() => setMenuOpen(true)}
               className="w-10 h-10 flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px]"
@@ -372,9 +374,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t flex flex-col gap-2" style={{ borderColor: C.sidebarBorder }}>
-          {isAdmin && (
+          {(isAdmin || isConsultora) && (
             <div className="flex items-center justify-center gap-2 mb-2">
-              <ThemeToggle size="sm" colors={C} />
+              {isAdmin && <ThemeToggle size="sm" colors={C} />}
               <div style={{ color: C.mutedFg }}><PushNotificationButton /></div>
             </div>
           )}
