@@ -465,7 +465,7 @@ export default function NovaVenda() {
                         productInputRef.current?.focus();
                       }
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-transform"
+                    className="absolute right-3 top-1/2 p-1 rounded transition-transform"
                     style={{ color: "#737390", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
                     aria-label="Abrir lista de trabalhos">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
