@@ -198,15 +198,18 @@ export default function Vendedores() {
     onError: (err) => toast.error(err.message),
   });
 
-  const deactivateMutation = trpc.ownAuth.deactivateUser.useMutation({
-    onSuccess: () => { toast.success("Acesso desativado"); refetch(); },
-    onError: (err) => toast.error(err.message),
+  const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
+    onSuccess: () => { refetch(); },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const reactivateMutation = trpc.ownAuth.reactivateUser.useMutation({
-    onSuccess: () => { toast.success("Acesso reativado"); refetch(); },
-    onError: (err) => toast.error(err.message),
-  });
+  const deactivateMutation = {
+    mutate: (userId: number) => updateUserMutation.mutate({ userId, active: false }, { onSuccess: () => { toast.success("Acesso desativado"); refetch(); } }),
+  };
+
+  const reactivateMutation = {
+    mutate: (userId: number) => updateUserMutation.mutate({ userId, active: true }, { onSuccess: () => { toast.success("Acesso reativado"); refetch(); } }),
+  };
 
   const admins = users.filter(u => u.role === "admin");
   const employees = users.filter(u => u.role === "user");

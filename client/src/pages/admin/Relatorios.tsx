@@ -271,7 +271,7 @@ export default function AdminRelatorios() {
                     {topSellers.length === 0 ? (
                       <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
                     ) : (
-                      topSellers.map((seller, index) => (
+                      topSellers.map((seller: any, index: number) => (
                         <li key={seller.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
@@ -290,7 +290,7 @@ export default function AdminRelatorios() {
                     {topClients.length === 0 ? (
                       <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
                     ) : (
-                      topClients.map((client, index) => (
+                      topClients.map((client: any, index: number) => (
                         <li key={client.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
@@ -309,7 +309,7 @@ export default function AdminRelatorios() {
                     {topProducts.length === 0 ? (
                       <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
                     ) : (
-                      topProducts.map((product, index) => (
+                      topProducts.map((product: any, index: number) => (
                         <li key={product.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
@@ -393,7 +393,7 @@ export default function AdminRelatorios() {
                         <p className="text-xs text-[var(--muted-foreground)]">Para: {schedule.recipientEmail}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => sendTestEmail.mutate({ scheduleId: schedule.id })} disabled={sendTestEmail.isPending}
+                        <button onClick={() => sendTestEmail.mutate({ email: schedule.recipientEmail })} disabled={sendTestEmail.isPending}
                           className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]">
                           {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>

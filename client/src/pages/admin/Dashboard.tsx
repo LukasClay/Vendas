@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-[var(--muted-foreground)]">Nenhum vendedor encontrado.</p>
               ) : (
                 <ul className="space-y-3">
-                  {topSellers.map((seller, index) => (
+                  {topSellers.map((seller: any, index: number) => (
                     <li key={seller.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>

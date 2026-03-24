@@ -257,30 +257,44 @@ export default function Consultas() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
 
-  const { data: slots = [], isLoading } = trpc.consultations.listAll.useQuery();
+  const { data: slots = [], isLoading } = trpc.consultationSlots.listAll.useQuery();
 
-  const createSlotsMutation = trpc.consultations.createSlots.useMutation({
-    onSuccess: () => { toast.success("Horários criados!"); utils.consultations.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
+  const cancelMutation = trpc.consultationSlots.cancel.useMutation({
+    onSuccess: () => { toast.success("Consulta cancelada!"); setCancelModal(null); utils.consultationSlots.listAll.invalidate(); },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const cancelMutation = trpc.consultations.cancel.useMutation({
-    onSuccess: () => { toast.success("Consulta cancelada!"); setCancelModal(null); utils.consultations.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
+  const restoreMutation = trpc.consultationSlots.restore.useMutation({
+    onSuccess: () => { toast.success("Consulta restaurada!"); utils.consultationSlots.listAll.invalidate(); },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const restoreMutation = trpc.consultations.restore.useMutation({
-    onSuccess: () => { toast.success("Consulta restaurada!"); utils.consultations.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
+  const deleteMutation = trpc.consultationSlots.delete.useMutation({
+    onSuccess: () => { toast.success("Horário liberado!"); utils.consultationSlots.listAll.invalidate(); },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const deleteMutation = trpc.consultations.delete.useMutation({
-    onSuccess: () => { toast.success("Horário liberado!"); utils.consultations.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const handleCreateSlots = () => {
-    createSlotsMutation.mutate({ date: selectedDate, times: TIME_OPTIONS });
+  // O backend aceita um slot por vez, então criamos em sequência
+  const [creatingSlots, setCreatingSlots] = useState(false);
+  const createSlotMutation = trpc.consultationSlots.create.useMutation();
+  // Wrapper para manter compatibilidade com o template
+  const createSlotsMutation = { isPending: creatingSlots };
+  const handleCreateSlots = async () => {
+    setCreatingSlots(true);
+    let created = 0;
+    for (const time of TIME_OPTIONS) {
+      try {
+        await createSlotMutation.mutateAsync({ consultationDate: selectedDate, consultationTime: time });
+        created++;
+      } catch { /* slot já existe, pula */ }
+    }
+    setCreatingSlots(false);
+    if (created > 0) {
+      toast.success(`${created} horários criados!`);
+      utils.consultationSlots.listAll.invalidate();
+    } else {
+      toast.info("Todos os horários já existem para esta data.");
+    }
   };
 
   const pendentes = slots.filter(s => s.effectiveStatus === "pendente");
@@ -405,11 +419,11 @@ export default function Consultas() {
                           slot={slot} 
                           showDate={false}
                           onCancel={activeTab === "pendentes" ? () => setCancelModal({ id: slot.id, clientName: slot.clientName }) : undefined}
-                          onRestore={activeTab === "canceladas" ? () => restoreMutation.mutate({ consultationId: slot.id }) : undefined}
-                          onDelete={activeTab === "canceladas" ? () => deleteMutation.mutate({ consultationId: slot.id }) : undefined}
-                          cancelling={cancelMutation.isPending && cancelMutation.variables?.consultationId === slot.id}
-                          restoring={restoreMutation.isPending && restoreMutation.variables?.consultationId === slot.id}
-                          deleting={deleteMutation.isPending && deleteMutation.variables?.consultationId === slot.id}
+                          onRestore={activeTab === "canceladas" ? () => restoreMutation.mutate({ id: slot.id }) : undefined}
+                          onDelete={activeTab === "canceladas" ? () => deleteMutation.mutate({ id: slot.id }) : undefined}
+                          cancelling={cancelMutation.isPending && cancelMutation.variables?.id === slot.id}
+                          restoring={restoreMutation.isPending && restoreMutation.variables?.id === slot.id}
+                          deleting={deleteMutation.isPending && deleteMutation.variables?.id === slot.id}
                         />
                       ))}
                     </div>
@@ -425,7 +439,7 @@ export default function Consultas() {
             <CancelModal 
               modalData={cancelModal} 
               onClose={() => setCancelModal(null)} 
-              onConfirm={(reason) => cancelMutation.mutate({ consultationId: cancelModal.id, reason })}
+              onConfirm={(reason) => cancelMutation.mutate({ id: cancelModal.id, reason })}
             />
           )}
         </AnimatePresence>

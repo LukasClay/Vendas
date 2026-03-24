@@ -1,5 +1,5 @@
 import { motion, type Variants } from "framer-motion";
-import { type ReactNode } from "react";
+import React, { type ReactNode } from "react";
 
 // ========== Page Transition ==========
 export function PageTransition({ children }: { children: ReactNode }) {
@@ -99,10 +99,12 @@ export function AnimatedCard({
   children,
   className = "",
   onClick,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }) {
   return (
     <motion.div
@@ -111,6 +113,7 @@ export function AnimatedCard({
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={className}
       onClick={onClick}
+      style={style}
     >
       {children}
     </motion.div>

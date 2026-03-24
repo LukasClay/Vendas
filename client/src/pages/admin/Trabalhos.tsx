@@ -115,7 +115,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
       setSelectedId("");
       onUpdated();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   if (!editing) {
@@ -484,17 +484,17 @@ export default function Trabalhos() {
 
   const markDone = trpc.consultora.markDone.useMutation({
     onSuccess: () => { toast.success("Trabalho concluído!"); utils.consultora.pending.invalidate(); utils.consultora.done.invalidate(); },
-    onError: (e) => toast.error(e.message)
+    onError: (e: any) => toast.error(e.message)
   });
 
-  const restoreToPending = trpc.consultora.restoreToPending.useMutation({
+  const restoreToPending = trpc.consultora.undoDone.useMutation({
     onSuccess: () => { toast.success("Restaurado para Pendentes!"); utils.consultora.done.invalidate(); utils.consultora.pending.invalidate(); },
-    onError: (e) => toast.error(e.message)
+       onError: (e: any) => toast.error(e.message)
   });
 
   const undoWritten = trpc.consultora.undoWritten.useMutation({
     onSuccess: () => { toast.success("Voltou para 'Para Escrever'!"); utils.consultora.pending.invalidate(); utils.consultora.toWrite.invalidate(); },
-    onError: (e) => toast.error(e.message)
+    onError: (e: any) => toast.error(e.message)
   });
 
   const isLoading = activeTab === "para_escrever" ? load1 : activeTab === "pendente" ? load2 : load3;
@@ -606,7 +606,7 @@ export default function Trabalhos() {
               <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
               <p className="text-sm font-medium">Carregando trabalhos...</p>
             </motion.div>
-          ) : filtered.length === 0 ? (
+          ) : (activeTab === "para_escrever" ? filteredToWrite : activeTab === "pendente" ? filteredPending : filteredDone).length === 0 ? (
             <motion.div key="empty" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
               <ClipboardList className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
@@ -617,11 +617,11 @@ export default function Trabalhos() {
               <div className={activeTab === "para_escrever" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
                 {(activeTab === "para_escrever" ? filteredToWrite : activeTab === "pendente" ? filteredPending : filteredDone).map(item => (
                   activeTab === "para_escrever" ? (
-                    <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={id => markWritten.mutate({ saleId: id })} />
+                    <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={id => markWritten.mutate({ id })} />
                   ) : activeTab === "pendente" ? (
-                    <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ saleId: id })} onUndoWritten={id => undoWritten.mutate({ id })} sellers={sellers} />
+                    <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ id })} onUndoWritten={id => undoWritten.mutate({ id })} sellers={sellers} />
                   ) : (
-                    <DoneCard key={item.id} item={item} onUndo={id => restoreToPending.mutate({ saleId: id })} sellers={sellers} />
+                    <DoneCard key={item.id} item={item} onUndo={id => restoreToPending.mutate({ id })} sellers={sellers} />
                   )
                 ))}
               </div>

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -55,6 +56,9 @@ export default function NovaVenda() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const isMobile = useIsMobile();
+  const { resolvedTheme } = useTheme();
+  const isAdmin = user?.role === "admin";
+  const isDark = isAdmin && resolvedTheme === "dark";
   const { data: products = [], isLoading: loadingProducts } = trpc.products.list.useQuery();
 
   // Estado do campo de data de nascimento como texto mascarado
@@ -265,13 +269,13 @@ export default function NovaVenda() {
               style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
               <CheckCircle2 className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", color: "#1a1a2e" }}>
+            <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", color: isDark ? "var(--foreground)" : "#1a1a2e" }}>
               Venda Registrada!
             </h2>
-            <p className="text-base mb-2" style={{ color: "#737390" }}>
+            <p className="text-base mb-2" style={{ color: isDark ? "var(--muted-foreground)" : "#737390" }}>
               A venda foi salva com sucesso no sistema.
             </p>
-            <p className="text-sm mb-8" style={{ color: "#8888a0" }}>
+            <p className="text-sm mb-8" style={{ color: isDark ? "var(--muted-foreground)" : "#8888a0" }}>
               O administrador poderá visualizá-la no painel.
             </p>
             <button
@@ -289,7 +293,15 @@ export default function NovaVenda() {
   // ── Classe base dos inputs ─────────────────────────────────────
   const inputClass = `w-full px-4 rounded-xl text-base transition-all focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${isMobile ? "py-4 text-[16px]" : "py-3"}`;
   const cardClass = "rounded-2xl p-5 shadow-sm";
-  const cardStyle = { background: "white", border: "1px solid #ddd5c4" };
+  const cardStyle = isDark
+    ? { background: "var(--card)", border: "1px solid var(--border)", color: "var(--foreground)" }
+    : { background: "white", border: "1px solid #ddd5c4" };
+  const dynInputStyle = isDark
+    ? { border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }
+    : inputStyle;
+  const dynLabelStyle = isDark ? { color: "var(--foreground)" } : labelStyle;
+  const dynHeadingColor = isDark ? "var(--foreground)" : "#1a1a2e";
+  const dynSubColor = isDark ? "var(--muted-foreground)" : "#737390";
 
   return (
     <DashboardLayout>
@@ -302,10 +314,10 @@ export default function NovaVenda() {
             <Star className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#1a1a2e" }}>
+            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: dynHeadingColor }}>
               Nova Venda
             </h1>
-            <p className="text-sm" style={{ color: "#737390" }}>
+            <p className="text-sm" style={{ color: dynSubColor }}>
               Olá, <strong>{user?.name?.split(" ")[0] || "Vendedor"}</strong>! Preencha os dados abaixo.
             </p>
           </div>
@@ -315,7 +327,7 @@ export default function NovaVenda() {
 
           {/* ── Card 1: Dados do Cliente ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: "#c17f24" }}>1</span>
               Dados do Cliente
@@ -324,7 +336,7 @@ export default function NovaVenda() {
 
               {/* Nome */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Nome Completo {requiredStar}
                 </label>
                 <input
@@ -333,7 +345,7 @@ export default function NovaVenda() {
                   onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))}
                   placeholder="Ex: Maria da Silva"
                   className={inputClass}
-                  style={inputStyle}
+                  style={dynInputStyle}
                   autoComplete="off"
                   required
                 />
@@ -341,7 +353,7 @@ export default function NovaVenda() {
 
               {/* Data de Nascimento — input text com máscara dd/mm/aaaa + botão calendário */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Data de Nascimento {requiredStar}
                 </label>
                 <div className="flex items-center gap-2">
@@ -354,7 +366,7 @@ export default function NovaVenda() {
                     placeholder="DD/MM/AAAA"
                     maxLength={10}
                     className={inputClass}
-                    style={inputStyle}
+                    style={dynInputStyle}
                     autoComplete="off"
                   />
                   {/* Botão calendário — abre o input nativo oculto */}
@@ -365,8 +377,8 @@ export default function NovaVenda() {
                     style={{
                       width: isMobile ? 52 : 44,
                       height: isMobile ? 52 : 44,
-                      background: "#faf8f4",
-                      border: "1.5px solid #ddd5c4",
+                      background: isDark ? "var(--secondary)" : "#faf8f4",
+                      border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4",
                       color: "#c17f24",
                     }}
                     aria-label="Abrir calendário"
@@ -388,7 +400,7 @@ export default function NovaVenda() {
 
               {/* Telefone */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Telefone {requiredStar}
                 </label>
                 <input
@@ -399,7 +411,7 @@ export default function NovaVenda() {
                   placeholder="(00) 00000-0000"
                   maxLength={15}
                   className={inputClass}
-                  style={inputStyle}
+                  style={dynInputStyle}
                   required
                 />
               </div>
@@ -408,7 +420,7 @@ export default function NovaVenda() {
 
           {/* ── Card 2: Dados do Trabalho ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: "#c17f24" }}>2</span>
               Dados do Trabalho
@@ -417,7 +429,7 @@ export default function NovaVenda() {
 
               {/* Trabalho Espiritual — input único com autocomplete */}
               <div className="relative">
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Trabalho Espiritual {requiredStar}
                 </label>
                 <div className="relative">
@@ -445,9 +457,8 @@ export default function NovaVenda() {
                     readOnly={loadingProducts}
                     className={inputClass}
                     style={{
-                      ...inputStyle,
+                      ...dynInputStyle,
                       paddingRight: "2.5rem",
-                      color: "#1a1a2e",
                     }}
                     autoComplete="off"
                   />
@@ -466,7 +477,7 @@ export default function NovaVenda() {
                       }
                     }}
                     className="absolute right-3 top-1/2 p-1 rounded transition-transform"
-                    style={{ color: "#737390", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
+                    style={{ color: isDark ? "var(--muted-foreground)" : "#737390", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
                     aria-label="Abrir lista de trabalhos">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -479,14 +490,14 @@ export default function NovaVenda() {
                   <div
                     className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
                     style={{
-                      background: "white",
-                      border: "1.5px solid #ddd5c4",
+                      background: isDark ? "var(--card)" : "white",
+                      border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4",
                       maxHeight: 240,
                       overflowY: "auto",
                     }}
                   >
                     {filteredProducts.length === 0 ? (
-                      <div className="px-4 py-3 text-sm" style={{ color: "#737390" }}>
+                      <div className="px-4 py-3 text-sm" style={{ color: dynSubColor }}>
                         Nenhum trabalho encontrado.
                       </div>
                     ) : (
@@ -505,9 +516,9 @@ export default function NovaVenda() {
                           style={{
                             padding: isMobile ? "14px 16px" : "10px 16px",
                             fontSize: isMobile ? 16 : 14,
-                            background: form.productName === p.name ? "#ede8de" : "white",
-                            color: "#1a1a2e",
-                            borderBottom: "1px solid #ddd5c4",
+                            background: form.productName === p.name ? (isDark ? "var(--accent)" : "#ede8de") : (isDark ? "var(--card)" : "white"),
+                            color: isDark ? "var(--foreground)" : "#1a1a2e",
+                            borderBottom: isDark ? "1px solid var(--border)" : "1px solid #ddd5c4",
                           }}
                         >
                           {p.name}
@@ -521,7 +532,7 @@ export default function NovaVenda() {
               {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
               {!isConsultaCartas && (
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Tipo {requiredStar}
                 </label>
                 <div className="flex gap-2 flex-wrap">
@@ -539,7 +550,7 @@ export default function NovaVenda() {
                         ? { background: opt.value === "promocao" ? "#ede8de" : opt.value === "coletivo" ? "#e0e0f8" : "#ddd5c4",
                             color: opt.value === "promocao" ? "#7a5518" : opt.value === "coletivo" ? "#4040b0" : "#2a2a40",
                             borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "#737390" }
-                        : { background: "white", color: "#737390", borderColor: "#ddd5c4" }
+                        : { background: isDark ? "var(--secondary)" : "white", color: isDark ? "var(--muted-foreground)" : "#737390", borderColor: isDark ? "var(--border)" : "#ddd5c4" }
                       }>
                       {opt.icon}{opt.label}
                     </button>
@@ -550,7 +561,7 @@ export default function NovaVenda() {
 
               {/* Data da Venda */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Data da Venda {user?.role === "admin" ? requiredStar : null}
                 </label>
                 {user?.role === "admin" ? (
@@ -559,13 +570,13 @@ export default function NovaVenda() {
                     value={form.saleDate}
                     onChange={e => setForm(f => ({ ...f, saleDate: e.target.value }))}
                     className={inputClass}
-                    style={inputStyle}
+                    style={dynInputStyle}
                     required
                   />
                 ) : (
                   <div
                     className={inputClass}
-                    style={{ ...inputStyle, background: "#f5f0e8", color: "#4a4a60", cursor: "not-allowed" }}
+                    style={{ ...dynInputStyle, background: isDark ? "var(--muted)" : "#f5f0e8", color: isDark ? "var(--muted-foreground)" : "#4a4a60", cursor: "not-allowed" }}
                   >
                     {fmtDate(form.saleDate)}
                   </div>
@@ -575,22 +586,22 @@ export default function NovaVenda() {
               {/* Horário da Consulta — exibido apenas para Consulta Cartas */}
               {isConsultaCartas && (
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                  <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4" style={{ color: "#5050c0" }} />
                       Horário da Consulta {requiredStar}
                     </span>
                   </label>
                   {loadingSlots ? (
-                    <div className="flex items-center gap-2 py-3" style={{ color: "#737390" }}>
+                    <div className="flex items-center gap-2 py-3" style={{ color: dynSubColor }}>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm">Carregando horários...</span>
                     </div>
                   ) : availableSlots.length === 0 ? (
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f5f0e8", border: "1.5px solid #ddd5c4" }}>
-                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: "#737390" }} />
-                      <p className="text-sm font-medium" style={{ color: "#3a3a50" }}>Nenhum horário disponível</p>
-                      <p className="text-xs mt-1" style={{ color: "#737390" }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
+                    <div className="rounded-xl p-4 text-center" style={{ background: isDark ? "var(--secondary)" : "#f5f0e8", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
+                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: dynSubColor }} />
+                      <p className="text-sm font-medium" style={{ color: isDark ? "var(--foreground)" : "#3a3a50" }}>Nenhum horário disponível</p>
+                      <p className="text-xs mt-1" style={{ color: dynSubColor }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -629,7 +640,7 @@ export default function NovaVenda() {
 
               {/* Valor */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Valor do Trabalho {requiredStar}
                 </label>
                 <input
@@ -639,15 +650,15 @@ export default function NovaVenda() {
                   onChange={handleAmountChange}
                   placeholder="R$ 0,00"
                   className={`${inputClass} font-semibold text-lg`}
-                  style={inputStyle}
+                  style={dynInputStyle}
                   required
                 />
               </div>
 
               {/* Observações */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Observações <span className="font-normal text-xs" style={{ color: "#737390" }}>(opcional)</span>
+                <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
+                  Observações <span className="font-normal text-xs" style={{ color: dynSubColor }}>(opcional)</span>
                 </label>
                 <textarea
                   value={form.notes}
@@ -655,7 +666,7 @@ export default function NovaVenda() {
                   placeholder="Alguma observação sobre a venda..."
                   rows={2}
                   className={`${inputClass} resize-none`}
-                  style={inputStyle}
+                  style={dynInputStyle}
                 />
               </div>
             </div>
@@ -663,16 +674,16 @@ export default function NovaVenda() {
 
           {/* ── Card 3: Comprovante ── */}
           <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "#1a1a2e" }}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: "#c17f24" }}>3</span>
               Comprovante
-              <span className="text-xs font-normal ml-1" style={{ color: "#737390" }}>(opcional)</span>
+              <span className="text-xs font-normal ml-1" style={{ color: dynSubColor }}>(opcional)</span>
             </h2>
 
             {file ? (
               /* Arquivo selecionado */
-              <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "#f5f0e8", border: "1.5px solid #ddd5c4" }}>
+              <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: isDark ? "var(--secondary)" : "#f5f0e8", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
                 {filePreview ? (
                   <img src={filePreview} alt="Preview" className="w-16 h-16 object-cover rounded-lg shadow-sm shrink-0" />
                 ) : (
@@ -682,8 +693,8 @@ export default function NovaVenda() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "#1a1a2e" }}>{file.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#737390" }}>
+                  <p className="text-sm font-medium truncate" style={{ color: isDark ? "var(--foreground)" : "#1a1a2e" }}>{file.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: dynSubColor }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -700,17 +711,17 @@ export default function NovaVenda() {
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "#ede8de", border: "1.5px solid #ddd5c4" }}>
+                  style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
                   <Camera className="w-7 h-7" style={{ color: "#c17f24" }} />
-                  <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Tirar Foto</span>
+                  <span className="text-sm font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Tirar Foto</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "#ede8de", border: "1.5px solid #ddd5c4" }}>
+                  style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
                   <Upload className="w-7 h-7" style={{ color: "#c17f24" }} />
-                  <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Galeria / PDF</span>
+                  <span className="text-sm font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Galeria / PDF</span>
                 </button>
               </div>
             ) : (
@@ -722,8 +733,8 @@ export default function NovaVenda() {
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all"
                 style={{
-                  borderColor: isDragging ? "#c17f24" : "#ddd5c4",
-                  background: isDragging ? "#ede8de" : "#faf8f4",
+                  borderColor: isDragging ? "#c17f24" : (isDark ? "var(--border)" : "#ddd5c4"),
+                  background: isDragging ? (isDark ? "var(--accent)" : "#ede8de") : (isDark ? "var(--secondary)" : "#faf8f4"),
                 }}>
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center"
@@ -731,10 +742,10 @@ export default function NovaVenda() {
                     <Upload className="w-6 h-6" style={{ color: "#c17f24" }} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium" style={{ color: "#2a2a40" }}>
+                    <p className="text-sm font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>
                       Clique ou arraste o comprovante aqui
                     </p>
-                    <p className="text-xs mt-1" style={{ color: "#737390" }}>
+                    <p className="text-xs mt-1" style={{ color: dynSubColor }}>
                       JPG, PNG, WEBP ou PDF — máx. 5MB
                     </p>
                   </div>

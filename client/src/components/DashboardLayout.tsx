@@ -13,6 +13,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
 import { ShimmerText, PulseStar, FadeIn } from "./Animations";
+import { lazy, Suspense } from "react";
+const AdminCelebration = lazy(() => import("./AdminCelebration"));
 
 // Cores clássicas (v1.8.x)
 const CLASSIC_COLORS = {
@@ -176,7 +178,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  return <DashboardLayoutContent>{children}</DashboardLayoutContent>;
+  return (
+    <>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      {isAdmin && (
+        <Suspense fallback={null}>
+          <AdminCelebration />
+        </Suspense>
+      )}
+    </>
+  );
 }
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
