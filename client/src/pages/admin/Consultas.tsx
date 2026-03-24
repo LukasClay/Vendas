@@ -237,6 +237,11 @@ function ConsultaCard({
               Motivo: {slot.cancelReason}
             </div>
           )}
+          {isCancelled && slot.cancelledAt && (
+            <p className="mt-1 text-[10px] text-red-400 dark:text-red-500">
+              Cancelada em: {new Date(slot.cancelledAt).toLocaleDateString("pt-BR")}
+            </p>
+          )}
         </div>
       )}
     </div>

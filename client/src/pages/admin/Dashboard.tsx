@@ -272,6 +272,89 @@ export default function AdminDashboard() {
             </div>
           </StaggerItem>
         </StaggerList>
+
+        {/* Top Clientes + Vendas Recentes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Top Clientes */}
+          <FadeIn delay={0.4}>
+            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+                <Star className="w-4 h-4" style={{ color: "var(--primary)" }} />
+                Melhores Clientes
+              </h2>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl animate-pulse bg-[var(--secondary)]" />)}
+                </div>
+              ) : topClients.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: "var(--muted-foreground)" }}>Nenhum dado ainda</p>
+              ) : (
+                <div className="space-y-2">
+                  {topClients.slice(0, 6).map((client: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl"
+                      style={{ background: "var(--secondary)" }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-bold w-5 text-center" style={{ color: "var(--primary)" }}>
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{client.clientName}</p>
+                          {client.clientPhone && (
+                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{client.clientPhone}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
+                          {formatCurrency(client.totalAmount)}
+                        </p>
+                        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          {client.totalSales} venda{Number(client.totalSales) !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </FadeIn>
+
+          {/* Vendas Recentes */}
+          <FadeIn delay={0.5}>
+            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <h2 className="font-bold mb-4" style={{ color: "var(--foreground)" }}>Vendas Recentes</h2>
+              {recentSales.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: "var(--muted-foreground)" }}>Nenhuma venda ainda</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentSales.slice(0, 6).map((item: any) => {
+                    const sale = item.sale ?? item;
+                    const seller = item.seller;
+                    return (
+                      <div key={sale.id} className="flex items-center justify-between p-3 rounded-xl"
+                        style={{ background: "var(--secondary)" }}>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{sale.clientName}</p>
+                          <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
+                            {sale.productName} · {seller?.displayName || seller?.name || ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
+                            {formatCurrency(sale.amount)}
+                          </p>
+                          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                            {formatDate(sale.saleDate)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </FadeIn>
+        </div>
       </div>
     </DashboardLayout>
   );

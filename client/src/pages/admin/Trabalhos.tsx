@@ -280,7 +280,128 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
 }
 
 // Card: Pendente (Trabalhos a fazer/pendentes)
-function PendingCard({ item, onMarkDone }: { item: any; onMarkDone: (id: number) => void }) {
+function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
+  item: any;
+  onMarkDone: (id: number) => void;
+  onUndoWritten: (id: number) => void;
+  sellers: Seller[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const { copy, copiedKey } = useCopy();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  const CopyBtn = ({ text, field }: { text: string; field: string }) => (
+    <button onClick={(e) => { e.stopPropagation(); copy(text, `${item.id}-${field}`); }}
+      className="p-2 rounded-lg active:scale-95 shrink-0 transition-all border border-[var(--border)]"
+      style={{ 
+        background: copiedKey === `${item.id}-${field}` ? "rgba(34, 197, 94, 0.15)" : "var(--secondary)", 
+        color: copiedKey === `${item.id}-${field}` ? "#22c55e" : "var(--primary)" 
+      }}>
+      {copiedKey === `${item.id}-${field}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+    </button>
+  );
+
+  return (
+    <div className="rounded-2xl overflow-hidden border transition-all shadow-sm" style={{ background: "var(--card)", borderColor: item.isOverdue ? (isDark ? "#f87171" : "#f0a0a0") : item.isUrgent ? (isDark ? "#fbbf24" : "#f0d090") : "var(--border)" }}>
+      <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+              <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{item.productName}</p>
+              {item.productCategory === "promocao" && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">⭐ PROMOÇÃO</span>}
+              {item.productCategory === "coletivo" && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">👥 COLETIVO</span>}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-bold uppercase tracking-tighter text-[var(--muted-foreground)] bg-[var(--secondary)] px-2 py-0.5 rounded-lg">
+                Venda: {formatDate(item.saleDate)}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-tighter text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg border border-blue-100 dark:border-blue-800">
+                Escrito: {formatDate(item.writtenAt)}
+              </span>
+            </div>
+          </div>
+          <div className="p-1 rounded-lg shrink-0 mt-0.5 text-[var(--muted-foreground)]">
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-[var(--border)] pt-3">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+              <span className="text-sm" style={{ color: "var(--foreground)" }}>Nasc: {formatBirthDate(item.clientBirthDate)}</span>
+            </div>
+            {item.clientPhone && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>{item.clientPhone}</span>
+                </div>
+                <CopyBtn text={item.clientPhone} field="phone" />
+              </div>
+            )}
+            {item.notes && (
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2 min-w-0 flex-1">
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
+                  <p className="text-sm" style={{ color: "var(--foreground)" }}>{item.notes}</p>
+                </div>
+                <CopyBtn text={item.notes} field="notes" />
+              </div>
+            )}
+          </div>
+          {!confirming ? (
+            <div className="space-y-2">
+              <button onClick={() => setConfirming(true)}
+                className="w-full py-4 rounded-2xl text-white font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
+                <CheckCircle2 className="w-5 h-5" /> Marcar como Feito
+              </button>
+              <button onClick={() => onUndoWritten(item.id)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
+                <RotateCcw className="w-3.5 h-3.5" /> Voltar para Para Escrever
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-center font-medium" style={{ color: "var(--foreground)" }}>Confirmar que o trabalho foi feito?</p>
+              <div className="flex gap-2">
+                <button onClick={() => { onMarkDone(item.id); setConfirming(false); }}
+                  className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 flex items-center justify-center gap-2"
+                  style={{ background: "#1a8a50" }}>
+                  <Check className="w-4 h-4" /> Sim
+                </button>
+                <button onClick={() => setConfirming(false)}
+                  className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
+                  style={{ background: "var(--border)", color: "var(--foreground)" }}>
+                  <X className="w-4 h-4" /> Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card: Feito (Trabalhos concluídos)
+function DoneCard({ item, onUndo, sellers }: {
+  item: { id: number; clientName: string; productName: string; productCategory?: string | null; saleDate: Date | string | null; completedAt: Date | string | null; sellerName?: string | null; doneAt?: Date | string | null };
+  onUndo: (id: number) => void;
+  sellers: Seller[];
+}) {
   const [confirming, setConfirming] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -289,67 +410,43 @@ function PendingCard({ item, onMarkDone }: { item: any; onMarkDone: (id: number)
     <div className="rounded-2xl p-4 border transition-all shadow-sm" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
-          <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: "var(--primary)" }}>{item.productName}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold uppercase tracking-tighter text-[var(--muted-foreground)] bg-[var(--secondary)] px-2 py-0.5 rounded-lg">
-              Venda: {formatDate(item.saleDate)}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-tighter text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg border border-blue-100 dark:border-blue-800">
-              Escrito: {formatDate(item.writtenAt)}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+            <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
           </div>
-        </div>
-        <div className="shrink-0">
-          {!confirming ? (
-            <button onClick={() => setConfirming(true)}
-              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--secondary)] text-green-500 border border-[var(--border)] active:scale-95" title="Concluir trabalho">
-              <CheckCircle2 className="w-5 h-5" />
-            </button>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <button onClick={() => onMarkDone(item.id)} className="w-10 h-8 rounded-lg bg-green-600 text-white flex items-center justify-center active:scale-95"><Check className="w-4 h-4" /></button>
-              <button onClick={() => setConfirming(false)} className="w-10 h-8 rounded-lg bg-[var(--secondary)] text-[var(--foreground)] flex items-center justify-center border border-[var(--border)] active:scale-95"><X className="w-4 h-4" /></button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Card: Feito (Trabalhos concluídos)
-function DoneCard({ item, onRestore }: { item: any; onRestore: (id: number) => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-
-  return (
-    <div className="rounded-2xl p-4 border transition-all shadow-sm opacity-80" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5" style={{ color: "var(--muted-foreground)" }}>{item.productName}</p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-             <span className="text-[10px] font-bold uppercase tracking-tighter text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-lg border border-green-100 dark:border-green-800">
-              Feito: {formatDate(item.doneAt)}
-            </span>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <p className="text-xs font-medium" style={{ color: "var(--primary)" }}>{item.productName}</p>
+            {item.productCategory === "promocao" && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">⭐ Promoção</span>}
+            {item.productCategory === "coletivo" && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">👥 Coletivo</span>}
           </div>
+          <p className="text-xs mt-0.5 whitespace-normal" style={{ color: "var(--muted-foreground)" }}>
+            Venda: {formatDate(item.saleDate)} · Feito: {formatDate(item.completedAt || item.doneAt)}
+          </p>
         </div>
-        <div className="shrink-0">
-          {!confirming ? (
-            <button onClick={() => setConfirming(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] active:scale-95" title="Mover para pendentes">
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <button onClick={() => onRestore(item.id)} className="w-8 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center active:scale-95"><Check className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setConfirming(false)} className="w-8 h-7 rounded-lg bg-[var(--secondary)] text-[var(--foreground)] flex items-center justify-center border border-[var(--border)] active:scale-95"><X className="w-3.5 h-3.5" /></button>
-            </div>
-          )}
-        </div>
+        <span className="shrink-0 px-2 py-1 rounded-full text-xs font-semibold" style={{ background: isDark ? "rgba(34, 197, 94, 0.15)" : "#d4f5e9", color: isDark ? "#4ade80" : "#1a7a4a" }}>
+          <CheckCircle2 className="w-3 h-3 inline mr-1" />Feito
+        </span>
       </div>
+      {!confirming ? (
+        <button onClick={() => setConfirming(true)}
+          className="mt-3 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
+          style={{ background: "var(--secondary)", color: "var(--primary)" }}>
+          <RotateCcw className="w-3.5 h-3.5" /> Desfazer
+        </button>
+      ) : (
+        <div className="mt-3 flex gap-2">
+          <button onClick={() => { onUndo(item.id); setConfirming(false); }}
+            className="flex-1 py-2 rounded-xl text-white text-sm font-semibold active:scale-95 flex items-center justify-center gap-1.5"
+            style={{ background: "var(--primary)" }}>
+            <RotateCcw className="w-3.5 h-3.5" /> Confirmar
+          </button>
+          <button onClick={() => setConfirming(false)}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold active:scale-95 flex items-center justify-center gap-1.5"
+            style={{ background: "var(--border)", color: "var(--foreground)" }}>
+            <X className="w-3.5 h-3.5" /> Cancelar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -378,6 +475,11 @@ export default function Trabalhos() {
 
   const restoreToPending = trpc.consultora.restoreToPending.useMutation({
     onSuccess: () => { toast.success("Restaurado para Pendentes!"); utils.consultora.done.invalidate(); utils.consultora.pending.invalidate(); },
+    onError: (e) => toast.error(e.message)
+  });
+
+  const undoWritten = trpc.consultora.undoWritten.useMutation({
+    onSuccess: () => { toast.success("Voltou para 'Para Escrever'!"); utils.consultora.pending.invalidate(); utils.consultora.toWrite.invalidate(); },
     onError: (e) => toast.error(e.message)
   });
 
@@ -447,9 +549,9 @@ export default function Trabalhos() {
                   activeTab === "para_escrever" ? (
                     <ToWriteCard key={item.id} item={item} sellers={sellers} onMarkWritten={id => markWritten.mutate({ saleId: id })} />
                   ) : activeTab === "pendente" ? (
-                    <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ saleId: id })} />
+                    <PendingCard key={item.id} item={item} onMarkDone={id => markDone.mutate({ saleId: id })} onUndoWritten={id => undoWritten.mutate({ id })} sellers={sellers} />
                   ) : (
-                    <DoneCard key={item.id} item={item} onRestore={id => restoreToPending.mutate({ saleId: id })} />
+                    <DoneCard key={item.id} item={item} onUndo={id => restoreToPending.mutate({ saleId: id })} sellers={sellers} />
                   )
                 ))}
               </div>

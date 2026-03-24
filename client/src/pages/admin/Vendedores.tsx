@@ -20,6 +20,12 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
 };
 
+const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
+  user: { bg: "oklch(0.92 0.04 250)", text: "oklch(0.35 0.15 250)" },
+  consultora: { bg: "oklch(0.93 0.04 290)", text: "oklch(0.40 0.18 290)" },
+  admin: { bg: "oklch(0.94 0.02 65)", text: "oklch(0.45 0.10 65)" },
+};
+
 function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivate: (id: number) => void; onReactivate: (id: number) => void }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -117,8 +123,12 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
               <p className="font-bold text-base" style={{ color: "var(--foreground)" }}>{user.displayName || user.name || "Sem nome"}</p>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
                 style={{ 
-                  background: user.role === "admin" ? (isDark ? "rgba(202, 138, 4, 0.15)" : "oklch(0.95 0.04 65)") : (isDark ? "rgba(139, 92, 246, 0.15)" : "oklch(0.95 0.04 265)"),
-                  color: user.role === "admin" ? (isDark ? "#eab308" : "oklch(0.45 0.15 65)") : (isDark ? "#a78bfa" : "oklch(0.45 0.15 265)")
+                  background: isDark 
+                    ? (user.role === "admin" ? "rgba(202, 138, 4, 0.15)" : user.role === "consultora" ? "rgba(139, 92, 246, 0.15)" : "rgba(59, 130, 246, 0.15)")
+                    : (ROLE_COLORS[user.role] ?? ROLE_COLORS.user).bg,
+                  color: isDark 
+                    ? (user.role === "admin" ? "#eab308" : user.role === "consultora" ? "#a78bfa" : "#60a5fa")
+                    : (ROLE_COLORS[user.role] ?? ROLE_COLORS.user).text
                 }}>
                 {ROLE_LABELS[user.role] || user.role}
               </span>
@@ -174,11 +184,13 @@ export default function Vendedores() {
   const [showResetPassword, setShowResetPassword] = useState(false); // Adicionado para o formulário de novo funcionário
   const { data: users = [], isLoading, refetch } = trpc.users.listAll.useQuery();
   const [isAdding, setIsAdding] = useState(false);
+  const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
   const [newForm, setNewForm] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
 
-  const createUserMutation = trpc.ownAuth.register.useMutation({
+  const createEmployee = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
-      toast.success("Funcionário criado!");
+      const label = ROLE_LABELS[createRole] ?? "Funcionário";
+      toast.success(`${label} criado com sucesso!`);
       refetch();
       setIsAdding(false);
       setNewForm({ name: "", username: "", password: "", phone: "" });
@@ -228,6 +240,15 @@ export default function Vendedores() {
                 <button onClick={() => setIsAdding(false)} className="p-2 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"><X className="w-5 h-5" /></button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Cargo *</label>
+                  <select value={createRole} onChange={e => setCreateRole(e.target.value as "user" | "consultora" | "admin")}
+                    className="w-full px-4 py-2.5 rounded-xl outline-none cursor-pointer" style={inputStyle}>
+                    <option value="user">Funcionário (Vendedor)</option>
+                    <option value="consultora">Consultora</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Nome Completo</label>
                   <input type="text" value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl outline-none" style={inputStyle} />
@@ -251,10 +272,10 @@ export default function Vendedores() {
                 </div>
               </div>
               <div className="flex justify-end pt-2">
-                <button onClick={() => createUserMutation.mutate(newForm)} disabled={createUserMutation.isPending || newForm.name.length < 3 || newForm.username.length < 3 || newForm.password.length < 6}
+                <button onClick={() => createEmployee.mutate({ ...newForm, role: createRole })} disabled={createEmployee.isPending || newForm.name.length < 3 || newForm.username.length < 3 || newForm.password.length < 6}
                   className="px-6 py-3 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-2">
-                  {createUserMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                  Cadastrar
+                  {createEmployee.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  Criar {ROLE_LABELS[createRole]}
                 </button>
               </div>
             </motion.div>
