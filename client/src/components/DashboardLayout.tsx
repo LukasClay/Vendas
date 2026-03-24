@@ -285,8 +285,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     style={{ background: C.gradientGold }}>{initials}</div>
                   <p className="font-bold text-lg" style={{ color: C.sidebarFg }}>{displayName}</p>
                   <div className="mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : "rgba(255,255,255,0.1)", color: isAdmin ? "#b8860b" : "#ffffff" }}>
-                    {user?.role}
+                    style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)", color: isAdmin ? "#b8860b" : isConsultora ? "#7b5ea7" : "#27ae60" }}>
+                    {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
                   </div>
                 </div>
 
@@ -345,8 +345,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             style={{ background: C.gradientGold }}>{initials}</div>
           <p className="font-bold text-sm text-center" style={{ color: C.sidebarFg }}>{displayName}</p>
           <div className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : "rgba(255,255,255,0.1)", color: isAdmin ? "#b8860b" : "#ffffff" }}>
-            {user?.role}
+            style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)", color: isAdmin ? "#b8860b" : isConsultora ? "#7b5ea7" : "#27ae60" }}>
+            {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
           </div>
         </div>
 
