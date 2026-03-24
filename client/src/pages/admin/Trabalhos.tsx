@@ -84,6 +84,8 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
   sellers: Seller[];
   onUpdated: () => void;
 }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [editing, setEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const utils = trpc.useUtils();
