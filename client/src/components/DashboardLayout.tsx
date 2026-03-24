@@ -333,7 +333,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen" style={{ background: C.bg }}>
-      <aside className="w-64 shrink-0 flex flex-col border-r shadow-lg"
+      <aside className="w-64 shrink-0 flex flex-col border-r shadow-lg sticky top-0 h-screen"
         style={{ background: C.sidebar, borderColor: C.sidebarBorder }}>
         <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
           <PulseStar className="text-amber-500" />
