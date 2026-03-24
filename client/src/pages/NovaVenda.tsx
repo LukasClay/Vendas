@@ -420,35 +420,59 @@ export default function NovaVenda() {
                 <label className="block text-sm font-medium mb-2" style={labelStyle}>
                   Trabalho Espiritual {requiredStar}
                 </label>
-                <input
-                  ref={productInputRef}
-                  type="text"
-                  value={productDropdownOpen ? productQuery : form.productName}
-                  onChange={e => {
-                    setProductQuery(e.target.value);
-                    setProductDropdownOpen(true);
-                    // Se o utilizador apagar tudo, limpa a seleção
-                    if (!e.target.value) {
-                      setForm(f => ({ ...f, productName: "", productId: null }));
-                    }
-                  }}
-                  onFocus={() => {
-                    setProductQuery("");
-                    setProductDropdownOpen(true);
-                  }}
-                  onBlur={() => {
-                    // Pequeno delay para permitir o click no item da lista
-                    setTimeout(() => setProductDropdownOpen(false), 150);
-                  }}
-                  placeholder={loadingProducts ? "Carregando..." : "Digite ou selecione o trabalho..."}
-                  readOnly={loadingProducts}
-                  className={inputClass}
-                  style={{
-                    ...inputStyle,
-                    color: form.productName && !productDropdownOpen ? "var(--foreground)" : "var(--foreground)",
-                  }}
-                  autoComplete="off"
-                />
+                <div className="relative">
+                  <input
+                    ref={productInputRef}
+                    type="text"
+                    value={productDropdownOpen ? productQuery : form.productName}
+                    onChange={e => {
+                      setProductQuery(e.target.value);
+                      setProductDropdownOpen(true);
+                      // Se o utilizador apagar tudo, limpa a seleção
+                      if (!e.target.value) {
+                        setForm(f => ({ ...f, productName: "", productId: null }));
+                      }
+                    }}
+                    onFocus={() => {
+                      setProductQuery("");
+                      setProductDropdownOpen(true);
+                    }}
+                    onBlur={() => {
+                      // Pequeno delay para permitir o click no item da lista
+                      setTimeout(() => setProductDropdownOpen(false), 150);
+                    }}
+                    placeholder={loadingProducts ? "Carregando..." : "Digite ou selecione o trabalho..."}
+                    readOnly={loadingProducts}
+                    className={inputClass}
+                    style={{
+                      ...inputStyle,
+                      paddingRight: "2.5rem",
+                      color: form.productName && !productDropdownOpen ? "var(--foreground)" : "var(--foreground)",
+                    }}
+                    autoComplete="off"
+                  />
+                  {/* Botão de seta para abrir dropdown ao clicar */}
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => {
+                      if (productDropdownOpen) {
+                        setProductDropdownOpen(false);
+                      } else {
+                        setProductQuery("");
+                        setProductDropdownOpen(true);
+                        productInputRef.current?.focus();
+                      }
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-transform"
+                    style={{ color: "var(--muted-foreground)", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
+                    aria-label="Abrir lista de trabalhos">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
 
                 {/* Dropdown de sugestões */}
                 {productDropdownOpen && !loadingProducts && (

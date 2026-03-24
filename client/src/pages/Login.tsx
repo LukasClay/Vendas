@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const loginSchema = z.object({
@@ -20,11 +20,14 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { user, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
     if (user) {
-      navigate(user.role === "admin" ? "/admin" : "/venda");
+      if (user.role === "admin") navigate("/admin");
+      else if (user.role === "consultora") navigate("/consultora");
+      else navigate("/venda");
     }
   }, [user, loading, navigate]);
 
@@ -35,13 +38,18 @@ export default function Login() {
 
   const loginMutation = trpc.ownAuth.login.useMutation({
     onSuccess: (data) => {
+      setLoginError(null);
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
-        window.location.href = data.role === "admin" ? "/admin" : "/venda";
+        if (data.role === "admin") window.location.href = "/admin";
+        else if (data.role === "consultora") window.location.href = "/consultora";
+        else window.location.href = "/venda";
       }, 300);
     },
     onError: (err) => {
-      toast.error(err.message || "Usuário ou senha incorretos.");
+      const msg = err.message || "Usuário ou senha incorretos.";
+      setLoginError(msg);
+      toast.error(msg);
     },
   });
 
@@ -86,7 +94,7 @@ export default function Login() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit((d: LoginForm) => loginMutation.mutate(d))} className="space-y-5">
+          <form onSubmit={handleSubmit((d: LoginForm) => { setLoginError(null); loginMutation.mutate(d); })} className="space-y-5">
 
             {/* Username */}
             <div>
@@ -108,6 +116,7 @@ export default function Login() {
                   color: "oklch(0.15 0.02 260)",
                   fontSize: "16px",
                 }}
+                onChange={(e) => { register("username").onChange(e); setLoginError(null); }}
               />
               {errors.username && (
                 <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.username.message}</p>
@@ -132,6 +141,7 @@ export default function Login() {
                     color: "oklch(0.15 0.02 260)",
                     fontSize: "16px",
                   }}
+                  onChange={(e) => { register("password").onChange(e); setLoginError(null); }}
                 />
                 <button
                   type="button"
@@ -161,6 +171,15 @@ export default function Login() {
                 Lembrar de mim por 1 ano
               </label>
             </div>
+
+            {/* Mensagem de erro inline */}
+            {loginError && (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", color: "#b91c1c" }}>
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <p className="text-sm font-medium">{loginError}</p>
+              </div>
+            )}
 
             {/* Botão entrar */}
             <button

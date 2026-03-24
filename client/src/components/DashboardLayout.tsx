@@ -270,7 +270,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen" style={{ background: C.bg }}>
 
       {/* Sidebar desktop */}
-      <aside className="w-64 shrink-0 flex flex-col sticky top-0 h-screen"
+      <aside className="w-72 shrink-0 flex flex-col sticky top-0 h-screen"
         style={{ background: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}` }}>
 
         {/* Logo */}
@@ -308,7 +308,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   color: C.sidebarFg,
                 } : { color: C.textFaint }}>
                 <item.icon className="w-4 h-4 shrink-0" style={isActive ? { color: C.primary } : {}} />
-                <span className="font-medium text-sm">{item.label}</span>
+                <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
               </button>
             );
           })}

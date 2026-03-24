@@ -390,7 +390,7 @@ function DoneCard({ item, onUndo, sellers }: {
             {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
             {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+          <p className="text-xs mt-0.5 whitespace-normal" style={{ color: "var(--muted-foreground)" }}>
             Venda: {formatDate(item.saleDate)} · Feito: {formatDate(item.completedAt)}
           </p>
         </div>

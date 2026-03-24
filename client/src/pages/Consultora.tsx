@@ -445,21 +445,22 @@ function DoneCard({ item, onUndo }: {
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "white", border: "1.5px solid #c0e8d0" }}>
-      <div className="flex items-center gap-3 px-4 py-4">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white"
-          style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
-          <CheckCircle2 className="w-4 h-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
-          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
-            {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
-            {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
+      <div className="px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white"
+            style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
+            <CheckCircle2 className="w-4 h-4" />
           </div>
-          <p className="text-xs mt-0.5" style={{ color: "#8888a0" }}>Feito em {formatDate(item.completedAt)}</p>
-        </div>
-        {!confirming ? (
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>{item.clientName}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+              {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "#8888a0" }}>Feito em {formatDate(item.completedAt)}</p>
+          </div>
+          {!confirming ? (
           <button onClick={() => setConfirming(true)}
             className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold active:scale-95 shrink-0"
             style={{ background: "#fde8d8", color: "#c0522a" }}>
@@ -475,6 +476,7 @@ function DoneCard({ item, onUndo }: {
               style={{ background: "var(--border)", color: "#2a2a40" }}>Não</button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
