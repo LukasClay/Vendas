@@ -228,6 +228,10 @@
   .dark ::-webkit-scrollbar-thumb { background: oklch(0.35 0.04 265); }
   .dark ::-webkit-scrollbar-track { background: transparent; }
 
+  /* Placeholder legível — sobrescreve o preflight do Tailwind v4 */
+  ::placeholder { color: #a0a0b0; opacity: 1; }
+  .dark ::placeholder { color: oklch(0.50 0.015 265); opacity: 1; }
+
   /* Mobile: scroll suave nativo em iOS antigo */
   .overflow-y-auto,
   .overflow-auto,
