@@ -255,31 +255,59 @@ export default function Consultas() {
 
   const [activeTab, setActiveTab] = useState<"pendentes" | "realizadas" | "canceladas" | "gerenciar">("pendentes");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedTime, setSelectedTime] = useState("");
   const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
 
-  const { data: slots = [], isLoading } = trpc.consultationSlots.listAll.useQuery();
+  // Queries separadas para cada aba
+  const { data: slots = [], isLoading: loadingAll } = trpc.consultationSlots.listAll.useQuery();
+  const { data: pendentes = [], isLoading: loadingPendentes } = trpc.consultationSlots.listPending.useQuery();
+  const { data: realizadas = [], isLoading: loadingRealizadas } = trpc.consultationSlots.listDone.useQuery();
+  const { data: canceladas = [], isLoading: loadingCanceladas } = trpc.consultationSlots.listCancelled.useQuery();
+
+  const invalidateAll = () => {
+    utils.consultationSlots.listAll.invalidate();
+    utils.consultationSlots.listPending.invalidate();
+    utils.consultationSlots.listDone.invalidate();
+    utils.consultationSlots.listCancelled.invalidate();
+  };
 
   const cancelMutation = trpc.consultationSlots.cancel.useMutation({
-    onSuccess: () => { toast.success("Consulta cancelada!"); setCancelModal(null); utils.consultationSlots.listAll.invalidate(); },
+    onSuccess: () => { toast.success("Consulta cancelada!"); setCancelModal(null); invalidateAll(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const restoreMutation = trpc.consultationSlots.restore.useMutation({
-    onSuccess: () => { toast.success("Consulta restaurada!"); utils.consultationSlots.listAll.invalidate(); },
+    onSuccess: () => { toast.success("Consulta restaurada!"); invalidateAll(); },
     onError: (err: any) => toast.error(err.message),
   });
 
-  const deleteMutation = trpc.consultationSlots.delete.useMutation({
-    onSuccess: () => { toast.success("Horário liberado!"); utils.consultationSlots.listAll.invalidate(); },
+  const deleteMutation = trpc.consultationSlots.deleteCancelled.useMutation({
+    onSuccess: () => { toast.success("Horário liberado!"); invalidateAll(); },
     onError: (err: any) => toast.error(err.message),
   });
 
-  // O backend aceita um slot por vez, então criamos em sequência
+  // O backend aceita um slot por vez
   const [creatingSlots, setCreatingSlots] = useState(false);
   const createSlotMutation = trpc.consultationSlots.create.useMutation();
-  // Wrapper para manter compatibilidade com o template
   const createSlotsMutation = { isPending: creatingSlots };
-  const handleCreateSlots = async () => {
+
+  // Criar um único slot (data + horário específico)
+  const handleCreateSingleSlot = async () => {
+    if (!selectedTime) { toast.error("Selecione um horário."); return; }
+    setCreatingSlots(true);
+    try {
+      await createSlotMutation.mutateAsync({ consultationDate: selectedDate, consultationTime: selectedTime });
+      toast.success(`Horário ${selectedTime} criado para ${fmtDate(selectedDate)}!`);
+      invalidateAll();
+      setSelectedTime("");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar horário.");
+    }
+    setCreatingSlots(false);
+  };
+
+  // Criar todos os slots do dia (7h-20h a cada 15min)
+  const handleCreateAllSlots = async () => {
     setCreatingSlots(true);
     let created = 0;
     for (const time of TIME_OPTIONS) {
@@ -290,16 +318,14 @@ export default function Consultas() {
     }
     setCreatingSlots(false);
     if (created > 0) {
-      toast.success(`${created} horários criados!`);
-      utils.consultationSlots.listAll.invalidate();
+      toast.success(`${created} horários criados para ${fmtDate(selectedDate)}!`);
+      invalidateAll();
     } else {
       toast.info("Todos os horários já existem para esta data.");
     }
   };
 
-  const pendentes = slots.filter(s => s.effectiveStatus === "pendente");
-  const realizadas = slots.filter(s => s.effectiveStatus === "realizada");
-  const canceladas = slots.filter(s => s.effectiveStatus === "cancelada");
+  const isLoading = activeTab === "pendentes" ? loadingPendentes : activeTab === "realizadas" ? loadingRealizadas : activeTab === "canceladas" ? loadingCanceladas : loadingAll;
 
   const listToRender = activeTab === "pendentes" ? pendentes : activeTab === "realizadas" ? realizadas : canceladas;
 
@@ -334,7 +360,7 @@ export default function Consultas() {
           {[
             { id: "pendentes", label: "Pendentes", count: pendentes.length, icon: Clock },
             { id: "realizadas", label: "Realizadas", count: realizadas.length, icon: CheckCircle2 },
-            { id: "canceladas", label: "Canceladas", count: canceladas.length, icon: XCircle },
+            { id: "canceladas", label: "Canceladas", count: canceladas.length, icon: XCircle },  
             { id: "gerenciar", label: "Gerenciar Agenda", icon: Calendar }
           ].map((tab) => (
             <button
@@ -360,15 +386,18 @@ export default function Consultas() {
         <AnimatePresence mode="wait">
           {activeTab === "gerenciar" ? (
             <motion.div key="gerenciar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="p-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl space-y-6 text-center">
-              <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <Calendar className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+              className="p-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl space-y-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h2 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>Gerenciar Agenda</h2>
+                <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Crie horários individuais ou gere a agenda completa do dia</p>
               </div>
-              <div>
-                <h2 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>Criar Horários</h2>
-                <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Gere slots de 15 em 15 minutos para uma data específica</p>
-              </div>
-              <div className="max-w-xs mx-auto space-y-4">
+
+              {/* Seletor de Data */}
+              <div className="max-w-md mx-auto">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--muted-foreground)" }}>Data</label>
                 <input 
                   type="date" 
                   value={selectedDate} 
@@ -376,14 +405,68 @@ export default function Consultas() {
                   className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] font-bold"
                   style={{ background: "var(--secondary)", color: "var(--foreground)" }}
                 />
+              </div>
+
+              {/* Criar horário individual */}
+              <div className="max-w-md mx-auto space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Horário Específico</label>
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
+                  {TIME_OPTIONS.map(time => {
+                    const alreadyExists = slots.some(s => s.consultationDate === selectedDate && s.consultationTime === time);
+                    const isSelected = selectedTime === time;
+                    return (
+                      <button
+                        key={time}
+                        onClick={() => setSelectedTime(isSelected ? "" : time)}
+                        disabled={alreadyExists || createSlotsMutation.isPending}
+                        className={`px-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                          alreadyExists
+                            ? "opacity-30 cursor-not-allowed line-through"
+                            : isSelected
+                              ? "ring-2 ring-[var(--primary)] scale-105"
+                              : "hover:scale-105 active:scale-95"
+                        }`}
+                        style={{
+                          background: isSelected ? "var(--primary)" : "var(--secondary)",
+                          color: isSelected ? "white" : "var(--foreground)",
+                          border: `1px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
+                        }}
+                        title={alreadyExists ? "Já cadastrado" : ""}
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
                 <button 
-                  onClick={handleCreateSlots} 
-                  disabled={createSlotsMutation.isPending}
-                  className="w-full py-4 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={handleCreateSingleSlot} 
+                  disabled={createSlotsMutation.isPending || !selectedTime}
+                  className="w-full py-3 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {createSlotsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                  Gerar Agenda para {fmtDate(selectedDate)}
+                  {selectedTime ? `Criar ${selectedTime} em ${fmtDate(selectedDate)}` : "Selecione um horário"}
                 </button>
+              </div>
+
+              {/* Separador */}
+              <div className="flex items-center gap-4 max-w-md mx-auto">
+                <div className="h-px flex-1 bg-[var(--border)]" />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>ou</span>
+                <div className="h-px flex-1 bg-[var(--border)]" />
+              </div>
+
+              {/* Gerar agenda completa */}
+              <div className="max-w-md mx-auto">
+                <button 
+                  onClick={handleCreateAllSlots} 
+                  disabled={createSlotsMutation.isPending}
+                  className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-[var(--border)]"
+                  style={{ background: "var(--secondary)", color: "var(--foreground)" }}
+                >
+                  {createSlotsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarDays className="w-5 h-5" />}
+                  Gerar Agenda Completa para {fmtDate(selectedDate)}
+                </button>
+                <p className="text-[10px] mt-2 text-center" style={{ color: "var(--muted-foreground)" }}>Cria todos os horários de 07:00 às 19:45 (a cada 15 min) que ainda não existem</p>
               </div>
             </motion.div>
           ) : (
