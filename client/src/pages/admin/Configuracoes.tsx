@@ -26,13 +26,13 @@ export default function AdminConfiguracoes() {
         <StaggerList className="space-y-4">
           {/* Perfil */}
           <StaggerItem>
-            <div className="rounded-2xl p-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center"
                   style={{ background: "var(--secondary)" }}>
                   <User className="w-5 h-5" style={{ color: "var(--primary)" }} />
                 </div>
-                <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Meu Perfil</h2>
+                <h2 className="font-bold" style={{ color: "var(--foreground)" }}>Meu Perfil</h2>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: "var(--border)" }}>
@@ -56,13 +56,13 @@ export default function AdminConfiguracoes() {
 
           {/* Sistema */}
           <StaggerItem>
-            <div className="rounded-2xl p-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: isDark ? "oklch(0.20 0.03 250)" : "oklch(0.92 0.04 250)" }}>
-                  <Shield className="w-5 h-5" style={{ color: isDark ? "oklch(0.60 0.18 250)" : "oklch(0.50 0.18 250)" }} />
+                  style={{ background: isDark ? "var(--secondary)" : "oklch(0.92 0.04 250)" }}>
+                  <Shield className="w-5 h-5" style={{ color: isDark ? "var(--primary)" : "oklch(0.50 0.18 250)" }} />
                 </div>
-                <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Sobre o Sistema</h2>
+                <h2 className="font-bold" style={{ color: "var(--foreground)" }}>Sobre o Sistema</h2>
               </div>
               <div className="space-y-3">
                 {[
@@ -83,10 +83,13 @@ export default function AdminConfiguracoes() {
 
           {/* Relatórios automáticos */}
           <StaggerItem>
-            <div className="rounded-2xl p-6 shadow-sm" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>
+            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <Bell className="w-5 h-5" style={{ color: "var(--primary)" }} />
-                <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Relatórios Automáticos</h2>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: "var(--secondary)" }}>
+                  <Bell className="w-5 h-5" style={{ color: "var(--primary)" }} />
+                </div>
+                <h2 className="font-bold" style={{ color: "var(--foreground)" }}>Relatórios Automáticos</h2>
               </div>
               <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
                 Configure o envio automático de relatórios por email na página de{" "}

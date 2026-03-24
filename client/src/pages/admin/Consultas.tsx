@@ -6,69 +6,75 @@ import {
   Calendar, Clock, Plus, Trash2, Loader2, User, Phone,
   CalendarDays, CheckCircle2, ClipboardList, XCircle, RotateCcw, Ban, Unlock,
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Componente isolado: CancelModal (evita re-render em cascata) ────────────
+// ─── Componente isolado: CancelModal ──────────────────────────────────────────
 function CancelModal({ modalData, onClose, onConfirm }: {
   modalData: { id: number; clientName?: string | null };
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      style={{ background: "rgba(0,0,0,0.6)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-sm rounded-2xl p-6 shadow-xl" style={{ background: "white" }}>
-        <h3 className="text-base font-bold mb-1" style={{ color: "oklch(0.15 0.02 260)", fontFamily: "'Playfair Display', serif" }}>
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }}
+        className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-[var(--border)]" 
+        style={{ background: "var(--card)" }}
+      >
+        <h3 className="text-xl font-bold mb-1" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>
           Cancelar Consulta
         </h3>
         {modalData.clientName && (
-          <p className="text-sm mb-4" style={{ color: "oklch(0.45 0.015 260)" }}>
-            Cliente: <span className="font-semibold">{modalData.clientName}</span>
+          <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
+            Cliente: <span className="font-bold text-[var(--foreground)]">{modalData.clientName}</span>
           </p>
         )}
-        <label className="block text-xs font-semibold mb-1.5" style={{ color: "oklch(0.45 0.015 260)" }}>
-          Motivo do cancelamento <span style={{ color: "oklch(0.65 0.01 260)" }}>(opcional)</span>
+        <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
+          Motivo do cancelamento <span className="opacity-50">(opcional)</span>
         </label>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Ex: cliente desmarcou, conflito de agenda..."
           rows={3}
-          className="w-full rounded-xl px-3 py-2 text-sm resize-none outline-none"
+          className="w-full rounded-xl px-3 py-2 text-sm resize-none outline-none border border-[var(--border)]"
           style={{
-            background: "oklch(0.97 0.006 65)",
-            border: "1px solid oklch(0.88 0.012 65)",
-            color: "oklch(0.15 0.02 260)",
+            background: "var(--secondary)",
+            color: "var(--foreground)",
           }}
           autoFocus
         />
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: "oklch(0.94 0.008 65)", color: "oklch(0.45 0.015 260)" }}
+            className="flex-1 py-3 rounded-xl text-sm font-bold transition-all bg-[var(--secondary)] text-[var(--foreground)] active:scale-95"
           >
             Voltar
           </button>
           <button
             onClick={() => onConfirm(reason)}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-            style={{ background: "oklch(0.55 0.20 25)" }}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all bg-red-600 active:scale-95"
           >
-            Confirmar Cancelamento
+            Confirmar
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "";
   if (d instanceof Date) {
@@ -93,27 +99,7 @@ function generateTimeOptions(): string[] {
 }
 const TIME_OPTIONS = generateTimeOptions();
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type SlotItem = {
-  id: number;
-  consultationDate: string | Date | null;
-  consultationTime: string;
-  clientName?: string | null;
-  clientPhone?: string | null;
-  clientBirthDate?: string | Date | null;
-  notes?: string | null;
-  saleDate?: string | Date | null;
-  sold?: boolean;
-  sellerName?: string | null;
-  sellerUsername?: string | null;
-  cancelledAt?: Date | null;
-  cancelReason?: string | null;
-  effectiveStatus?: string;
-};
-
 // ─── Card de Consulta ─────────────────────────────────────────────────────────
-
 function ConsultaCard({
   slot,
   showDate = true,
@@ -124,7 +110,7 @@ function ConsultaCard({
   restoring = false,
   deleting = false,
 }: {
-  slot: SlotItem;
+  slot: any;
   showDate?: boolean;
   onCancel?: () => void;
   onRestore?: () => void;
@@ -133,77 +119,78 @@ function ConsultaCard({
   restoring?: boolean;
   deleting?: boolean;
 }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const sellerDisplay = slot.sellerName || slot.sellerUsername || null;
   const isCancelled = slot.effectiveStatus === "cancelada";
 
   return (
     <div
-      className="rounded-xl p-4"
+      className="rounded-2xl p-4 border transition-all"
       style={{
-        background: isCancelled ? "oklch(0.97 0.005 25)" : "oklch(0.97 0.006 65)",
-        border: `1px solid ${isCancelled ? "oklch(0.88 0.015 25)" : "oklch(0.90 0.010 65)"}`,
-        opacity: isCancelled ? 0.85 : 1,
+        background: isCancelled 
+          ? (isDark ? "rgba(239, 68, 68, 0.05)" : "oklch(0.98 0.01 25)") 
+          : "var(--card)",
+        borderColor: isCancelled 
+          ? (isDark ? "rgba(239, 68, 68, 0.2)" : "oklch(0.92 0.04 25)") 
+          : "var(--border)",
+        opacity: isCancelled ? 0.8 : 1,
       }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: isCancelled ? "oklch(0.92 0.04 25)" : "oklch(0.92 0.04 280)" }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ 
+              background: isCancelled ? "oklch(0.92 0.04 25)" : "oklch(0.92 0.04 280)",
+              opacity: isDark ? 0.8 : 1
+            }}
           >
-            <Clock className="w-4 h-4" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }} />
+            <Clock className="w-5 h-5" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }} />
           </div>
           <div>
             {showDate && (
-              <p className="text-xs font-semibold" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isCancelled ? "oklch(0.55 0.18 25)" : "oklch(0.55 0.18 280)" }}>
                 {fmtDate(slot.consultationDate)}
               </p>
             )}
-            <p className="text-base font-bold" style={{ color: "oklch(0.15 0.02 260)" }}>
+            <p className="text-lg font-bold" style={{ color: "var(--foreground)" }}>
               {slot.consultationTime}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {slot.saleDate && (
-            <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+            <span className="text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-tighter" 
+              style={{ background: "var(--secondary)", color: "var(--muted-foreground)" }}>
               Venda: {fmtDate(slot.saleDate)}
             </span>
           )}
-          {/* Botão Cancelar (apenas para pendentes com venda) */}
           {onCancel && slot.sold && !isCancelled && (
             <button
               onClick={onCancel}
               disabled={cancelling}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-              style={{ background: "oklch(0.94 0.04 25)", color: "oklch(0.50 0.20 25)", border: "1px solid oklch(0.85 0.08 25)" }}
-              title="Cancelar consulta"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800 active:scale-95"
             >
               {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
               Cancelar
             </button>
           )}
-          {/* Botão Restaurar (apenas para canceladas — ADM) */}
           {onRestore && isCancelled && (
             <button
               onClick={onRestore}
               disabled={restoring}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-              style={{ background: "oklch(0.94 0.04 160)", color: "oklch(0.40 0.15 160)", border: "1px solid oklch(0.85 0.08 160)" }}
-              title="Restaurar consulta"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800 active:scale-95"
             >
               {restoring ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
               Restaurar
             </button>
           )}
-          {/* Botão Liberar Horário (apenas para canceladas — ADM) */}
           {onDelete && isCancelled && (
             <button
               onClick={onDelete}
               disabled={deleting}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-              style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.015 260)", border: "1px solid oklch(0.85 0.012 65)" }}
-              title="Liberar horário (apagar permanentemente)"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] active:scale-95"
             >
               {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlock className="w-3 h-3" />}
               Liberar
@@ -213,51 +200,42 @@ function ConsultaCard({
       </div>
 
       {slot.clientName && (
-        <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: "1px solid oklch(0.92 0.008 65)" }}>
+        <div className="mt-4 pt-4 space-y-2 border-t border-[var(--border)]">
           {sellerDisplay && (
             <div className="flex items-center gap-2">
-              <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.55 0.18 280)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.55 0.18 280)" }}>Vendedor:</span>
-              <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{sellerDisplay}</span>
+              <User className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Vendedor:</span>
+              <span className="text-sm font-bold text-[var(--foreground)]">{sellerDisplay}</span>
             </div>
           )}
-          {sellerDisplay && (
-            <div style={{ height: "1px", background: "oklch(0.92 0.008 65)", margin: "4px 0" }} />
-          )}
           <div className="flex items-center gap-2">
-            <User className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Cliente:</span>
-            <span className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{slot.clientName}</span>
+            <User className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Cliente:</span>
+            <span className="text-sm font-bold text-[var(--foreground)]">{slot.clientName}</span>
           </div>
           {slot.clientBirthDate && (
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Nasc.:</span>
-              <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{fmtDate(slot.clientBirthDate)}</span>
+              <CalendarDays className="w-3.5 h-3.5 shrink-0 text-orange-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Nasc.:</span>
+              <span className="text-sm text-[var(--foreground)]">{fmtDate(slot.clientBirthDate)}</span>
             </div>
           )}
           {slot.clientPhone && (
             <div className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.60 0.01 260)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "oklch(0.60 0.01 260)" }}>Tel.:</span>
-              <span className="text-sm" style={{ color: "oklch(0.45 0.015 260)" }}>{slot.clientPhone}</span>
+              <Phone className="w-3.5 h-3.5 shrink-0 text-green-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Tel.:</span>
+              <span className="text-sm text-[var(--foreground)]">{slot.clientPhone}</span>
             </div>
           )}
           {slot.notes && (
-            <p className="text-xs mt-1 italic" style={{ color: "oklch(0.52 0.015 260)" }}>
+            <div className="mt-2 p-2 rounded-lg bg-[var(--secondary)]/50 text-xs italic text-[var(--muted-foreground)] border border-[var(--border)]/50">
               Obs: {slot.notes}
-            </p>
-          )}
-          {/* Informação de cancelamento */}
-          {isCancelled && slot.cancelledAt && (
-            <p className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.18 25)" }}>
-              Cancelada em: {fmtDate(slot.cancelledAt)}
-            </p>
+            </div>
           )}
           {isCancelled && slot.cancelReason && (
-            <p className="text-xs mt-0.5 italic" style={{ color: "oklch(0.50 0.15 25)" }}>
+            <div className="mt-2 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs italic text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800">
               Motivo: {slot.cancelReason}
-            </p>
+            </div>
           )}
         </div>
       )}
@@ -265,455 +243,188 @@ function ConsultaCard({
   );
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
-
-type Tab = "pendentes" | "realizadas" | "canceladas" | "gerenciar";
-
-export default function AdminConsultas() {
-  const [activeTab, setActiveTab] = useState<Tab>("pendentes");
-  const [newDate, setNewDate] = useState("");
-  const [newTime, setNewTime] = useState("");
-  const [cancellingId, setCancellingId] = useState<number | null>(null);
-  const [restoringId, setRestoringId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  // Modal de cancelamento com motivo
-  const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
-
+export default function Consultas() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
 
-  const { data: pending = [], isLoading: loadingPending } = trpc.consultationSlots.listPending.useQuery();
-  const { data: done = [], isLoading: loadingDone } = trpc.consultationSlots.listDone.useQuery();
-  const { data: cancelled = [], isLoading: loadingCancelled } = trpc.consultationSlots.listCancelled.useQuery();
-  const { data: allSlots = [], isLoading: loadingAll } = trpc.consultationSlots.listAll.useQuery();
+  const [activeTab, setActiveTab] = useState<"pendentes" | "realizadas" | "canceladas" | "gerenciar">("pendentes");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
 
-  const invalidateAll = () => {
-    utils.consultationSlots.listPending.invalidate();
-    utils.consultationSlots.listDone.invalidate();
-    utils.consultationSlots.listCancelled.invalidate();
-    utils.consultationSlots.listAll.invalidate();
-    utils.consultationSlots.listAvailable.invalidate();
-  };
+  const { data: slots = [], isLoading } = trpc.consultations.listAll.useQuery();
 
-  const createSlot = trpc.consultationSlots.create.useMutation({
-    onSuccess: () => {
-      toast.success("Horário adicionado com sucesso!");
-      setNewDate("");
-      setNewTime("");
-      invalidateAll();
-    },
-    onError: (err) => toast.error(err.message || "Erro ao adicionar horário."),
+  const createSlotsMutation = trpc.consultations.createSlots.useMutation({
+    onSuccess: () => { toast.success("Horários criados!"); utils.consultations.listAll.invalidate(); },
+    onError: (err) => toast.error(err.message),
   });
 
-  const deleteSlot = trpc.consultationSlots.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Horário removido.");
-      invalidateAll();
-    },
-    onError: (err) => toast.error(err.message || "Erro ao remover horário."),
+  const cancelMutation = trpc.consultations.cancel.useMutation({
+    onSuccess: () => { toast.success("Consulta cancelada!"); setCancelModal(null); utils.consultations.listAll.invalidate(); },
+    onError: (err) => toast.error(err.message),
   });
 
-  const cancelSlot = trpc.consultationSlots.cancel.useMutation({
-    onSuccess: () => {
-      toast.success("Consulta cancelada.");
-      setCancellingId(null);
-      invalidateAll();
-    },
-    onError: (err) => {
-      toast.error(err.message || "Erro ao cancelar consulta.");
-      setCancellingId(null);
-    },
+  const restoreMutation = trpc.consultations.restore.useMutation({
+    onSuccess: () => { toast.success("Consulta restaurada!"); utils.consultations.listAll.invalidate(); },
+    onError: (err) => toast.error(err.message),
   });
 
-  const deleteCancelledSlot = trpc.consultationSlots.deleteCancelled.useMutation({
-    onSuccess: () => {
-      toast.success("Horário liberado. Pode ser recadastrado agora.");
-      setDeletingId(null);
-      invalidateAll();
-    },
-    onError: (err) => {
-      toast.error(err.message || "Erro ao liberar horário.");
-      setDeletingId(null);
-    },
+  const deleteMutation = trpc.consultations.delete.useMutation({
+    onSuccess: () => { toast.success("Horário liberado!"); utils.consultations.listAll.invalidate(); },
+    onError: (err) => toast.error(err.message),
   });
 
-  const restoreSlot = trpc.consultationSlots.restore.useMutation({
-    onSuccess: () => {
-      toast.success("Consulta restaurada para pendente.");
-      setRestoringId(null);
-      invalidateAll();
-    },
-    onError: (err) => {
-      toast.error(err.message || "Erro ao restaurar consulta.");
-      setRestoringId(null);
-    },
-  });
-
-  const handleAddSlot = () => {
-    if (!newDate) { toast.error("Selecione a data."); return; }
-    if (!newTime) { toast.error("Selecione o horário."); return; }
-    createSlot.mutate({ consultationDate: newDate, consultationTime: newTime });
+  const handleCreateSlots = () => {
+    createSlotsMutation.mutate({ date: selectedDate, times: TIME_OPTIONS });
   };
 
-  const handleCancel = (id: number, clientName?: string | null) => {
-    setCancelModal({ id, clientName });
-  };
+  const pendentes = slots.filter(s => s.effectiveStatus === "pendente");
+  const realizadas = slots.filter(s => s.effectiveStatus === "realizada");
+  const canceladas = slots.filter(s => s.effectiveStatus === "cancelada");
 
-  const handleRestore = (id: number) => {
-    if (!window.confirm("Restaurar esta consulta para pendente?")) return;
-    setRestoringId(id);
-    restoreSlot.mutate({ id });
-  };
+  const listToRender = activeTab === "pendentes" ? pendentes : activeTab === "realizadas" ? realizadas : canceladas;
 
-  const handleDeleteCancelled = (id: number) => {
-    if (!window.confirm("Liberar este horário permanentemente?\nO slot será apagado e poderá ser recadastrado depois.")) return;
-    setDeletingId(id);
-    deleteCancelledSlot.mutate({ id });
-  };
+  // Agrupar por data
+  const grouped = listToRender.reduce((acc, s) => {
+    const d = fmtDate(s.consultationDate);
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(s);
+    return acc;
+  }, {} as Record<string, any[]>);
 
-  // Agrupa por data
-  function groupByDate<T extends { consultationDate: string | Date | null }>(items: T[]) {
-    return items.reduce<Record<string, T[]>>((acc, s) => {
-      const key = String(s.consultationDate).slice(0, 10);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(s);
-      return acc;
-    }, {});
-  }
-
-  const pendingByDate = groupByDate(pending);
-  const doneByDate = groupByDate(done);
-  const cancelledByDate = groupByDate(cancelled);
-
-  const tabStyle = (t: Tab): React.CSSProperties => ({
-    padding: "8px 12px",
-    borderRadius: "12px",
-    fontWeight: 600,
-    fontSize: "13px",
-    cursor: "pointer",
-    transition: "all 0.15s",
-    background: activeTab === t ? "oklch(0.55 0.18 280)" : "transparent",
-    color: activeTab === t ? "white" : "oklch(0.45 0.015 260)",
-    border: "none",
-    whiteSpace: "nowrap" as const,
+  const sortedDates = Object.keys(grouped).sort((a, b) => {
+    const da = a.split("/").reverse().join("");
+    const db = b.split("/").reverse().join("");
+    return activeTab === "pendentes" ? da.localeCompare(db) : db.localeCompare(da);
   });
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
-
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 280), oklch(0.65 0.20 290))" }}
-          >
-            <Calendar className="w-5 h-5 text-white" />
+      <div className="max-w-5xl mx-auto space-y-6 pb-20">
+        <FadeIn>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>Gerenciamento de Consultas</h1>
+              <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Controle de agenda e atendimentos</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-              Consultas
-            </h1>
-            <p className="text-sm" style={{ color: "oklch(0.52 0.015 260)" }}>
-              Gerenciamento de Consulta Cartas
-            </p>
-          </div>
-        </div>
+        </FadeIn>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 rounded-2xl overflow-x-auto" style={{ background: "oklch(0.94 0.008 65)" }}>
-          <button style={tabStyle("pendentes")} onClick={() => setActiveTab("pendentes")}>
-            <ClipboardList className="w-4 h-4 inline mr-1" />
-            Pendentes {pending.length > 0 && `(${pending.length})`}
-          </button>
-          <button style={tabStyle("realizadas")} onClick={() => setActiveTab("realizadas")}>
-            <CheckCircle2 className="w-4 h-4 inline mr-1" />
-            Realizadas {done.length > 0 && `(${done.length})`}
-          </button>
-          <button style={tabStyle("canceladas")} onClick={() => setActiveTab("canceladas")}>
-            <XCircle className="w-4 h-4 inline mr-1" />
-            Canceladas {cancelled.length > 0 && `(${cancelled.length})`}
-          </button>
-          <button style={tabStyle("gerenciar")} onClick={() => setActiveTab("gerenciar")}>
-            <Plus className="w-4 h-4 inline mr-1" />
-            Gerenciar
-          </button>
+        <div className="flex p-1 rounded-2xl bg-[var(--secondary)]/50 border border-[var(--border)] overflow-x-auto no-scrollbar">
+          {[
+            { id: "pendentes", label: "Pendentes", count: pendentes.length, icon: Clock },
+            { id: "realizadas", label: "Realizadas", count: realizadas.length, icon: CheckCircle2 },
+            { id: "canceladas", label: "Canceladas", count: canceladas.length, icon: XCircle },
+            { id: "gerenciar", label: "Gerenciar Agenda", icon: Calendar }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? "bg-[var(--card)] text-[var(--primary)] shadow-sm border border-[var(--border)]" 
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {"count" in tab && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* ── Consultas Pendentes ── */}
-        {activeTab === "pendentes" && (
-          <div>
-            {loadingPending ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.55 0.18 280)" }} />
+        <AnimatePresence mode="wait">
+          {activeTab === "gerenciar" ? (
+            <motion.div key="gerenciar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="p-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl space-y-6 text-center">
+              <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <Calendar className="w-8 h-8 text-orange-600 dark:text-orange-400" />
               </div>
-            ) : Object.keys(pendingByDate).length === 0 ? (
-              <div className="text-center py-16">
-                <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: "oklch(0.75 0.01 260)" }} />
-                <p className="font-medium" style={{ color: "oklch(0.40 0.02 260)" }}>Nenhuma consulta pendente</p>
-                <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>
-                  As consultas agendadas aparecerão aqui.
-                </p>
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>Criar Horários</h2>
+                <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Gere slots de 15 em 15 minutos para uma data específica</p>
               </div>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(pendingByDate).map(([dateKey, slots]) => (
-                  <div key={dateKey}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Calendar className="w-4 h-4" style={{ color: "oklch(0.50 0.18 280)" }} />
-                      <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
-                        {fmtDate(dateKey)}
-                      </h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.45 0.18 280)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                        {slots.length} consulta{slots.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {slots.map(slot => (
-                        <ConsultaCard
-                          key={slot.id}
-                          slot={{ ...slot, effectiveStatus: "pendente" }}
-                          showDate={false}
-                          onCancel={() => handleCancel(slot.id, slot.clientName)}
-                          cancelling={cancellingId === slot.id}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="max-w-xs mx-auto space-y-4">
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={e => setSelectedDate(e.target.value)} 
+                  className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] font-bold"
+                  style={{ background: "var(--secondary)", color: "var(--foreground)" }}
+                />
+                <button 
+                  onClick={handleCreateSlots} 
+                  disabled={createSlotsMutation.isPending}
+                  className="w-full py-4 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {createSlotsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  Gerar Agenda para {fmtDate(selectedDate)}
+                </button>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Consultas Realizadas ── */}
-        {activeTab === "realizadas" && (
-          <div>
-            {loadingDone ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.55 0.18 280)" }} />
-              </div>
-            ) : Object.keys(doneByDate).length === 0 ? (
-              <div className="text-center py-16">
-                <CheckCircle2 className="w-10 h-10 mx-auto mb-3" style={{ color: "oklch(0.75 0.01 260)" }} />
-                <p className="font-medium" style={{ color: "oklch(0.40 0.02 260)" }}>Nenhuma consulta realizada ainda</p>
-                <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>
-                  O histórico de consultas passadas aparecerá aqui.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(doneByDate).map(([dateKey, slots]) => (
-                  <div key={dateKey}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <CheckCircle2 className="w-4 h-4" style={{ color: "oklch(0.50 0.15 160)" }} />
-                      <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
-                        {fmtDate(dateKey)}
-                      </h3>
-                    </div>
-                    <div className="space-y-2">
-                      {slots.map(slot => (
-                        <ConsultaCard key={slot.id} slot={slot} showDate={false} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Consultas Canceladas ── */}
-        {activeTab === "canceladas" && (
-          <div>
-            {loadingCancelled ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.55 0.18 280)" }} />
-              </div>
-            ) : Object.keys(cancelledByDate).length === 0 ? (
-              <div className="text-center py-16">
-                <XCircle className="w-10 h-10 mx-auto mb-3" style={{ color: "oklch(0.75 0.01 260)" }} />
-                <p className="font-medium" style={{ color: "oklch(0.40 0.02 260)" }}>Nenhuma consulta cancelada</p>
-                <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>
-                  Consultas canceladas aparecerão aqui.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(cancelledByDate).map(([dateKey, slots]) => (
-                  <div key={dateKey}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <XCircle className="w-4 h-4" style={{ color: "oklch(0.55 0.18 25)" }} />
-                      <h3 className="font-bold text-base tracking-wide" style={{ color: "oklch(0.25 0.05 260)", fontFamily: "system-ui, -apple-system, sans-serif", letterSpacing: "0.02em" }}>
-                        {fmtDate(dateKey)}
-                      </h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.92 0.04 25)", color: "oklch(0.50 0.18 25)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                        {slots.length} cancelada{slots.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {slots.map(slot => (
-                        <ConsultaCard
-                          key={slot.id}
-                          slot={{ ...slot, effectiveStatus: "cancelada" }}
-                          showDate={false}
-                          onRestore={() => handleRestore(slot.id)}
-                          restoring={restoringId === slot.id}
-                          onDelete={() => handleDeleteCancelled(slot.id)}
-                          deleting={deletingId === slot.id}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Gerenciar Horários ── */}
-        {activeTab === "gerenciar" && (
-          <div className="space-y-5">
-
-            {/* Formulário de adicionar */}
-            <div className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-              <h2 className="text-sm font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
-                Adicionar Novo Horário de Consulta
-              </h2>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.40 0.02 260)" }}>
-                    Data
-                  </label>
-                  <input
-                    type="date"
-                    value={newDate}
-                    min={new Date().toISOString().slice(0, 10)}
-                    onChange={e => setNewDate(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none"
-                    style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
-                  />
+            </motion.div>
+          ) : (
+            <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--muted-foreground)]">
+                  <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+                  <p className="text-sm font-medium">Carregando consultas...</p>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.40 0.02 260)" }}>
-                    Horário
-                  </label>
-                  <select
-                    value={newTime}
-                    onChange={e => setNewTime(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none cursor-pointer"
-                    style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: newTime ? "oklch(0.15 0.02 260)" : "oklch(0.60 0.01 260)" }}
-                  >
-                    <option value="" disabled>Selecionar...</option>
-                    {TIME_OPTIONS.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+              ) : sortedDates.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
+                  <ClipboardList className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhuma consulta encontrada nesta categoria.</p>
                 </div>
-              </div>
-              <button
-                onClick={handleAddSlot}
-                disabled={createSlot.isPending || !newDate || !newTime}
-                className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 280), oklch(0.65 0.20 290))" }}
-              >
-                {createSlot.isPending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Adicionando...</>
-                ) : (
-                  <><Plus className="w-4 h-4" /> Adicionar Horário</>
-                )}
-              </button>
-            </div>
-
-            {/* Lista de todos os slots (não cancelados) */}
-            <div className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-              <h2 className="text-sm font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
-                Todos os Horários Cadastrados
-              </h2>
-
-              {loadingAll ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: "oklch(0.55 0.18 280)" }} />
-                </div>
-              ) : allSlots.length === 0 ? (
-                <p className="text-sm text-center py-6" style={{ color: "oklch(0.60 0.01 260)" }}>
-                  Nenhum horário cadastrado ainda.
-                </p>
               ) : (
-                <div className="space-y-2">
-                  {allSlots.map(slot => (
-                    <div
-                      key={slot.id}
-                      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
-                      style={{
-                        background: slot.sold ? "oklch(0.96 0.01 160)" : "oklch(0.97 0.008 65)",
-                        border: `1px solid ${slot.sold ? "oklch(0.85 0.05 160)" : "oklch(0.90 0.010 65)"}`,
-                      }}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>
-                          {fmtDate(slot.consultationDate)} — {slot.consultationTime}
-                        </p>
-                        {slot.sold && slot.clientName && (
-                          <div className="mt-0.5 space-y-0.5">
-                            <p className="text-xs" style={{ color: "oklch(0.45 0.12 160)" }}>
-                              ✓ <span className="font-medium">{slot.clientName}</span>
-                            </p>
-                            {(slot.sellerName || slot.sellerUsername) && (
-                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
-                                Vendedor: {slot.sellerName || slot.sellerUsername}
-                              </p>
-                            )}
-                            {slot.clientPhone && (
-                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
-                                Tel: {slot.clientPhone}
-                              </p>
-                            )}
-                            {slot.clientBirthDate && (
-                              <p className="text-xs" style={{ color: "oklch(0.52 0.015 260)" }}>
-                                Nasc: {fmtDate(slot.clientBirthDate)}
-                              </p>
-                            )}
-                          </div>
-                        )}
+                sortedDates.map(date => (
+                  <div key={date} className="space-y-4">
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="h-px flex-1 bg-[var(--border)]" />
+                      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--secondary)] border border-[var(--border)]">
+                        <CalendarDays className="w-3.5 h-3.5 text-[var(--primary)]" />
+                        <span className="text-xs font-bold text-[var(--foreground)]">{date}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--card)] text-[var(--muted-foreground)]">
+                          {grouped[date].length}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {slot.sold ? (
-                          <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "oklch(0.88 0.08 160)", color: "oklch(0.35 0.15 160)" }}>
-                            Vendido
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => deleteSlot.mutate({ id: slot.id })}
-                            disabled={deleteSlot.isPending}
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ color: "oklch(0.58 0.22 25)" }}
-                            title="Remover horário"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      <div className="h-px flex-1 bg-[var(--border)]" />
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {grouped[date].map(slot => (
+                        <ConsultaCard 
+                          key={slot.id} 
+                          slot={slot} 
+                          showDate={false}
+                          onCancel={activeTab === "pendentes" ? () => setCancelModal({ id: slot.id, clientName: slot.clientName }) : undefined}
+                          onRestore={activeTab === "canceladas" ? () => restoreMutation.mutate({ consultationId: slot.id }) : undefined}
+                          onDelete={activeTab === "canceladas" ? () => deleteMutation.mutate({ consultationId: slot.id }) : undefined}
+                          cancelling={cancelMutation.isPending && cancelMutation.variables?.consultationId === slot.id}
+                          restoring={restoreMutation.isPending && restoreMutation.variables?.consultationId === slot.id}
+                          deleting={deleteMutation.isPending && deleteMutation.variables?.consultationId === slot.id}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
               )}
-            </div>
-          </div>
-        )}
-      </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Modal de cancelamento isolado */}
-      {cancelModal && (
-        <CancelModal
-          modalData={cancelModal}
-          onClose={() => setCancelModal(null)}
-          onConfirm={(reason) => {
-            setCancellingId(cancelModal.id);
-            cancelSlot.mutate({ id: cancelModal.id, reason: reason.trim() || undefined });
-            setCancelModal(null);
-          }}
-        />
-      )}
+        <AnimatePresence>
+          {cancelModal && (
+            <CancelModal 
+              modalData={cancelModal} 
+              onClose={() => setCancelModal(null)} 
+              onConfirm={(reason) => cancelMutation.mutate({ consultationId: cancelModal.id, reason })}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </DashboardLayout>
   );
 }

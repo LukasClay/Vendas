@@ -14,13 +14,13 @@ function formatDate(d: Date | string | null) {
 function StatusBadge({ status, isDark }: { status: "para_escrever" | "pendente"; isDark: boolean }) {
   if (status === "para_escrever") return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: isDark ? "oklch(0.20 0.03 250)" : "oklch(0.94 0.02 260)", color: isDark ? "oklch(0.70 0.15 250)" : "oklch(0.40 0.10 260)" }}>
+      style={{ background: isDark ? "var(--secondary)" : "oklch(0.94 0.02 260)", color: isDark ? "var(--primary)" : "oklch(0.40 0.10 260)" }}>
       Para Escrever
     </span>
   );
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: isDark ? "oklch(0.20 0.04 55)" : "oklch(0.94 0.04 55)", color: isDark ? "oklch(0.75 0.14 55)" : "oklch(0.45 0.12 55)" }}>
+      style={{ background: isDark ? "var(--secondary)" : "oklch(0.94 0.04 55)", color: isDark ? "var(--primary)" : "oklch(0.45 0.12 55)" }}>
       Pendente
     </span>
   );
@@ -91,20 +91,14 @@ export default function AdminAlertas() {
         {/* Resumo */}
         <StaggerList className="grid grid-cols-2 gap-3">
           <StaggerItem>
-            <div className="rounded-2xl p-4" style={{
-              background: isDark ? "oklch(0.18 0.03 25)" : "oklch(0.97 0.03 25)",
-              border: `1.5px solid ${isDark ? "oklch(0.28 0.08 25)" : "oklch(0.90 0.08 25)"}`,
-            }}>
-              <p className="text-xs font-medium mb-1" style={{ color: isDark ? "oklch(0.70 0.15 25)" : "oklch(0.55 0.15 25)" }}>Atrasados</p>
+            <div className="rounded-2xl p-4 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+              <p className="text-xs font-bold uppercase mb-1 text-[var(--muted-foreground)]">Atrasados</p>
               <p className="text-3xl font-bold" style={{ color: isDark ? "oklch(0.75 0.18 25)" : "oklch(0.50 0.20 25)" }}>{overdueCount}</p>
             </div>
           </StaggerItem>
           <StaggerItem>
-            <div className="rounded-2xl p-4" style={{
-              background: isDark ? "oklch(0.18 0.03 55)" : "oklch(0.98 0.03 55)",
-              border: `1.5px solid ${isDark ? "oklch(0.28 0.08 55)" : "oklch(0.90 0.08 55)"}`,
-            }}>
-              <p className="text-xs font-medium mb-1" style={{ color: isDark ? "oklch(0.70 0.14 55)" : "oklch(0.55 0.15 55)" }}>Urgentes (≤2 dias)</p>
+            <div className="rounded-2xl p-4 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+              <p className="text-xs font-bold uppercase mb-1 text-[var(--muted-foreground)]">Urgentes (≤2 dias)</p>
               <p className="text-3xl font-bold" style={{ color: isDark ? "oklch(0.75 0.16 55)" : "oklch(0.50 0.18 55)" }}>{urgentCount}</p>
             </div>
           </StaggerItem>
@@ -114,12 +108,12 @@ export default function AdminAlertas() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: "var(--muted)" }} />
+              <div key={i} className="h-24 rounded-2xl animate-pulse bg-[var(--card)]" />
             ))}
           </div>
         ) : alerts.length === 0 ? (
           <FadeIn>
-            <div className="rounded-2xl p-10 text-center" style={{ background: "var(--muted)", border: "1.5px dashed var(--border)" }}>
+            <div className="rounded-2xl p-10 text-center border border-dashed border-[var(--border)] bg-[var(--card)] shadow-xl">
               <p className="text-4xl mb-3">✅</p>
               <p className="font-semibold" style={{ color: "var(--foreground)" }}>Nenhum alerta no momento</p>
               <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Todos os trabalhos estão dentro do prazo</p>
@@ -147,7 +141,7 @@ export default function AdminAlertas() {
                           <User className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
                           <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
                           {item.sellerName && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)]">
                               {item.sellerName}
                             </span>
                           )}

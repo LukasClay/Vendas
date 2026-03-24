@@ -3,8 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useTheme } from "@/contexts/ThemeContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -44,17 +46,16 @@ function parseCurrencyToNumber(formatted: string): number {
 
 const inputStyle = {
   border: "1.5px solid var(--border)",
-  background: "#faf8f4",
+  background: "var(--secondary)",
   color: "var(--foreground)",
 };
-
-const labelStyle = { color: "#2a2a40" };
-const requiredStar = <span style={{ color: "#c0392b" }}>*</span>;
 
 export default function NovaVenda() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const isMobile = useIsMobile();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const { data: products = [], isLoading: loadingProducts } = trpc.products.list.useQuery();
 
   // Estado do campo de data de nascimento como texto mascarado
@@ -259,10 +260,10 @@ export default function NovaVenda() {
   if (success) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[70vh]">
-          <div className="text-center max-w-sm mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center min-h-[70vh]">
+          <div className="text-center max-w-sm mx-auto px-4 py-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl">
             <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
-              style={{ background: "linear-gradient(135deg, #1a7a4a, #22924f)" }}>
+              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.68 0.14 70))" }}>
               <CheckCircle2 className="w-12 h-12 text-white" />
             </div>
             <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
@@ -271,514 +272,199 @@ export default function NovaVenda() {
             <p className="text-base mb-2" style={{ color: "var(--muted-foreground)" }}>
               A venda foi salva com sucesso no sistema.
             </p>
-            <p className="text-sm mb-8" style={{ color: "#8888a0" }}>
-              O administrador poderá visualizá-la no painel.
+            <p className="text-sm mb-8" style={{ color: "var(--muted-foreground)" }}>
+              Você pode visualizar o histórico de vendas na seção "Vendas".
             </p>
-            <button
-              onClick={resetForm}
-              className="w-full py-5 px-8 rounded-2xl text-white font-semibold text-lg transition-all active:scale-[0.98] shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
-              Registrar Nova Venda
+            <button onClick={resetForm}
+              className="px-8 py-4 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 mx-auto">
+              <Plus className="w-5 h-5" /> Registrar Nova Venda
             </button>
           </div>
-        </div>
+        </motion.div>
       </DashboardLayout>
     );
   }
 
-  // ── Classe base dos inputs ─────────────────────────────────────
-  const inputClass = `w-full px-4 rounded-xl text-base transition-all focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${isMobile ? "py-4 text-[16px]" : "py-3"}`;
-  const cardClass = "rounded-2xl p-5 shadow-sm";
-  const cardStyle = { background: "white", border: "1px solid var(--border)" };
-
   return (
     <DashboardLayout>
-      <div className="max-w-lg mx-auto">
-
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
-            <Star className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-              Nova Venda
-            </h1>
-            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-              Olá, <strong>{user?.name?.split(" ")[0] || "Vendedor"}</strong>! Preencha os dados abaixo.
-            </p>
-          </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-6 pb-20">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+            Nova Venda
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+            Registre uma nova venda no sistema.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* ── Card 1: Dados do Cliente ── */}
-          <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>1</span>
-              Dados do Cliente
-            </h2>
-            <div className="space-y-4">
-
-              {/* Nome */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Nome Completo {requiredStar}
-                </label>
-                <input
-                  type="text"
-                  value={form.clientName}
-                  onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))}
-                  placeholder="Ex: Maria da Silva"
-                  className={inputClass}
-                  style={inputStyle}
-                  autoComplete="off"
-                  required
-                />
-              </div>
-
-              {/* Data de Nascimento — input text com máscara dd/mm/aaaa + botão calendário */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Data de Nascimento {requiredStar}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={birthDateInputRef}
-                    type="text"
-                    inputMode="numeric"
-                    value={birthDateMasked}
-                    onChange={handleBirthDateInput}
-                    placeholder="DD/MM/AAAA"
-                    maxLength={10}
-                    className={inputClass}
-                    style={inputStyle}
-                    autoComplete="off"
-                  />
-                  {/* Botão calendário — abre o input nativo oculto */}
-                  <button
-                    type="button"
-                    onClick={() => birthDateNativeRef.current?.showPicker?.()}
-                    className="shrink-0 flex items-center justify-center rounded-xl transition-all active:scale-95"
-                    style={{
-                      width: isMobile ? 52 : 44,
-                      height: isMobile ? 52 : 44,
-                      background: "#faf8f4",
-                      border: "1.5px solid var(--border)",
-                      color: "var(--primary)",
-                    }}
-                    aria-label="Abrir calendário"
-                  >
-                    <Calendar className="w-5 h-5" />
-                  </button>
-                  {/* Input nativo oculto — usado apenas pelo botão calendário */}
-                  <input
-                    ref={birthDateNativeRef}
-                    type="date"
-                    value={form.clientBirthDate}
-                    onChange={handleBirthDateNative}
-                    className="sr-only"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                </div>
-              </div>
-
-              {/* Telefone */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Telefone {requiredStar}
-                </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={form.clientPhone}
-                  onChange={handlePhoneChange}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                  className={inputClass}
-                  style={inputStyle}
-                  required
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6 p-6 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Nome do Cliente <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required />
             </div>
-          </div>
 
-          {/* ── Card 2: Dados do Trabalho ── */}
-          <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>2</span>
-              Dados do Trabalho
-            </h2>
-            <div className="space-y-4">
-
-              {/* Trabalho Espiritual — input único com autocomplete */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Data de Nascimento <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Trabalho Espiritual {requiredStar}
-                </label>
-                <div className="relative">
-                  <input
-                    ref={productInputRef}
-                    type="text"
-                    value={productDropdownOpen ? productQuery : form.productName}
-                    onChange={e => {
-                      setProductQuery(e.target.value);
-                      setProductDropdownOpen(true);
-                      // Se o utilizador apagar tudo, limpa a seleção
-                      if (!e.target.value) {
-                        setForm(f => ({ ...f, productName: "", productId: null }));
-                      }
-                    }}
-                    onFocus={() => {
-                      setProductQuery("");
-                      setProductDropdownOpen(true);
-                    }}
-                    onBlur={() => {
-                      // Pequeno delay para permitir o click no item da lista
-                      setTimeout(() => setProductDropdownOpen(false), 150);
-                    }}
-                    placeholder={loadingProducts ? "Carregando..." : "Digite ou selecione o trabalho..."}
-                    readOnly={loadingProducts}
-                    className={inputClass}
-                    style={{
-                      ...inputStyle,
-                      paddingRight: "2.5rem",
-                      color: form.productName && !productDropdownOpen ? "var(--foreground)" : "var(--foreground)",
-                    }}
-                    autoComplete="off"
-                  />
-                  {/* Botão de seta para abrir dropdown ao clicar */}
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={() => {
-                      if (productDropdownOpen) {
-                        setProductDropdownOpen(false);
-                      } else {
-                        setProductQuery("");
-                        setProductDropdownOpen(true);
-                        productInputRef.current?.focus();
-                      }
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-transform"
-                    style={{ color: "var(--muted-foreground)", transform: productDropdownOpen ? "translateY(-50%) rotate(180deg)" : "translateY(-50%)" }}
-                    aria-label="Abrir lista de trabalhos">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Dropdown de sugestões */}
-                {productDropdownOpen && !loadingProducts && (
-                  <div
-                    className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
-                    style={{
-                      background: "white",
-                      border: "1.5px solid var(--border)",
-                      maxHeight: 240,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {filteredProducts.length === 0 ? (
-                      <div className="px-4 py-3 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        Nenhum trabalho encontrado.
-                      </div>
-                    ) : (
-                      filteredProducts.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onMouseDown={e => e.preventDefault()} // evita blur antes do click
-                          onClick={() => {
-                            setForm(f => ({ ...f, productName: p.name, productId: p.id }));
-                            setProductQuery("");
-                            setProductDropdownOpen(false);
-                            productInputRef.current?.blur();
-                          }}
-                          className="w-full text-left transition-colors"
-                          style={{
-                            padding: isMobile ? "14px 16px" : "10px 16px",
-                            fontSize: isMobile ? 16 : 14,
-                            background: form.productName === p.name ? "var(--accent)" : "white",
-                            color: "var(--foreground)",
-                            borderBottom: "1px solid var(--border)",
-                          }}
-                        >
-                          {p.name}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
-              {!isConsultaCartas && (
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Tipo {requiredStar}
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {([
-                    { value: "individual", label: "Individual", icon: "" },
-                    { value: "promocao", label: "Promoção", icon: "⭐ " },
-                    { value: "coletivo", label: "Coletivo", icon: "👥 " },
-                  ] as const).map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, productCategory: opt.value }))}
-                      className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 border-2"
-                      style={form.productCategory === opt.value
-                        ? { background: opt.value === "promocao" ? "var(--accent)" : opt.value === "coletivo" ? "#e0e0f8" : "var(--border)",
-                            color: opt.value === "promocao" ? "#7a5518" : opt.value === "coletivo" ? "#4040b0" : "#2a2a40",
-                            borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "var(--muted-foreground)" }
-                        : { background: "white", color: "var(--muted-foreground)", borderColor: "var(--border)" }
-                      }>
-                      {opt.icon}{opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              )}
-
-              {/* Data da Venda */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Data da Venda {user?.role === "admin" ? requiredStar : null}
-                </label>
-                {user?.role === "admin" ? (
-                  <input
-                    type="date"
-                    value={form.saleDate}
-                    onChange={e => setForm(f => ({ ...f, saleDate: e.target.value }))}
-                    className={inputClass}
-                    style={inputStyle}
-                    required
-                  />
-                ) : (
-                  <div
-                    className={inputClass}
-                    style={{ ...inputStyle, background: "#f5f0e8", color: "#4a4a60", cursor: "not-allowed" }}
-                  >
-                    {fmtDate(form.saleDate)}
-                  </div>
-                )}
-              </div>
-
-              {/* Horário da Consulta — exibido apenas para Consulta Cartas */}
-              {isConsultaCartas && (
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4" style={{ color: "#5050c0" }} />
-                      Horário da Consulta {requiredStar}
-                    </span>
-                  </label>
-                  {loadingSlots ? (
-                    <div className="flex items-center gap-2 py-3" style={{ color: "var(--muted-foreground)" }}>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Carregando horários...</span>
-                    </div>
-                  ) : availableSlots.length === 0 ? (
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f5f0e8", border: "1.5px solid var(--border)" }}>
-                      <Clock className="w-6 h-6 mx-auto mb-2" style={{ color: "var(--muted-foreground)" }} />
-                      <p className="text-sm font-medium" style={{ color: "#3a3a50" }}>Nenhum horário disponível</p>
-                      <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>Aguarde o administrador ou a consultora adicionar novos horários.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {Object.entries(slotsByDate).map(([dateKey, slots]) => (
-                        <div key={dateKey}>
-                          <p className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: "#5050c0" }}>
-                            <Calendar className="w-3.5 h-3.5" />
-                            {fmtDate(dateKey)}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {(slots ?? []).map(slot => (
-                              <button
-                                key={slot.id}
-                                type="button"
-                                onClick={() => setConsultationSlotId(consultationSlotId === slot.id ? null : slot.id)}
-                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 ${
-                                  consultationSlotId === slot.id
-                                    ? "text-white border-transparent"
-                                    : "border-transparent"
-                                }`}
-                                style={consultationSlotId === slot.id
-                                  ? { background: "#5050c0", color: "white" }
-                                  : { background: "#eaeaf8", color: "#3a3a9a", border: "1.5px solid #c0c0e8" }
-                                }>
-                                <Clock className="w-3.5 h-3.5 inline mr-1" />
-                                {slot.consultationTime}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Valor */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Valor do Trabalho {requiredStar}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={form.amountFormatted}
-                  onChange={handleAmountChange}
-                  placeholder="R$ 0,00"
-                  className={`${inputClass} font-semibold text-lg`}
-                  style={inputStyle}
-                  required
-                />
-              </div>
-
-              {/* Observações */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={labelStyle}>
-                  Observações <span className="font-normal text-xs" style={{ color: "var(--muted-foreground)" }}>(opcional)</span>
-                </label>
-                <textarea
-                  value={form.notes}
-                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Alguma observação sobre a venda..."
-                  rows={2}
-                  className={`${inputClass} resize-none`}
-                  style={inputStyle}
-                />
+                <input type="text" value={birthDateMasked} onChange={handleBirthDateInput} ref={birthDateInputRef}
+                  placeholder="DD/MM/AAAA" maxLength={10}
+                  className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required />
+                <input type="date" value={form.clientBirthDate} onChange={handleBirthDateNative} ref={birthDateNativeRef}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted-foreground)] pointer-events-none" />
               </div>
             </div>
-          </div>
 
-          {/* ── Card 3: Comprovante ── */}
-          <div className={cardClass} style={cardStyle}>
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "var(--primary)" }}>3</span>
-              Comprovante
-              <span className="text-xs font-normal ml-1" style={{ color: "var(--muted-foreground)" }}>(opcional)</span>
-            </h2>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Telefone <span className="text-red-500">*</span>
+              </label>
+              <input type="tel" value={form.clientPhone} onChange={handlePhoneChange}
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required />
+            </div>
 
-            {file ? (
-              /* Arquivo selecionado */
-              <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "#f5f0e8", border: "1.5px solid var(--border)" }}>
-                {filePreview ? (
-                  <img src={filePreview} alt="Preview" className="w-16 h-16 object-cover rounded-lg shadow-sm shrink-0" />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "var(--border)" }}>
-                    <FileText className="w-8 h-8" style={{ color: "var(--primary)" }} />
-                  </div>
+            <div className="sm:col-span-2 relative">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Trabalho Espiritual <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={productQuery || form.productName} onChange={e => {
+                setProductQuery(e.target.value);
+                setProductDropdownOpen(true);
+                setForm(f => ({ ...f, productName: e.target.value, productId: null, productCategory: "individual" }));
+              }} onFocus={() => setProductDropdownOpen(true)} ref={productInputRef}
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required
+                placeholder="Selecione ou digite o trabalho..." />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-4 text-[var(--muted-foreground)]">
+                {productDropdownOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </div>
+
+              <AnimatePresence>
+                {productDropdownOpen && filteredProducts.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    className="absolute z-10 w-full mt-1 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
+                    {filteredProducts.map(product => (
+                      <div key={product.id} onClick={() => {
+                        setForm(f => ({ ...f, productName: product.name, productId: product.id, productCategory: product.category as any }));
+                        setProductQuery(product.name);
+                        setProductDropdownOpen(false);
+                      }} className="px-4 py-2 cursor-pointer hover:bg-[var(--secondary)] transition-colors text-[var(--foreground)] text-sm">
+                        {product.name}
+                        {product.category === "promocao" && <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">⭐ PROMOÇÃO</span>}
+                        {product.category === "coletivo" && <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">👥 COLETIVO</span>}
+                      </div>
+                    ))}
+                  </motion.div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{file.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-                <button type="button" onClick={() => { setFile(null); setFilePreview(null); }}
-                  className="p-2 rounded-lg"
-                  style={{ color: "#c0392b" }}>
-                  <X className="w-5 h-5" />
-                </button>
+              </AnimatePresence>
+            </div>
+
+            {isConsultaCartas && (
+              <div className="sm:col-span-2 relative">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                  Horário da Consulta <span className="text-red-500">*</span>
+                </label>
+                <select value={consultationSlotId ?? ""} onChange={e => setConsultationSlotId(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required>
+                  <option value="">Selecione um horário</option>
+                  {loadingSlots ? (
+                    <option disabled>Carregando horários...</option>
+                  ) : Object.keys(slotsByDate).length === 0 ? (
+                    <option disabled>Nenhum horário disponível</option>
+                  ) : (
+                    Object.keys(slotsByDate).map(date => (
+                      <optgroup key={date} label={fmtDate(date)}>
+                        {slotsByDate[date].map(slot => (
+                          <option key={slot.id} value={slot.id}>
+                            {slot.consultationTime} ({slot.sellerName || "Vendedor não atribuído"})
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))
+                  )}
+                </select>
+                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 mt-4 w-5 h-5 text-[var(--muted-foreground)] pointer-events-none" />
               </div>
-            ) : isMobile ? (
-              /* Upload mobile: dois botões grandes (câmera + galeria) */
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "var(--accent)", border: "1.5px solid var(--border)" }}>
-                  <Camera className="w-7 h-7" style={{ color: "var(--primary)" }} />
-                  <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Tirar Foto</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-2 py-5 rounded-xl transition-all active:scale-[0.97]"
-                  style={{ background: "var(--accent)", border: "1.5px solid var(--border)" }}>
-                  <Upload className="w-7 h-7" style={{ color: "var(--primary)" }} />
-                  <span className="text-sm font-medium" style={{ color: "#2a2a40" }}>Galeria / PDF</span>
-                </button>
-              </div>
-            ) : (
-              /* Upload desktop: drag & drop */
-              <div
+            )}
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Data da Venda <span className="text-red-500">*</span>
+              </label>
+              <input type="date" value={form.saleDate} onChange={e => setForm(f => ({ ...f, saleDate: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Valor (R$) <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={form.amountFormatted} onChange={handleAmountChange}
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} required />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Observações (opcional)
+              </label>
+              <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                rows={3} placeholder="Detalhes adicionais sobre a venda..."
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all resize-none" style={inputStyle} />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                Anexo (opcional, máx 5MB)
+              </label>
+              <div className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                ${isDragging ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-[var(--secondary)]"}`}
                 onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all"
-                style={{
-                  borderColor: isDragging ? "var(--primary)" : "var(--border)",
-                  background: isDragging ? "var(--accent)" : "#faf8f4",
-                }}>
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--accent)" }}>
-                    <Upload className="w-6 h-6" style={{ color: "var(--primary)" }} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: "#2a2a40" }}>
-                      Clique ou arraste o comprovante aqui
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
-                      JPG, PNG, WEBP ou PDF — máx. 5MB
-                    </p>
-                  </div>
-                </div>
+                onClick={() => fileInputRef.current?.click()}>
+                {filePreview ? (
+                  <img src={filePreview} alt="Preview" className="max-h-40 rounded-lg mb-3" />
+                ) : file ? (
+                  <FileText className="w-12 h-12 text-[var(--primary)] mb-3" />
+                ) : (
+                  <Upload className="w-12 h-12 text-[var(--muted-foreground)] opacity-50 mb-3" />
+                )}
+                <p className="text-sm font-medium text-[var(--foreground)] mb-1">
+                  {file ? file.name : "Arraste e solte um arquivo aqui ou clique para selecionar"}
+                </p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  JPG, PNG, WEBP ou PDF (máx. 5MB)
+                </p>
+                <input type="file" ref={fileInputRef} className="hidden" onChange={e => handleFileChange(e.target.files?.[0] || null)} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
+                  className="mt-3 px-4 py-2 rounded-lg text-xs font-bold bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] flex items-center gap-2">
+                  <Camera className="w-4 h-4" /> Tirar Foto
+                </button>
+                <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} className="hidden" onChange={e => handleFileChange(e.target.files?.[0] || null)} />
+                {file && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); setFilePreview(null); }}
+                    className="mt-2 text-red-500 text-xs font-bold flex items-center gap-1">
+                    <X className="w-3 h-3" /> Remover Anexo
+                  </button>
+                )}
               </div>
-            )}
-
-            {/* Input câmera (mobile, capture=camera) */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="environment"
-              className="hidden"
-              onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
-            />
-            {/* Input galeria/arquivo */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              className="hidden"
-              onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
-            />
+            </div>
           </div>
 
-          {/* ── Botão Registrar ── */}
-          <button
-            type="submit"
-            disabled={createSale.isPending}
-            className={`w-full rounded-2xl text-white font-semibold transition-all active:scale-[0.98] shadow-lg disabled:opacity-60 disabled:cursor-not-allowed ${isMobile ? "py-5 text-lg" : "py-4 text-base"}`}
-            style={{ background: "linear-gradient(135deg, var(--primary), #d4932a)" }}>
-            {createSale.isPending ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Registrando venda...
-              </span>
-            ) : (
-              "✓  Registrar Venda"
-            )}
-          </button>
-
+          <div className="flex justify-end pt-4">
+            <button type="submit" disabled={createSale.isPending || loadingProducts || loadingSlots}
+              className="px-8 py-4 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+              {createSale.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Star className="w-5 h-5" />}
+              Registrar Venda
+            </button>
+          </div>
         </form>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 }

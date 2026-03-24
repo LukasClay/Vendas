@@ -1,11 +1,12 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
+import { motion, AnimatePresence } from "framer-motion";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -19,14 +20,16 @@ function toInputDate(date: Date | string | null) {
 
 const inputStyle = {
   border: "1.5px solid var(--border)",
-  background: "var(--card)",
+  background: "var(--secondary)",
   color: "var(--foreground)",
-  fontSize: "16px",
+  fontSize: "14px",
 };
 
-// ─── Modal de edição com estado ISOLADO para evitar re-render da tabela ───
+// ─── Modal de edição ──────────────────────────────────────────────────────────
 function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; onClose: () => void }) {
   const utils = trpc.useUtils();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const [editForm, setEditForm] = useState({
     clientName: sale.clientName ?? "",
@@ -63,81 +66,59 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh] sm:max-h-[90vh]"
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-[var(--border)]"
         style={{ background: "var(--card)" }}>
-        {/* Header style={{ background: "var(--card)" }}>
-        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b"
+        
+        <div className="px-6 py-5 border-b flex items-center justify-between"
           style={{ borderColor: "var(--border)" }}>
-          <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>           Editar Venda
+          <h2 className="font-bold text-xl" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+            Editar Venda
           </h2>
-          <button onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            style={{ color: "var(--muted-foreground)" }}>
+          <button onClick={onClose} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Formulário */}
-        <div className="px-4 sm:px-6 py-5 space-y-4">
+        <div className="px-6 py-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Nome do cliente
-              </label>
-              <input type="text" value={editForm.clientName}
-                onChange={e => setEditForm(f => ({ ...f, clientName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Nome do cliente</label>
+              <input type="text" value={editForm.clientName} onChange={e => setEditForm(f => ({ ...f, clientName: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Data de nascimento
-              </label>
-              <input type="date" value={editForm.clientBirthDate}
-                onChange={e => setEditForm(f => ({ ...f, clientBirthDate: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Nascimento</label>
+              <input type="date" value={editForm.clientBirthDate} onChange={e => setEditForm(f => ({ ...f, clientBirthDate: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Telefone
-              </label>
-              <input type="tel" value={editForm.clientPhone}
-                onChange={e => setEditForm(f => ({ ...f, clientPhone: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Telefone</label>
+              <input type="tel" value={editForm.clientPhone} onChange={e => setEditForm(f => ({ ...f, clientPhone: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Trabalho</label>
+              <input type="text" value={editForm.productName} onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Nome do trabalho
-              </label>
-              <input type="text" value={editForm.productName}
-                onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Data da venda</label>
+              <input type="date" value={editForm.saleDate} onChange={e => setEditForm(f => ({ ...f, saleDate: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Data da venda
-              </label>
-              <input type="date" value={editForm.saleDate}
-                onChange={e => setEditForm(f => ({ ...f, saleDate: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Valor (R$)</label>
+              <input type="number" step="0.01" min="0" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Valor (R$)
-              </label>
-              <input type="number" step="0.01" min="0" value={editForm.amount}
-                onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Vendedor
-              </label>
-              <select value={editForm.sellerId}
-                onChange={e => setEditForm(f => ({ ...f, sellerId: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none cursor-pointer" style={inputStyle}>
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Vendedor</label>
+              <select value={editForm.sellerId} onChange={e => setEditForm(f => ({ ...f, sellerId: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
                 <option value="">Manter atual</option>
                 {sellers.map(s => (
                   <option key={s.id} value={s.id}>{s.displayName || s.name || s.email}</option>
@@ -145,44 +126,40 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
-                Observações
-              </label>
-              <textarea value={editForm.notes}
-                onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Observações</label>
+              <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                 rows={3} placeholder="Observações opcionais..."
-                className="w-full px-4 py-3 rounded-xl outline-none resize-none" style={inputStyle} />
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all resize-none" style={inputStyle} />
             </div>
           </div>
         </div>
 
-        {/* Footer do modal */}
-        <div className="flex gap-3 px-4 sm:px-6 py-4 border-t pb-6 sm:pb-4" style={{ borderColor: "var(--border)" }}>
-          <button
-            onClick={handleUpdate}
-            disabled={updateSale.isPending}
-            className="flex-1 py-4 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-            style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.68 0.14 70))", fontSize: "16px" }}>
-            {updateSale.isPending ? "Salvando..." : "Salvar Alterações"}
-          </button>
-          <button onClick={onClose}
-            className="px-5 py-4 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
-            style={{ background: "var(--secondary)", color: "var(--foreground)", fontSize: "16px" }}>
+        <div className="flex gap-3 px-6 py-6 border-t" style={{ borderColor: "var(--border)" }}>
+          <button onClick={onClose} className="flex-1 py-4 rounded-2xl font-bold transition-all bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-xs">
             Cancelar
           </button>
+          <button onClick={handleUpdate} disabled={updateSale.isPending}
+            className="flex-[2] py-4 rounded-2xl font-bold text-white transition-all bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+            {updateSale.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            Salvar
+          </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 // ─── Componente principal ───────────────────────────────────────────────────
 export default function AdminVendas() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
   const { data: sellers = [] } = trpc.users.listAll.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
 
   const [filters, setFilters] = useState({ startDate: "", endDate: "", sellerId: "", productName: "", category: "" });
+  const [showFilters, setShowFilters] = useState(false);
+  
   const queryFilters = useMemo(() => ({
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
@@ -193,28 +170,6 @@ export default function AdminVendas() {
 
   const { data: rawSalesData = [], isLoading } = trpc.sales.list.useQuery(queryFilters);
 
-  // Exportar CSV com os filtros ativos
-  const [csvLoading, setCsvLoading] = useState(false);
-  const exportCsvQuery = trpc.sales.exportCsv.useQuery(queryFilters, { enabled: false });
-  async function handleExportCsv() {
-    setCsvLoading(true);
-    try {
-      const result = await exportCsvQuery.refetch();
-      if (!result.data?.csv) { toast.error('Nenhum dado para exportar'); return; }
-      const bom = '\uFEFF';
-      const blob = new Blob([bom + result.data.csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `vendas_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${result.data.total} vendas exportadas`);
-    } catch { toast.error('Erro ao exportar CSV'); }
-    finally { setCsvLoading(false); }
-  }
-
-  // Filtro client-side por categoria
   const salesData = useMemo(() => {
     if (!filters.category) return rawSalesData;
     return rawSalesData.filter((item: any) => {
@@ -223,26 +178,12 @@ export default function AdminVendas() {
     });
   }, [rawSalesData, filters.category]);
 
-  // Estado do modal de edição — apenas controla qual venda está aberta
   const [editSale, setEditSale] = useState<any | null>(null);
-
-  // Estado de confirmação de exclusão
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
-  // Estado do modal de histórico de cliente
-  const [historyClientName, setHistoryClientName] = useState<string | null>(null);
-  const { data: clientHistory, isLoading: loadingHistory } = trpc.sales.clientHistory.useQuery(
-    { clientName: historyClientName! },
-    { enabled: !!historyClientName }
-  );
-
   const deleteSale = trpc.sales.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Venda excluída com sucesso!");
-      utils.sales.list.invalidate();
-      setDeleteConfirmId(null);
-    },
-    onError: (err) => toast.error(err.message),
+    onSuccess: () => { toast.success("Venda excluída"); utils.sales.list.invalidate(); setDeleteConfirmId(null); },
+    onError: (err) => toast.error(err.message)
   });
 
   const openEdit = (item: any) => {
@@ -260,370 +201,180 @@ export default function AdminVendas() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-              Todas as Vendas
-            </h1>
-            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-              {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
-              {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
-            </p>
-          </div>
-          <button
-            onClick={handleExportCsv}
-            disabled={csvLoading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition-opacity hover:opacity-80 disabled:opacity-50 shrink-0"
-            style={{ background: "oklch(0.55 0.15 145)", color: "white" }}
-          >
-            {csvLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Exportar CSV
-          </button>
-        </div>
-
-        {/* Filtros */}
-        <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4" style={{ color: "var(--primary)" }} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Filtros</h2>
-            {hasFilters && (
-              <button onClick={clearFilters}
-                className="ml-auto flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
-                <X className="w-3 h-3" /> Limpar filtros
+      <div className="max-w-6xl mx-auto space-y-6 pb-20">
+        <FadeIn>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>Histórico de Vendas</h1>
+              <p className="text-sm mt-1 text-[var(--muted-foreground)]">Gerencie e filtre todos os registros do sistema</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowFilters(!showFilters)} 
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${showFilters ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'bg-[var(--card)] text-[var(--foreground)] border-[var(--border)]'}`}>
+                <Filter className="w-4 h-4" />
+                Filtros
               </button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Data início</label>
-              <input type="date" value={filters.startDate}
-                onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Data fim</label>
-              <input type="date" value={filters.endDate}
-                onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Vendedor</label>
-              <select value={filters.sellerId}
-                onChange={e => setFilters(f => ({ ...f, sellerId: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
-                <option value="">Todos</option>
-                {sellers.map(s => <option key={s.id} value={s.id}>{s.displayName || s.name || s.email}</option>)}
-              </select>
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-green-600 text-white shadow-lg shadow-green-500/20 active:scale-95">
+                <Download className="w-4 h-4" />
+                Exportar
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Trabalho</label>
-              <select value={filters.productName}
-                onChange={e => setFilters(f => ({ ...f, productName: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
-                <option value="">Todos</option>
-                {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Tipo</label>
-              <select value={filters.category}
-                onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
-                <option value="">Todos</option>
-                <option value="individual">Individual</option>
-                <option value="promocao">⭐ Promoção</option>
-                <option value="coletivo">👥 Coletivo</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        </FadeIn>
 
-        {/* Tabela */}
-        {/* Modal de Histórico de Cliente */}
-        {historyClientName && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-            style={{ background: "rgba(0,0,0,0.5)" }}
-            onClick={(e) => { if (e.target === e.currentTarget) setHistoryClientName(null); }}>
-            <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
-              style={{ background: "var(--card)" }}>
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-                <div>
-                  <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-                    {historyClientName}e
-                  </h2>
-                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>{historyClientName}</p>
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="p-6 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Início</label>
+                  <input type="date" value={filters.startDate} onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl outline-none border border-[var(--border)] bg-[var(--secondary)] text-sm" />
                 </div>
-                <button onClick={() => setHistoryClientName(null)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  style={{ color: "var(--muted-foreground)" }}>
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Fim</label>
+                  <input type="date" value={filters.endDate} onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl outline-none border border-[var(--border)] bg-[var(--secondary)] text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Vendedor</label>
+                  <select value={filters.sellerId} onChange={e => setFilters(f => ({ ...f, sellerId: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl outline-none border border-[var(--border)] bg-[var(--secondary)] text-sm cursor-pointer">
+                    <option value="">Todos</option>
+                    {sellers.map(s => <option key={s.id} value={s.id}>{s.displayName || s.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Categoria</label>
+                  <select value={filters.category} onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl outline-none border border-[var(--border)] bg-[var(--secondary)] text-sm cursor-pointer">
+                    <option value="">Todas</option>
+                    <option value="individual">Individual</option>
+                    <option value="promocao">Promoção</option>
+                    <option value="coletivo">Coletivo</option>
+                  </select>
+                </div>
+                <div className="lg:col-span-4 flex justify-end pt-2">
+                  <button onClick={clearFilters}
+                    className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest">
+                    Limpar Filtros
+                  </button>
+                </div>
               </div>
-              <div className="px-6 py-5">
-                {loadingHistory ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Trabalhos */}
-                    {clientHistory && clientHistory.totalPurchases > 0 && (
-                      <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--muted-foreground)" }}>
-                          Trabalhos ({clientHistory.totalPurchases})
-                        </h3>
-                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                          {clientHistory.purchases.map((p: any, i: number) => (
-                            <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-2"
-                              style={{ borderBottom: i < clientHistory.purchases.length - 1 ? "1px solid var(--border)" : "none" }}>
-                              <div>
-                                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{p.productName}</p>
-                                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatDate(p.saleDate)}</p>
-                              </div>
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
-                                background: p.workStatus === "feito" ? "oklch(0.92 0.04 160)" : p.workStatus === "pendente" ? "oklch(0.94 0.03 65)" : "oklch(0.92 0.04 250)",
-                                color: p.workStatus === "feito" ? "oklch(0.40 0.14 160)" : p.workStatus === "pendente" ? "oklch(0.45 0.10 65)" : "oklch(0.40 0.14 250)",
-                              }}>
-                                {p.workStatus === "feito" ? "Feito" : p.workStatus === "pendente" ? "Pendente" : "Escrever"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* Consultas */}
-                    {clientHistory && clientHistory.totalConsultas > 0 && (
-                      <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--muted-foreground)" }}>
-                          Consultas de Cartas ({clientHistory.totalConsultas})
-                        </h3>
-                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                          {clientHistory.consultas.map((c: any, i: number) => (
-                            <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-2"
-                              style={{ borderBottom: i < clientHistory.consultas.length - 1 ? "1px solid var(--border)" : "none" }}>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--primary)" }} />
-                                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Consulta Cartas</p>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
-                                  {c.consultationDate ? c.consultationDate.slice(8,10)+"/"+c.consultationDate.slice(5,7)+"/"+c.consultationDate.slice(0,4) : ""} às {c.consultationTime}
-                                </span>
-                                {c.status === "cancelada" && (
-                                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.18 25)" }}>Cancelada</p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {clientHistory && clientHistory.totalPurchases === 0 && clientHistory.totalConsultas === 0 && (
-                      <p className="text-sm text-center py-6" style={{ color: "var(--muted-foreground)" }}>Nenhum histórico encontrado.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
-            </div>
-          ) : salesData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <FileText className="w-10 h-10 mb-3" style={{ color: "var(--muted-foreground)" }} />
-              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Nenhuma venda encontrada</p>
-              {hasFilters && (
-                <button onClick={clearFilters} className="text-xs mt-2 underline" style={{ color: "var(--primary)" }}>
-                  Limpar filtros
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                      {["Data", "Cliente", "Trabalho", "Vendedor", "Valor", "Comprovante", "Ações"].map(h => (
-                        <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide"
-                          style={{ color: "var(--muted-foreground)" }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salesData.map((item: any) => {
-                      const sale = item.sale ?? item;
-                      const seller = item.seller;
-                      return (
-                        <tr key={sale.id} className="transition-colors"
-                          style={{ borderBottom: "1px solid var(--border)" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "var(--muted)")}
-                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <td className="px-4 py-3.5 text-sm whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
-                            {formatDate(sale.saleDate)}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <button
-                              onClick={() => setHistoryClientName(sale.clientName)}
-                              className="text-left hover:underline"
-                              title="Ver histórico desta cliente">
-                              <p className="text-sm font-medium" style={{ color: "var(--primary)" }}>{sale.clientName}</p>
-                            </button>
-                            {sale.clientPhone && <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{sale.clientPhone}</p>}
-                          </td>
-                          <td className="px-4 py-3.5 text-sm" style={{ color: "var(--foreground)" }}>
-                            <span>{sale.productName}</span>
-                            {sale.productCategory === "promocao" && (
-                              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.94 0.04 65)", color: "oklch(0.50 0.14 65)" }}>⭐ Promoção</span>
-                            )}
-                            {sale.productCategory === "coletivo" && (
-                              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.40 0.14 250)" }}>👥 Coletivo</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5 text-sm" style={{ color: "var(--foreground)" }}>
-                            {seller?.displayName || seller?.name || "-"}
-                          </td>
-                          <td className="px-4 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--primary)" }}>
-                            {formatCurrency(sale.amount)}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            {sale.attachmentUrl ? (
-                              <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg w-fit"
-                                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
-                                <ExternalLink className="w-3 h-3" /> Ver
-                              </a>
-                            ) : (
-                              <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <div className="flex items-center gap-1">
-                              {/* Editar */}
-                              <button onClick={() => openEdit(item)}
-                                className="p-1.5 rounded-lg transition-colors hover:bg-blue-50"
-                                style={{ color: "var(--primary)" }} title="Editar venda">
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              {/* Excluir / Confirmar */}
-                              {deleteConfirmId === sale.id ? (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => deleteSale.mutate({ id: sale.id })}
-                                    disabled={deleteSale.isPending}
-                                    className="p-1.5 rounded-lg text-white transition-colors text-xs font-semibold px-2"
-                                    style={{ background: "oklch(0.58 0.22 25)" }}>
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={() => setDeleteConfirmId(null)}
-                                    className="p-1.5 rounded-lg transition-colors hover:bg-gray-100"
-                                    style={{ color: "var(--muted-foreground)" }} title="Cancelar">
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button onClick={() => setDeleteConfirmId(sale.id)}
-                                  className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
-                                  style={{ color: "oklch(0.58 0.22 25)" }} title="Excluir venda">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              {/* Mobile cards */}
-              <div className="md:hidden divide-y" style={{ borderColor: "var(--border)" }}>
-                {salesData.map((item: any) => {
-                  const sale = item.sale ?? item;
-                  const seller = item.seller;
-                  return (
-                    <div key={sale.id} className="px-4 py-4">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>{sale.clientName}</p>
-                        <p className="font-semibold text-sm" style={{ color: "var(--primary)" }}>{formatCurrency(sale.amount)}</p>
+        <div className="rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--secondary)]/30">
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Data</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Cliente</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Trabalho</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Valor</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Vendedor</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+                        <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Carregando vendas...</p>
                       </div>
-                      <p className="text-xs mb-2" style={{ color: "var(--muted-foreground)" }}>
-                        {sale.productName}
-                        {sale.productCategory === "promocao" && <span className="ml-1 text-xs">⭐</span>}
-                        {sale.productCategory === "coletivo" && <span className="ml-1 text-xs">👥</span>}
-                        {" · "}{seller?.displayName || seller?.name || ""} · {formatDate(sale.saleDate)}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button onClick={() => setHistoryClientName(sale.clientName)}
-                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
-                          style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.35 0.15 280)" }}>
-                          <History className="w-3 h-3" /> Histórico
-                        </button>
-                        {sale.attachmentUrl && (
-                          <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
-                            style={{ background: "var(--secondary)", color: "var(--primary)" }}>
-                            <ExternalLink className="w-3 h-3" /> Comprovante
-                          </a>
-                        )}
-                        <button onClick={() => openEdit(item)}
-                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
-                          style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>
-                          <Pencil className="w-3 h-3" /> Editar
-                        </button>
-                        {deleteConfirmId === sale.id ? (
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => deleteSale.mutate({ id: sale.id })}
-                              disabled={deleteSale.isPending}
-                              className="text-xs px-2 py-1 rounded-lg text-white font-semibold"
-                              style={{ background: "oklch(0.58 0.22 25)" }}>
-                              Confirmar
+                    </td>
+                  </tr>
+                ) : salesData.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3 opacity-20">
+                        <FileText className="w-12 h-12 text-[var(--muted-foreground)]" />
+                        <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Nenhuma venda encontrada</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  salesData.map((item: any) => {
+                    const sale = item.sale ?? item;
+                    return (
+                      <tr key={sale.id} className="hover:bg-[var(--secondary)]/20 transition-colors group">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-[var(--foreground)]">{formatDate(sale.saleDate)}</span>
+                            <span className="text-[10px] text-[var(--muted-foreground)]">{new Date(sale.saleDate).getFullYear()}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-[var(--foreground)]">{sale.clientName}</span>
+                            <span className="text-[10px] text-[var(--muted-foreground)]">{sale.clientPhone || "Sem telefone"}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-[var(--primary)]">{sale.productName}</span>
+                            <span className="text-[10px] uppercase font-bold tracking-tighter text-[var(--muted-foreground)]">{sale.productCategory || "individual"}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(sale.amount)}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)]">
+                            {sale.sellerName || "—"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => setEditSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 border border-[var(--border)]">
+                              <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setDeleteConfirmId(null)}
-                              className="text-xs px-2 py-1 rounded-lg"
-                              style={{ background: "var(--secondary)", color: "var(--foreground)" }}>
-                              Cancelar
+                            <button onClick={() => setDeleteConfirmId(sale.id)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95 border border-[var(--border)]">
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        ) : (
-                          <button onClick={() => setDeleteConfirmId(sale.id)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
-                            style={{ background: "oklch(0.95 0.04 25)", color: "oklch(0.58 0.22 25)" }}>
-                            <Trash2 className="w-3 h-3" /> Excluir
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-6 py-4 bg-[var(--secondary)]/10 border-t border-[var(--border)] flex items-center justify-between">
+            <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Total de registros: {salesData.length}</p>
+            <div className="flex items-center gap-2">
+               <span className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Soma: </span>
+               <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                 {formatCurrency(salesData.reduce((acc: number, item: any) => acc + Number((item.sale ?? item).amount), 0))}
+               </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Modal de Edição — componente isolado */}
-      {editSale && (
-        <EditSaleModal
-          sale={editSale}
-          sellers={sellers}
-          onClose={() => setEditSale(null)}
-        />
-      )}
+      <AnimatePresence>
+        {editSale && <EditSaleModal sale={editSale} sellers={sellers} onClose={() => setEditSale(null)} />}
+        
+        {deleteConfirmId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[var(--border)]" style={{ background: "var(--card)" }}>
+              <h3 className="text-xl font-bold mb-2 text-[var(--foreground)]" style={{ fontFamily: "'Playfair Display', serif" }}>Excluir Venda?</h3>
+              <p className="text-sm text-[var(--muted-foreground)] mb-6">Esta ação não pode ser desfeita. O registro será removido permanentemente do sistema.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-xl font-bold bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-[10px]">Cancelar</button>
+                <button onClick={() => deleteSale.mutate({ id: deleteConfirmId })} disabled={deleteSale.isPending} className="flex-1 py-3 rounded-xl font-bold bg-red-600 text-white active:scale-95 uppercase tracking-widest text-[10px]">
+                  {deleteSale.isPending ? "Excluindo..." : "Confirmar"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

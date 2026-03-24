@@ -20,7 +20,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
 export function FadeIn({
   children,
   delay = 0,
-  duration = 0.4,
+  duration = 0.6,
   className = "",
 }: {
   children: ReactNode;
@@ -46,8 +46,8 @@ const staggerContainer: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.1,
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
     },
   },
 };

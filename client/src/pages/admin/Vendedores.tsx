@@ -1,12 +1,14 @@
 import { trpc } from "@/lib/trpc";
-import { Sparkles } from "lucide-react";
-import DashboardLayout from "@/components/DashboardLayout";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
 import {
-  Users, Pencil, Check, X, Loader2, UserCheck, UserX,
-  Plus, Eye, EyeOff, KeyRound, Shield
+  Users, Pencil, Check, X, UserCheck, UserX,
+  Plus, Eye, EyeOff, KeyRound, Shield, Loader2
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
+import { motion, AnimatePresence } from "framer-motion";
 
 type NewEmployeeForm = { name: string; username: string; password: string; phone: string };
 type EditEmployeeForm = { name: string; username: string; role: "user" | "consultora" | "admin"; active: boolean };
@@ -18,34 +20,13 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
 };
 
-const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  user: { bg: "oklch(0.92 0.04 250)", text: "oklch(0.35 0.15 250)" },
-  consultora: { bg: "oklch(0.93 0.04 290)", text: "oklch(0.40 0.18 290)" },
-  admin: { bg: "oklch(0.94 0.02 65)", text: "oklch(0.45 0.10 65)" },
-};
-
-const inputStyle = {
-  border: "1.5px solid oklch(0.88 0.012 65)",
-  background: "oklch(0.98 0.006 65)",
-  color: "oklch(0.15 0.02 260)",
-  fontSize: "16px",
-};
-
-// ─── UserCard com estado de edição e reset ISOLADO para evitar re-render em cascata ───
-type UserCardProps = {
-  user: any;
-  onDeactivate: (id: number) => void;
-  onReactivate: (id: number) => void;
-};
-
-function UserCard({ user, onDeactivate, onReactivate }: UserCardProps) {
+function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivate: (id: number) => void; onReactivate: (id: number) => void }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
 
-  // Estado de edição isolado dentro do card
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EditEmployeeForm>({ name: "", username: "", role: "user", active: true });
-
-  // Estado de reset de senha isolado dentro do card
   const [isResetting, setIsResetting] = useState(false);
   const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -68,8 +49,6 @@ function UserCard({ user, onDeactivate, onReactivate }: UserCardProps) {
     onError: (err) => toast.error(err.message),
   });
 
-  const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.user;
-
   const startEditing = () => {
     setEditForm({
       name: user.name ?? user.displayName ?? "",
@@ -89,79 +68,45 @@ function UserCard({ user, onDeactivate, onReactivate }: UserCardProps) {
     });
   };
 
-  const handleReset = () => {
-    resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword });
+  const inputStyle = {
+    border: "1.5px solid var(--border)",
+    background: "var(--secondary)",
+    color: "var(--foreground)",
   };
 
   return (
-    <div
-      className="px-4 sm:px-6 py-4 transition-colors"
-      style={{ opacity: user.active ? 1 : 0.55 }}
-      onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
-      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-    >
+    <div className="px-4 sm:px-6 py-4 transition-colors border-b last:border-0 border-[var(--border)]" style={{ opacity: user.active ? 1 : 0.6 }}>
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-        {/* Avatar */}
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm"
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-sm text-white"
           style={{
-            background:
-              user.role === "admin"
-                ? "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.72 0.15 75))"
-                : user.role === "consultora"
-                  ? "linear-gradient(135deg, oklch(0.50 0.18 290), oklch(0.60 0.20 295))"
-                  : "oklch(0.22 0.03 265)",
-            color: "white",
-          }}
-        >
+            background: user.role === "admin" 
+              ? "linear-gradient(135deg, var(--primary), oklch(0.75 0.18 75))" 
+              : user.role === "consultora"
+                ? "linear-gradient(135deg, oklch(0.55 0.20 290), oklch(0.65 0.22 295))"
+                : "oklch(0.30 0.05 265)"
+          }}>
           {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
         </div>
 
-        {/* Info / Edit inline */}
         {isEditing ? (
           <div className="flex-1 flex flex-col gap-2">
-            <input
-              type="text"
-              value={editForm.name}
-              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Nome completo"
-              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-              style={inputStyle}
-            />
-            <input
-              type="text"
-              value={editForm.username}
-              onChange={e => setEditForm(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") }))}
-              placeholder="nome_usuario"
-              autoCapitalize="none"
-              autoCorrect="off"
-              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-              style={inputStyle}
-            />
-            <select
-              value={editForm.role}
-              onChange={e => setEditForm(f => ({ ...f, role: e.target.value as "user" | "consultora" | "admin" }))}
-              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-              style={inputStyle}
-            >
+            <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Nome completo" className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={inputStyle} />
+            <input type="text" value={editForm.username} onChange={e => setEditForm(f => ({ ...f, username: e.target.value }))}
+              placeholder="nome_usuario" className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={inputStyle} />
+            <select value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value as any }))}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer" style={inputStyle}>
               <option value="user">Funcionário</option>
               <option value="consultora">Consultora</option>
               <option value="admin">Administrador</option>
             </select>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSave}
-                disabled={updateUserMutation.isPending}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1 disabled:opacity-50 active:scale-95"
-                style={{ background: "oklch(0.55 0.15 160)", fontSize: "16px" }}
-              >
-                <Check className="w-3.5 h-3.5" /> Salvar
+            <div className="flex items-center gap-2 mt-1">
+              <button onClick={handleSave} disabled={updateUserMutation.isPending}
+                className="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold text-white bg-[var(--primary)] active:scale-95 disabled:opacity-50">
+                {updateUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
               </button>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-sm active:scale-95"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
-              >
+              <button onClick={() => setIsEditing(false)}
+                className="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 border border-[var(--border)]">
                 Cancelar
               </button>
             </div>
@@ -169,403 +114,202 @@ function UserCard({ user, onDeactivate, onReactivate }: UserCardProps) {
         ) : (
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
-                {user.displayName || user.name || "Sem nome"}
-              </p>
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: roleColor.bg, color: roleColor.text }}
-              >
-                {ROLE_LABELS[user.role] ?? user.role}
+              <p className="font-bold text-base" style={{ color: "var(--foreground)" }}>{user.displayName || user.name || "Sem nome"}</p>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                style={{ 
+                  background: user.role === "admin" ? (isDark ? "rgba(202, 138, 4, 0.15)" : "oklch(0.95 0.04 65)") : (isDark ? "rgba(139, 92, 246, 0.15)" : "oklch(0.95 0.04 265)"),
+                  color: user.role === "admin" ? (isDark ? "#eab308" : "oklch(0.45 0.15 65)") : (isDark ? "#a78bfa" : "oklch(0.45 0.15 265)")
+                }}>
+                {ROLE_LABELS[user.role] || user.role}
               </span>
-              {!user.active && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: "oklch(0.93 0.04 30)", color: "oklch(0.55 0.20 30)" }}
-                >
-                  Inativo
-                </span>
-              )}
             </div>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
-              @{user.username || user.email || "sem-usuario"}
-            </p>
+            <p className="text-xs mt-0.5 text-[var(--muted-foreground)]">@{user.username || "sem-usuario"}</p>
           </div>
         )}
 
-        {/* Actions */}
         {!isEditing && (
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            <button
-              onClick={startEditing}
-              className="p-2.5 sm:p-2 rounded-lg hover:bg-blue-50 transition-colors"
-              style={{ color: "oklch(0.50 0.18 250)" }}
-              title="Editar funcionário"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setIsResetting(true); setResetForm({ newPassword: "" }); }}
-              className="p-2.5 sm:p-2 rounded-lg hover:bg-yellow-50 transition-colors"
-              style={{ color: "oklch(0.60 0.13 65)" }}
-              title="Redefinir senha"
-            >
-              <KeyRound className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={startEditing} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]"><Pencil className="w-4 h-4" /></button>
+            <button onClick={() => setIsResetting(true)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-orange-500 border border-[var(--border)]"><KeyRound className="w-4 h-4" /></button>
             {user.active ? (
-              <button
-                onClick={() => onDeactivate(user.id)}
-                className="p-2.5 sm:p-2 rounded-lg hover:bg-red-50 transition-colors"
-                style={{ color: "oklch(0.58 0.22 25)" }}
-                title="Desativar acesso"
-              >
-                <UserX className="w-4 h-4" />
-              </button>
+              <button onClick={() => onDeactivate(user.id)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]"><UserX className="w-4 h-4" /></button>
             ) : (
-              <button
-                onClick={() => onReactivate(user.id)}
-                className="p-2.5 sm:p-2 rounded-lg transition-colors"
-                style={{ color: "oklch(0.55 0.15 160)" }}
-                title="Reativar acesso"
-              >
-                <UserCheck className="w-4 h-4" />
-              </button>
+              <button onClick={() => onReactivate(user.id)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-green-500 border border-[var(--border)]"><UserCheck className="w-4 h-4" /></button>
             )}
           </div>
         )}
       </div>
 
-      {/* Reset password inline */}
-      {isResetting && (
-        <div className="mt-3 ml-0 sm:ml-14 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type={showResetPassword ? "text" : "password"}
-              value={resetForm.newPassword}
-              onChange={e => setResetForm({ newPassword: e.target.value })}
-              placeholder="Nova senha (mín. 6 caracteres)"
-              className="w-full px-3 py-2.5 pr-10 rounded-lg outline-none"
-              style={inputStyle}
-            />
-            <button
-              type="button"
-              onClick={() => setShowResetPassword(!showResetPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
-              style={{ color: "oklch(0.52 0.015 260)" }}
-            >
-              {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleReset}
-              disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-              style={{ background: "oklch(0.60 0.13 65)", fontSize: "16px" }}
-            >
-              {resetPassword.isPending ? "Salvando..." : "Salvar senha"}
-            </button>
-            <button
-              onClick={() => setIsResetting(false)}
-              className="flex-1 sm:flex-none px-3 py-2.5 rounded-lg active:scale-95"
-              style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isResetting && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="mt-4 p-4 rounded-xl border border-[var(--border)] bg-[var(--secondary)] space-y-4">
+              <p className="text-sm font-bold text-[var(--foreground)]">Redefinir Senha</p>
+              <div className="relative">
+                <input type={showResetPassword ? "text" : "password"} value={resetForm.newPassword} onChange={e => setResetForm({ newPassword: e.target.value })}
+                  placeholder="Nova senha (mín. 6 caracteres)" className="w-full px-3 py-2 pr-10 rounded-lg outline-none text-sm" style={inputStyle} />
+                <button type="button" onClick={() => setShowResetPassword(!showResetPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--muted-foreground)]">
+                  {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
+                  disabled={resetForm.newPassword.length < 6 || resetPassword.isPending}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 disabled:opacity-50">
+                  {resetPassword.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
+                </button>
+                <button onClick={() => setIsResetting(false)} className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)]">Cancelar</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// ─── Componente principal ───────────────────────────────────────────────────
-export default function AdminVendedores() {
-  const utils = trpc.useUtils();
-  const { data: users = [], isLoading } = trpc.users.listAll.useQuery();
+export default function Vendedores() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const [showResetPassword, setShowResetPassword] = useState(false); // Adicionado para o formulário de novo funcionário
+  const { data: users = [], isLoading, refetch } = trpc.users.listAll.useQuery();
+  const [isAdding, setIsAdding] = useState(false);
+  const [newForm, setNewForm] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
 
-  // Create state
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
-  const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
-  const [showNewPassword, setShowNewPassword] = useState(false);
-
-  const deactivateUser = trpc.users.deactivate.useMutation({
-    onSuccess: () => { toast.success("Funcionário desativado."); utils.users.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const reactivateUser = trpc.users.update.useMutation({
-    onSuccess: () => { toast.success("Funcionário reativado."); utils.users.listAll.invalidate(); },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const createEmployee = trpc.ownAuth.createSeller.useMutation({
+  const createUserMutation = trpc.ownAuth.register.useMutation({
     onSuccess: () => {
-      const label = ROLE_LABELS[createRole] ?? "Funcionário";
-      toast.success(`${label} criado com sucesso!`);
-      utils.users.listAll.invalidate();
-      setShowCreateForm(false);
-      setNewEmployee({ name: "", username: "", password: "", phone: "" });
+      toast.success("Funcionário criado!");
+      refetch();
+      setIsAdding(false);
+      setNewForm({ name: "", username: "", password: "", phone: "" });
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const sellers = users.filter(u => u.role === "user");
-  const consultoras = users.filter(u => u.role === "consultora");
-  const admins = users.filter(u => u.role === "admin");
+  const deactivateMutation = trpc.ownAuth.deactivateUser.useMutation({
+    onSuccess: () => { toast.success("Acesso desativado"); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
 
-  const selectStyle = {
-    ...inputStyle,
-    cursor: "pointer",
-  };
+  const reactivateMutation = trpc.ownAuth.reactivateUser.useMutation({
+    onSuccess: () => { toast.success("Acesso reativado"); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const admins = users.filter(u => u.role === "admin");
+  const employees = users.filter(u => u.role === "user");
+  const consultoras = users.filter(u => u.role === "consultora");
+
+  const inputStyle = { border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" };
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
-          <div>
-            <h1
-              className="text-xl sm:text-2xl font-bold"
-              style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}
-            >
-              Funcionários
-            </h1>
-            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
-              Gerencie os funcionários do sistema
-            </p>
+      <div className="max-w-4xl mx-auto space-y-8 pb-12">
+        <FadeIn>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>Funcionários</h1>
+              <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Gerencie os acessos do sistema</p>
+            </div>
+            <motion.button onClick={() => setIsAdding(true)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className="px-5 py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+              style={{ background: "var(--primary)" }}>
+              <Plus className="w-5 h-5" /> Novo Funcionário
+            </motion.button>
           </div>
-          <button
-            onClick={() => {
-              setCreateRole("user");
-              setShowCreateForm(true);
-              setNewEmployee({ name: "", username: "", password: "", phone: "" });
-            }}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-semibold text-white transition-all active:scale-95 text-sm"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}
-          >
-            <Plus className="w-4 h-4" />
-            Novo Funcionário
-          </button>
-        </div>
+        </FadeIn>
 
-        {/* Formulário de criação */}
-        {showCreateForm && (
-          <div className="rounded-2xl p-4 sm:p-6 mb-6 shadow-sm" style={{ background: "white", border: "2px solid oklch(0.88 0.012 65)" }}>
-            <h2 className="font-semibold mb-4" style={{ color: "oklch(0.15 0.02 260)" }}>
-              Novo Funcionário
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Cargo *</label>
-                <select
-                  value={createRole}
-                  onChange={e => setCreateRole(e.target.value as "user" | "consultora" | "admin")}
-                  className="w-full px-4 py-3 rounded-xl outline-none"
-                  style={selectStyle}
-                >
-                  <option value="user">Funcionário (Vendedor)</option>
-                  <option value="consultora">Consultora</option>
-                  <option value="admin">Administrador</option>
-                </select>
+        <AnimatePresence>
+          {isAdding && (
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="p-6 rounded-2xl shadow-xl border border-[var(--border)] bg-[var(--card)] space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-bold text-lg" style={{ color: "var(--foreground)" }}>Cadastrar Novo</h2>
+                <button onClick={() => setIsAdding(false)} className="p-2 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"><X className="w-5 h-5" /></button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Nome completo *</label>
-                <input
-                  type="text"
-                  value={newEmployee.name}
-                  onChange={e => setNewEmployee(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nome do funcionário"
-                  className="w-full px-4 py-3 rounded-xl outline-none"
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
-                  Nome de usuário *
-                  <span className="ml-1 text-xs font-normal" style={{ color: "oklch(0.55 0.01 260)" }}>(para fazer login)</span>
-                </label>
-                <input
-                  type="text"
-                  value={newEmployee.username}
-                  onChange={e => setNewEmployee(f => ({ ...f, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() }))}
-                  placeholder="ex: joao_silva"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  className="w-full px-4 py-3 rounded-xl outline-none"
-                  style={inputStyle}
-                />
-                <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 260)" }}>
-                  Apenas letras, números e _ (sem espaços)
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Senha *</label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    value={newEmployee.password}
-                    onChange={e => setNewEmployee(f => ({ ...f, password: e.target.value }))}
-                    placeholder="Mínimo 6 caracteres"
-                    className="w-full px-4 py-3 pr-12 rounded-xl outline-none"
-                    style={inputStyle}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ color: "oklch(0.52 0.015 260)" }}
-                  >
-                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Nome Completo</label>
+                  <input type="text" value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl outline-none" style={inputStyle} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Nome de Usuário</label>
+                  <input type="text" value={newForm.username} onChange={e => setNewForm(f => ({ ...f, username: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl outline-none" style={inputStyle} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Senha</label>
+                  <div className="relative">
+                    <input type={showResetPassword ? "text" : "password"} value={newForm.password} onChange={e => setNewForm(f => ({ ...f, password: e.target.value }))} className="w-full px-4 py-2.5 pr-10 rounded-xl outline-none" placeholder="Mínimo 6 caracteres" style={inputStyle} />
+                    <button type="button" onClick={() => setShowResetPassword(!showResetPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--muted-foreground)]">
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Telefone (opcional)</label>
+                  <input type="tel" value={newForm.phone} onChange={e => setNewForm(f => ({ ...f, phone: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl outline-none" style={inputStyle} />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>Telefone (opcional)</label>
-                <input
-                  type="tel"
-                  value={newEmployee.phone}
-                  onChange={e => setNewEmployee(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="(00) 00000-0000"
-                  className="w-full px-4 py-3 rounded-xl outline-none"
-                  style={inputStyle}
-                />
+              <div className="flex justify-end pt-2">
+                <button onClick={() => createUserMutation.mutate(newForm)} disabled={createUserMutation.isPending || newForm.name.length < 3 || newForm.username.length < 3 || newForm.password.length < 6}
+                  className="px-6 py-3 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-2">
+                  {createUserMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  Cadastrar
+                </button>
               </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-5">
-              <button
-                onClick={() =>
-                  createEmployee.mutate({
-                    name: newEmployee.name,
-                    username: newEmployee.username,
-                    password: newEmployee.password,
-                    phone: newEmployee.phone || undefined,
-                    role: createRole,
-                  })
-                }
-                disabled={
-                  !newEmployee.name ||
-                  newEmployee.username.length < 3 ||
-                  newEmployee.password.length < 6 ||
-                  createEmployee.isPending
-                }
-                className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}
-              >
-                {createEmployee.isPending ? "Criando..." : `Criar ${ROLE_LABELS[createRole]}`}
-              </button>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
-                style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--muted-foreground)]">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+            <p className="text-sm font-medium">Carregando funcionários...</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Administradores */}
+          <StaggerList>
             {admins.length > 0 && (
-              <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-                <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-                  <Shield className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
-                  <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Administradores</h2>
-                  <span className="ml-auto text-sm px-3 py-1 rounded-full"
-                    style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
-                    {admins.length}
-                  </span>
-                </div>
-                <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {admins.map(u => (
-                    <UserCard
-                      key={u.id}
-                      user={u}
-                      onDeactivate={(id) => deactivateUser.mutate({ id })}
-                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
-                    />
+              <StaggerItem>
+                <h2 className="text-lg font-bold mb-3" style={{ color: "var(--foreground)" }}>Administradores</h2>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
+                  {admins.map((user) => (
+                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
                   ))}
                 </div>
-              </div>
+              </StaggerItem>
             )}
 
-            {/* Funcionários */}
-            <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-              <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-                <Users className="w-4 h-4" style={{ color: "oklch(0.50 0.18 250)" }} />
-                <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Funcionários</h2>
-                <span className="ml-auto text-sm px-3 py-1 rounded-full"
-                  style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.35 0.15 250)" }}>
-                  {sellers.length}
-                </span>
-              </div>
-              {sellers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4">
-                  <Users className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
-                  <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum funcionário cadastrado</p>
-                  <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
-                    Clique em "Novo Funcionário" para cadastrar o primeiro funcionário.
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {sellers.map(u => (
-                    <UserCard
-                      key={u.id}
-                      user={u}
-                      onDeactivate={(id) => deactivateUser.mutate({ id })}
-                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
-                    />
+            {consultoras.length > 0 && (
+              <StaggerItem>
+                <h2 className="text-lg font-bold mt-6 mb-3" style={{ color: "var(--foreground)" }}>Consultoras</h2>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
+                  {consultoras.map((user) => (
+                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
                   ))}
                 </div>
-              )}
-            </div>
+              </StaggerItem>
+            )}
 
-            {/* Consultoras */}
-            <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-              <div className="px-6 py-4 border-b flex items-center gap-2" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-                <Sparkles className="w-4 h-4" style={{ color: "oklch(0.50 0.18 290)" }} />
-                <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Consultoras</h2>
-                <span className="ml-auto text-sm px-3 py-1 rounded-full"
-                  style={{ background: "oklch(0.93 0.04 290)", color: "oklch(0.40 0.18 290)" }}>
-                  {consultoras.length}
-                </span>
-              </div>
-              {consultoras.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4">
-                  <Sparkles className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 290)" }} />
-                  <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhuma consultora cadastrada</p>
-                  <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
-                    Clique em "Novo Funcionário" e selecione o cargo "Consultora".
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
-                  {consultoras.map(u => (
-                    <UserCard
-                      key={u.id}
-                      user={u}
-                      onDeactivate={(id) => deactivateUser.mutate({ id })}
-                      onReactivate={(id) => reactivateUser.mutate({ id, active: true })}
-                    />
+            {employees.length > 0 && (
+              <StaggerItem>
+                <h2 className="text-lg font-bold mt-6 mb-3" style={{ color: "var(--foreground)" }}>Funcionários</h2>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
+                  {employees.map((user) => (
+                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </StaggerItem>
+            )}
+
+            {users.length === 0 && (
+              <StaggerItem>
+                <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
+                  <Users className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário cadastrado.</p>
+                </div>
+              </StaggerItem>
+            )}
+          </StaggerList>
         )}
       </div>
     </DashboardLayout>

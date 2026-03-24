@@ -24,18 +24,18 @@ const C = {
   primaryFg:      "var(--primary-foreground)",
   bg:             "var(--background)",
   mutedFg:        "var(--muted-foreground)",
-  textHint:       "#8888a0",
-  textFaint:      "#6b6b80",
-  roleBadgeAdminBg:   "rgba(193,127,36,0.2)",
-  roleBadgeAdminFg:   "#b8860b",
-  roleBadgeConsultBg: "rgba(107,79,173,0.2)",
-  roleBadgeConsultFg: "#7b5ea7",
-  roleBadgeSellerBg:  "rgba(39,174,96,0.2)",
-  roleBadgeSellerFg:  "#1e8449",
-  logoutFg:       "#c0392b",
-  logoutBg:       "rgba(192,57,43,0.08)",
-  gradientGold:   "linear-gradient(135deg, #c17f24, #d4932a)",
-  gradientDark:   "linear-gradient(135deg, #181824 0%, #1e1e30 100%)",
+  textHint:       "var(--muted-foreground)",
+  textFaint:      "var(--muted-foreground)",
+  roleBadgeAdminBg:   "rgba(var(--primary-rgb), 0.2)",
+  roleBadgeAdminFg:   "var(--primary)",
+  roleBadgeConsultBg: "rgba(var(--accent-rgb), 0.2)",
+  roleBadgeConsultFg: "var(--accent)",
+  roleBadgeSellerBg:  "rgba(var(--success-rgb), 0.2)",
+  roleBadgeSellerFg:  "var(--success)",
+  logoutFg:       "var(--destructive)",
+  logoutBg:       "rgba(var(--destructive-rgb), 0.08)",
+  gradientGold:   "linear-gradient(135deg, var(--primary), var(--primary-darker))",
+  gradientDark:   "linear-gradient(135deg, var(--background-start), var(--background-end))",
 };
 
 const sellerMenuItems = [
@@ -132,14 +132,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex items-center justify-center min-h-screen"
         style={{ background: C.gradientDark }}>
-        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full">
+        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full rounded-3xl shadow-2xl border border-[var(--border)]"
+          style={{ background: "var(--card)" }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center"
             style={{ background: C.gradientGold }}>
             <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
               <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" opacity="0.9" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl font-bold text-center" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
             Acesso Necessário
           </h1>
           <p className="text-sm text-center" style={{ color: C.textHint }}>
@@ -266,62 +267,49 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-
-                {/* Drawer header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b"
+                <div className="flex items-center justify-between p-4 border-b"
                   style={{ borderColor: C.sidebarBorder }}>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm"
-                      style={{ background: C.gradientGold, color: "white" }}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold"
+                      style={{ background: C.gradientGold }}>
                       {initials}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: C.sidebarFg }}>{firstName}</p>
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={roleBadgeStyle}>
-                        {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
+                      <ShimmerText className="font-bold text-sm" style={{ color: C.sidebarFg }}>{firstName}</ShimmerText>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-semibold uppercase"
+                        style={roleBadgeStyle}>
+                        {user?.role === "admin" ? "Admin" : user?.role === "consultora" ? "Consultora" : "Vendedor"}
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => setMenuOpen(false)}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px]"
-                    style={{ color: C.textFaint }}>
+                  <button onClick={() => setMenuOpen(false)} className="p-2 rounded-xl text-white hover:bg-white/10">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Menu items */}
-                <nav className="flex-1 overflow-y-auto py-3 px-3">
-                  {menuItems.map((item, i) => {
-                    const isActive = activeMenuItem?.path === item.path;
-                    return (
-                      <motion.button
-                        key={item.path}
-                        onClick={() => navigate(item.path)}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.04, type: "spring", stiffness: 300, damping: 24 }}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl mb-1 transition-all text-left min-h-[44px]"
-                        style={isActive ? {
-                          background: C.sidebarAccent,
-                          borderLeft: `3px solid ${C.primary}`,
-                          color: C.sidebarFg,
-                        } : { color: C.textFaint }}>
-                        <item.icon className="w-5 h-5 shrink-0" style={isActive ? { color: C.primary } : {}} />
-                        <span className="font-medium text-[15px]">{item.label}</span>
-                        {isActive && <ChevronRight className="w-4 h-4 ml-auto" style={{ color: C.primary }} />}
-                      </motion.button>
-                    );
-                  })}
+                <nav className="flex-1 p-4 space-y-1">
+                  {menuItems.map((item, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={() => navigate(item.path)}
+                      className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors
+                        ${activeMenuItem?.path === item.path ? "bg-[var(--sidebar-accent)] text-[var(--primary-foreground)]" : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)]"}`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      {item.label}
+                    </motion.button>
+                  ))}
                 </nav>
 
-                {/* Logout */}
-                <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
+                <div className="p-4 border-t flex items-center justify-between"
+                  style={{ borderColor: C.sidebarBorder }}>
+                  <ThemeToggle size="md" />
                   <button
                     onClick={() => logoutMutation.mutate()}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px]"
-                    style={{ color: C.logoutFg, background: C.logoutBg }}>
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-medium text-sm">Sair do Sistema</span>
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+                    style={{ background: C.logoutBg, color: C.logoutFg }}>
+                    <LogOut className="w-4 h-4" />
+                    Sair
                   </button>
                 </div>
               </motion.div>
@@ -330,8 +318,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Conteúdo principal mobile */}
-        <main className="flex-1 pt-14 pb-4">
-          <div className="px-4 py-5">{children}</div>
+        <main className="flex-1 p-4 pt-16">
+          {children}
         </main>
       </div>
     );
@@ -340,122 +328,75 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // ─── DESKTOP LAYOUT ──────────────────────────────────────────────
   return (
     <div className="flex min-h-screen" style={{ background: C.bg }}>
-
-      {/* Sidebar desktop */}
-      <aside className="w-72 shrink-0 flex flex-col sticky top-0 h-screen"
-        style={{ background: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}` }}>
-
-        {/* Logo com animação */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b" style={{ borderColor: C.sidebarBorder }}>
+      {/* Sidebar */}
+      <motion.aside
+        initial={{ x: -50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="w-64 shrink-0 flex flex-col border-r shadow-lg"
+        style={{ background: C.sidebar, borderColor: C.sidebarBorder }}>
+        <div className="flex items-center gap-3 p-4 border-b"
+          style={{ borderColor: C.sidebarBorder }}>
           <PulseStar className="text-amber-500" />
-          <ShimmerText className="font-semibold text-base" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>
             Mundo Da Magia
-          </ShimmerText>
-        </div>
-
-        {/* Role badge */}
-        <div className="px-4 py-3">
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={roleBadgeStyle}>
-            {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
           </span>
         </div>
 
-        {/* Nav - fontes maiores, ícones maiores, melhor contraste */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5">
-          {menuItems.map((item, i) => {
-            const isActive = activeMenuItem?.path === item.path;
-            return (
-              <motion.button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left relative"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 24 }}
-                whileHover={{ x: 4 }}
-                style={{ color: isActive ? C.sidebarFg : "rgba(200,200,215,0.65)" }}
-              >
-                {/* Barra lateral ativa com animação */}
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active"
-                    className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
-                    style={{ background: C.primary }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                {/* Background ativo */}
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-bg"
-                    className="absolute inset-0 rounded-xl"
-                    style={{ background: C.sidebarAccent }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <item.icon
-                  className="w-5 h-5 shrink-0 relative z-10"
-                  style={isActive ? { color: C.primary } : {}}
+        <div className="flex flex-col items-center p-4 border-b"
+          style={{ borderColor: C.sidebarBorder }}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2"
+            style={{ background: C.gradientGold }}>
+            {initials}
+          </div>
+          <ShimmerText className="font-bold text-base" style={{ color: C.sidebarFg }}>{displayName}</ShimmerText>
+          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold uppercase mt-1"
+            style={roleBadgeStyle}>
+            {user?.role === "admin" ? "Administrador" : user?.role === "consultora" ? "Consultora" : "Vendedor"}
+          </span>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-1">
+          {menuItems.map((item, index) => (
+            <motion.button
+              key={index}
+              onClick={() => navigate(item.path)}
+              whileHover={{ x: 5 }}
+              whileTap={{ scale: 0.98 }}
+              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${activeMenuItem?.path === item.path ? "bg-[var(--sidebar-accent)] text-[var(--primary-foreground)] shadow-sm" : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)]"}`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+              {activeMenuItem?.path === item.path && (
+                <motion.div
+                  layoutId="active-indicator"
+                  className="absolute right-2 w-1 h-5 rounded-full bg-[var(--primary)]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 />
-                <span className="font-medium text-[15px] relative z-10">{item.label}</span>
-              </motion.button>
-            );
-          })}
+              )}
+            </motion.button>
+          ))}
         </nav>
 
-        {/* Footer */}
-        <div className="p-3 border-t" style={{ borderColor: C.sidebarBorder }}>
-          {/* User info */}
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl mb-2"
-            style={{ color: C.sidebarFg }}>
-            <motion.div
-              className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-xs shrink-0"
-              style={{ background: C.gradientGold, color: "white" }}
-              whileHover={{ scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            >
-              {initials}
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-medium truncate" style={{ color: C.sidebarFg }}>{displayName}</p>
-              <p className="text-xs truncate" style={{ color: "rgba(200,200,215,0.5)" }}>{(user as any)?.username || user?.email || ""}</p>
-            </div>
-          </div>
-
-          {/* Actions row */}
-          <div className="flex items-center justify-between px-1 mb-2">
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <div style={{ color: C.mutedFg }}>
-                <PushNotificationButton />
-              </div>
-            </div>
-          </div>
-
-          {/* Logout */}
-          <motion.button
+        <div className="p-4 border-t flex items-center justify-between"
+          style={{ borderColor: C.sidebarBorder }}>
+          <ThemeToggle size="md" />
+          <button
             onClick={() => logoutMutation.mutate()}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[15px] font-medium"
-            style={{ color: C.logoutFg }}
-            whileHover={{ background: "rgba(192,57,43,0.1)", x: 2 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          >
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+            style={{ background: C.logoutBg, color: C.logoutFg }}>
             <LogOut className="w-4 h-4" />
             Sair
-          </motion.button>
+          </button>
         </div>
-      </aside>
+      </motion.aside>
 
-      {/* Main content desktop com animação de transição */}
-      <main className="flex-1 min-w-0 p-6 overflow-y-auto">
-        <motion.div
-          key={location}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-          {children}
-        </motion.div>
+      {/* Conteúdo principal desktop */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
       </main>
     </div>
   );
