@@ -9,6 +9,8 @@ import {
   RotateCcw, UserCog
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
+import { useTheme } from "@/contexts/ThemeContext";
+import { FadeIn } from "@/components/Animations";
 
 type Tab = "para_escrever" | "pendente" | "feito";
 type Seller = { id: number; name: string | null };
@@ -50,23 +52,25 @@ function useCopy() {
 }
 
 function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isOverdue: boolean }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   if (isOverdue) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "#fde8e8", color: "#c0392b" }}>
+      style={{ background: isDark ? "oklch(0.20 0.04 25)" : "#fde8e8", color: isDark ? "oklch(0.75 0.18 25)" : "#c0392b" }}>
       <AlertTriangle className="w-3 h-3" />
       {Math.abs(daysRemaining)}d atrasado
     </span>
   );
   if (daysRemaining <= 1) return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "#fef3e2", color: "#b7770d" }}>
+      style={{ background: isDark ? "oklch(0.20 0.04 55)" : "#fef3e2", color: isDark ? "oklch(0.75 0.14 55)" : "#b7770d" }}>
       <Clock className="w-3 h-3" />
       Urgente
     </span>
   );
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: "var(--accent)", color: "#7a5a20" }}>
+      style={{ background: isDark ? "oklch(0.20 0.03 160)" : "var(--accent)", color: isDark ? "oklch(0.70 0.15 160)" : "#7a5a20" }}>
       <Clock className="w-3 h-3" />
       {daysRemaining}d restantes
     </span>
@@ -112,7 +116,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
     return (
       <button onClick={handleOpen}
         className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all active:scale-95"
-        style={{ background: "#eaeaf8", color: "#4a4a80" }}>
+        style={{ background: isDark ? "oklch(0.20 0.03 265)" : "#eaeaf8", color: isDark ? "oklch(0.70 0.12 265)" : "#4a4a80" }}>
         <UserCog className="w-3 h-3" />
         {currentSellerName || "Sem vendedor"}
       </button>
@@ -123,7 +127,7 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
     <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
       <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
         className="text-xs px-2 py-1 rounded-lg outline-none"
-        style={{ background: "white", border: "1.5px solid var(--border)", color: "var(--foreground)" }}>
+        style={{ background: "var(--card)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}>
         <option value="">Selecionar...</option>
         {sellers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
       </select>
@@ -170,7 +174,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
   const borderColor = isOverdue ? "#e88080" : isUrgent ? "#e8b060" : "#e0d8cc";
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${borderColor}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: `1.5px solid ${borderColor}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       {/* Cabeçalho clicavel para expandir */}
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
@@ -196,7 +200,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "#ede8e0" }}>
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
           <div className="space-y-2 pt-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
@@ -240,7 +244,7 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
             </button>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-center font-medium" style={{ color: "#2a2a40" }}>Confirmar que foi escrito?</p>
+              <p className="text-sm text-center font-medium" style={{ color: "var(--foreground)" }}>Confirmar que foi escrito?</p>
               <div className="flex gap-2">
                 <button onClick={() => { onMarkWritten(item.id); setConfirming(false); }}
                   className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 flex items-center justify-center gap-2"
@@ -249,8 +253,8 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
                 </button>
                 <button onClick={() => setConfirming(false)}
                   className="flex-1 py-3 rounded-xl font-semibold active:scale-95 flex items-center justify-center gap-2"
-                  style={{ background: "var(--border)", color: "#2a2a40" }}>
-                  <X className="w-4 h-4" /> Cancelar
+style={{ background: "var(--border)", color: "var(--foreground)" }}>
+            <X className="w-4 h-4" /> Cancelar
                 </button>
               </div>
             </div>
@@ -281,7 +285,7 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
   );
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${item.isOverdue ? "#f0a0a0" : item.isUrgent ? "#f0d090" : "#e0d8cc"}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)", border: `1.5px solid ${item.isOverdue ? "#f0a0a0" : item.isUrgent ? "#f0d090" : "var(--border)"}`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       {/* Cabeçalho clicavel para expandir */}
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
@@ -296,7 +300,7 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
               <p className="text-xs font-medium" style={{ color: "#9a6e1a" }}>{item.productName}</p>
               {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
-              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
+              {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--secondary)", color: "var(--primary)", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
             </div>
             <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>Venda: {formatDate(item.saleDate)}</p>
           </div>
@@ -307,7 +311,7 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "#ede8e0" }}>
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border)" }}>
           <div className="space-y-2 pt-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--primary)" }} />
@@ -342,13 +346,13 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
               </button>
               <button onClick={() => onUndoWritten(item.id)}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg active:scale-95 transition-all"
-                style={{ background: "var(--accent)", color: "#7a5a20" }}>
+                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
                 <RotateCcw className="w-3.5 h-3.5" /> Voltar para Para Escrever
               </button>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-center font-medium" style={{ color: "#2a2a40" }}>Confirmar que o trabalho foi feito?</p>
+              <p className="text-sm text-center font-medium" style={{ color: "var(--foreground)" }}>Confirmar que o trabalho foi feito?</p>
               <div className="flex gap-2">
                 <button onClick={() => { onMarkDone(item.id); setConfirming(false); }}
                   className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 flex items-center justify-center gap-2"
@@ -378,7 +382,7 @@ function DoneCard({ item, onUndo, sellers }: {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: "white", border: "1.5px solid #e0d8cc", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+    <div className="rounded-2xl p-4" style={{ background: "var(--card)", border: "1.5px solid var(--border)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -414,9 +418,8 @@ function DoneCard({ item, onUndo, sellers }: {
           </button>
           <button onClick={() => setConfirming(false)}
             className="flex-1 py-2 rounded-xl text-sm font-semibold active:scale-95 flex items-center justify-center gap-1.5"
-            style={{ background: "var(--border)", color: "#2a2a40" }}>
-            <X className="w-3.5 h-3.5" /> Cancelar
-          </button>
+            style={{ background: "var(--border)", color: "var(--foreground)" }}>
+            <X className="w-3.5 h-3.5" /> Cancelar        </button>
         </div>
       )}
     </div>
@@ -538,7 +541,7 @@ export default function AdminTrabalhos() {
             <button key={tab.id} onClick={() => handleTabChange(tab.id)}
               className="flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={activeTab === tab.id
-                ? { background: "white", color: "var(--foreground)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
+                ? { background: "var(--card)", color: "var(--foreground)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
                 : { color: "var(--muted-foreground)" }
               }>
               <div className="flex items-center gap-1">
@@ -566,7 +569,7 @@ export default function AdminTrabalhos() {
                   onClick={() => { setSelectedCategory(cat.key); setSelectedType(null); }}
                   className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
                   style={selectedCategory === cat.key
-                    ? { background: "#4040b0", color: "white" }
+                    ? { background: "var(--primary)", color: "white" }
                     : { background: "#e8e8f8", color: "#4040b0" }}>
                   {cat.label} ({count})
                 </button>
@@ -583,7 +586,7 @@ export default function AdminTrabalhos() {
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
               style={selectedType === null
                 ? { background: "var(--primary)", color: "white" }
-                : { background: "var(--border)", color: "#6b5020" }}>
+                : { background: "var(--secondary)", color: "var(--primary)" }}>
               Todos ({categoryFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
@@ -594,7 +597,7 @@ export default function AdminTrabalhos() {
                   className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
                   style={selectedType === type
                     ? { background: "var(--primary)", color: "white" }
-                    : { background: "var(--border)", color: "#6b5020" }}>
+                    : { background: "var(--secondary)", color: "var(--primary)" }}>
                   {type} ({count})
                 </button>
               );
@@ -609,7 +612,7 @@ export default function AdminTrabalhos() {
             placeholder="Buscar por nome ou trabalho..."
             autoComplete="off"
             className="w-full pl-10 pr-10 py-3.5 rounded-xl outline-none text-sm"
-            style={{ background: "white", border: "1.5px solid var(--border)", color: "var(--foreground)", fontSize: "16px" }} />
+            style={{ background: "var(--card)", border: "1.5px solid var(--border)", color: "var(--foreground)", fontSize: "16px" }} />
           {search && (
             <button onClick={() => { setSearch(""); setDebouncedSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: "var(--muted-foreground)" }}>
               <X className="w-4 h-4" />

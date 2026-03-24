@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
+import { useTheme } from "@/contexts/ThemeContext";
+import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -16,9 +18,9 @@ function toInputDate(date: Date | string | null) {
 }
 
 const inputStyle = {
-  border: "1.5px solid oklch(0.88 0.012 65)",
-  background: "oklch(0.97 0.005 260)",
-  color: "oklch(0.15 0.02 260)",
+  border: "1.5px solid var(--border)",
+  background: "var(--card)",
+  color: "var(--foreground)",
   fontSize: "16px",
 };
 
@@ -65,16 +67,15 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh] sm:max-h-[90vh]"
-        style={{ background: "white" }}>
-        {/* Header do modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: "oklch(0.88 0.012 65)" }}>
-          <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-            Editar Venda
+        style={{ background: "var(--card)" }}>
+        {/* Header style={{ background: "var(--card)" }}>
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b"
+          style={{ borderColor: "var(--border)" }}>
+          <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>           Editar Venda
           </h2>
           <button onClick={onClose}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            style={{ color: "oklch(0.52 0.015 260)" }}>
+            style={{ color: "var(--muted-foreground)" }}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -83,7 +84,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
         <div className="px-4 sm:px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Nome do cliente
               </label>
               <input type="text" value={editForm.clientName}
@@ -91,7 +92,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Data de nascimento
               </label>
               <input type="date" value={editForm.clientBirthDate}
@@ -99,7 +100,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Telefone
               </label>
               <input type="tel" value={editForm.clientPhone}
@@ -107,7 +108,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Nome do trabalho
               </label>
               <input type="text" value={editForm.productName}
@@ -115,7 +116,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Data da venda
               </label>
               <input type="date" value={editForm.saleDate}
@@ -123,7 +124,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Valor (R$)
               </label>
               <input type="number" step="0.01" min="0" value={editForm.amount}
@@ -131,7 +132,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 className="w-full px-4 py-3 rounded-xl outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Vendedor
               </label>
               <select value={editForm.sellerId}
@@ -144,7 +145,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "oklch(0.30 0.02 260)" }}>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
                 Observações
               </label>
               <textarea value={editForm.notes}
@@ -156,17 +157,17 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
         </div>
 
         {/* Footer do modal */}
-        <div className="flex gap-3 px-4 sm:px-6 py-4 border-t pb-6 sm:pb-4" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+        <div className="flex gap-3 px-4 sm:px-6 py-4 border-t pb-6 sm:pb-4" style={{ borderColor: "var(--border)" }}>
           <button
             onClick={handleUpdate}
             disabled={updateSale.isPending}
             className="flex-1 py-4 sm:py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
-            style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
+            style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             {updateSale.isPending ? "Salvando..." : "Salvar Alterações"}
           </button>
           <button onClick={onClose}
             className="px-5 py-4 sm:py-3 rounded-xl font-semibold transition-all active:scale-95"
-            style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
+            style={{ background: "var(--secondary)", color: "var(--foreground)", fontSize: "16px" }}>
             Cancelar
           </button>
         </div>
@@ -263,10 +264,10 @@ export default function AdminVendas() {
         {/* Header */}
         <div className="mb-4 sm:mb-6 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
               Todas as Vendas
             </h1>
-            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
               {salesData.length} venda{salesData.length !== 1 ? "s" : ""} encontrada{salesData.length !== 1 ? "s" : ""}
               {totalAmount > 0 && ` · Total: ${formatCurrency(totalAmount)}`}
             </p>
@@ -283,33 +284,33 @@ export default function AdminVendas() {
         </div>
 
         {/* Filtros */}
-        <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+        <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
-            <h2 className="font-semibold text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>Filtros</h2>
+            <Filter className="w-4 h-4" style={{ color: "var(--primary)" }} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Filtros</h2>
             {hasFilters && (
               <button onClick={clearFilters}
                 className="ml-auto flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
                 <X className="w-3 h-3" /> Limpar filtros
               </button>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Data início</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Data início</label>
               <input type="date" value={filters.startDate}
                 onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Data fim</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Data fim</label>
               <input type="date" value={filters.endDate}
                 onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Vendedor</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Vendedor</label>
               <select value={filters.sellerId}
                 onChange={e => setFilters(f => ({ ...f, sellerId: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
@@ -320,7 +321,7 @@ export default function AdminVendas() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Trabalho</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Trabalho</label>
               <select value={filters.productName}
                 onChange={e => setFilters(f => ({ ...f, productName: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
@@ -329,7 +330,7 @@ export default function AdminVendas() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Tipo</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Tipo</label>
               <select value={filters.category}
                 onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none cursor-pointer" style={inputStyle}>
@@ -349,40 +350,40 @@ export default function AdminVendas() {
             style={{ background: "rgba(0,0,0,0.5)" }}
             onClick={(e) => { if (e.target === e.currentTarget) setHistoryClientName(null); }}>
             <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
-              style={{ background: "white" }}>
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+              style={{ background: "var(--card)" }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
                 <div>
-                  <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
-                    Histórico da Cliente
+                  <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+                    {historyClientName}e
                   </h2>
-                  <p className="text-sm" style={{ color: "oklch(0.52 0.015 260)" }}>{historyClientName}</p>
+                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>{historyClientName}</p>
                 </div>
                 <button onClick={() => setHistoryClientName(null)}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  style={{ color: "oklch(0.52 0.015 260)" }}>
+                  style={{ color: "var(--muted-foreground)" }}>
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="px-6 py-5">
                 {loadingHistory ? (
                   <div className="flex justify-center py-10">
-                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} />
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Trabalhos */}
                     {clientHistory && clientHistory.totalPurchases > 0 && (
                       <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--muted-foreground)" }}>
                           Trabalhos ({clientHistory.totalPurchases})
                         </h3>
-                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.012 65)" }}>
+                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                           {clientHistory.purchases.map((p: any, i: number) => (
                             <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-2"
-                              style={{ borderBottom: i < clientHistory.purchases.length - 1 ? "1px solid oklch(0.93 0.008 65)" : "none" }}>
+                              style={{ borderBottom: i < clientHistory.purchases.length - 1 ? "1px solid var(--border)" : "none" }}>
                               <div>
-                                <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>{p.productName}</p>
-                                <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{formatDate(p.saleDate)}</p>
+                                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{p.productName}</p>
+                                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatDate(p.saleDate)}</p>
                               </div>
                               <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
                                 background: p.workStatus === "feito" ? "oklch(0.92 0.04 160)" : p.workStatus === "pendente" ? "oklch(0.94 0.03 65)" : "oklch(0.92 0.04 250)",
@@ -398,16 +399,16 @@ export default function AdminVendas() {
                     {/* Consultas */}
                     {clientHistory && clientHistory.totalConsultas > 0 && (
                       <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--muted-foreground)" }}>
                           Consultas de Cartas ({clientHistory.totalConsultas})
                         </h3>
-                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.015 280)" }}>
+                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                           {clientHistory.consultas.map((c: any, i: number) => (
                             <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-2"
-                              style={{ borderBottom: i < clientHistory.consultas.length - 1 ? "1px solid oklch(0.92 0.01 280)" : "none" }}>
+                              style={{ borderBottom: i < clientHistory.consultas.length - 1 ? "1px solid var(--border)" : "none" }}>
                               <div className="flex items-center gap-2">
-                                <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(0.50 0.14 280)" }} />
-                                <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>Consulta Cartas</p>
+                                <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--primary)" }} />
+                                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Consulta Cartas</p>
                               </div>
                               <div className="text-right">
                                 <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.92 0.04 280)", color: "oklch(0.40 0.14 280)" }}>
@@ -423,7 +424,7 @@ export default function AdminVendas() {
                       </div>
                     )}
                     {clientHistory && clientHistory.totalPurchases === 0 && clientHistory.totalConsultas === 0 && (
-                      <p className="text-sm text-center py-6" style={{ color: "oklch(0.60 0.01 260)" }}>Nenhum histórico encontrado.</p>
+                      <p className="text-sm text-center py-6" style={{ color: "var(--muted-foreground)" }}>Nenhum histórico encontrado.</p>
                     )}
                   </div>
                 )}
@@ -431,18 +432,18 @@ export default function AdminVendas() {
             </div>
           </div>
         )}
-        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
+        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: "oklch(0.60 0.13 65)", borderTopColor: "transparent" }} />
+                style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
             </div>
           ) : salesData.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
-              <FileText className="w-10 h-10 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
-              <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhuma venda encontrada</p>
+              <FileText className="w-10 h-10 mb-3" style={{ color: "var(--muted-foreground)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Nenhuma venda encontrada</p>
               {hasFilters && (
-                <button onClick={clearFilters} className="text-xs mt-2 underline" style={{ color: "oklch(0.60 0.13 65)" }}>
+                <button onClick={clearFilters} className="text-xs mt-2 underline" style={{ color: "var(--primary)" }}>
                   Limpar filtros
                 </button>
               )}
@@ -453,10 +454,10 @@ export default function AdminVendas() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr style={{ borderBottom: "1px solid oklch(0.88 0.012 65)" }}>
+                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
                       {["Data", "Cliente", "Trabalho", "Vendedor", "Valor", "Comprovante", "Ações"].map(h => (
                         <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide"
-                          style={{ color: "oklch(0.52 0.015 260)" }}>
+                          style={{ color: "var(--muted-foreground)" }}>
                           {h}
                         </th>
                       ))}
@@ -468,10 +469,10 @@ export default function AdminVendas() {
                       const seller = item.seller;
                       return (
                         <tr key={sale.id} className="transition-colors"
-                          style={{ borderBottom: "1px solid oklch(0.94 0.006 65)" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "oklch(0.98 0.006 65)")}
+                          style={{ borderBottom: "1px solid var(--border)" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "var(--muted)")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <td className="px-4 py-3.5 text-sm whitespace-nowrap" style={{ color: "oklch(0.52 0.015 260)" }}>
+                          <td className="px-4 py-3.5 text-sm whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
                             {formatDate(sale.saleDate)}
                           </td>
                           <td className="px-4 py-3.5">
@@ -479,11 +480,11 @@ export default function AdminVendas() {
                               onClick={() => setHistoryClientName(sale.clientName)}
                               className="text-left hover:underline"
                               title="Ver histórico desta cliente">
-                              <p className="text-sm font-medium" style={{ color: "oklch(0.35 0.15 250)" }}>{sale.clientName}</p>
+                              <p className="text-sm font-medium" style={{ color: "var(--primary)" }}>{sale.clientName}</p>
                             </button>
-                            {sale.clientPhone && <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>{sale.clientPhone}</p>}
+                            {sale.clientPhone && <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{sale.clientPhone}</p>}
                           </td>
-                          <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>
+                          <td className="px-4 py-3.5 text-sm" style={{ color: "var(--foreground)" }}>
                             <span>{sale.productName}</span>
                             {sale.productCategory === "promocao" && (
                               <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.94 0.04 65)", color: "oklch(0.50 0.14 65)" }}>⭐ Promoção</span>
@@ -492,21 +493,21 @@ export default function AdminVendas() {
                               <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.92 0.04 250)", color: "oklch(0.40 0.14 250)" }}>👥 Coletivo</span>
                             )}
                           </td>
-                          <td className="px-4 py-3.5 text-sm" style={{ color: "oklch(0.30 0.02 260)" }}>
+                          <td className="px-4 py-3.5 text-sm" style={{ color: "var(--foreground)" }}>
                             {seller?.displayName || seller?.name || "-"}
                           </td>
-                          <td className="px-4 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "oklch(0.45 0.12 65)" }}>
+                          <td className="px-4 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--primary)" }}>
                             {formatCurrency(sale.amount)}
                           </td>
                           <td className="px-4 py-3.5">
                             {sale.attachmentUrl ? (
                               <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg w-fit"
-                                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
                                 <ExternalLink className="w-3 h-3" /> Ver
                               </a>
                             ) : (
-                              <span className="text-xs" style={{ color: "oklch(0.70 0.01 260)" }}>—</span>
+                              <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>—</span>
                             )}
                           </td>
                           <td className="px-4 py-3.5">
@@ -514,7 +515,7 @@ export default function AdminVendas() {
                               {/* Editar */}
                               <button onClick={() => openEdit(item)}
                                 className="p-1.5 rounded-lg transition-colors hover:bg-blue-50"
-                                style={{ color: "oklch(0.50 0.18 250)" }} title="Editar venda">
+                                style={{ color: "var(--primary)" }} title="Editar venda">
                                 <Pencil className="w-4 h-4" />
                               </button>
                               {/* Excluir / Confirmar */}
@@ -529,7 +530,7 @@ export default function AdminVendas() {
                                   </button>
                                   <button onClick={() => setDeleteConfirmId(null)}
                                     className="p-1.5 rounded-lg transition-colors hover:bg-gray-100"
-                                    style={{ color: "oklch(0.52 0.015 260)" }} title="Cancelar">
+                                    style={{ color: "var(--muted-foreground)" }} title="Cancelar">
                                     <X className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -550,17 +551,17 @@ export default function AdminVendas() {
               </div>
 
               {/* Mobile cards */}
-              <div className="md:hidden divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
+              <div className="md:hidden divide-y" style={{ borderColor: "var(--border)" }}>
                 {salesData.map((item: any) => {
                   const sale = item.sale ?? item;
                   const seller = item.seller;
                   return (
                     <div key={sale.id} className="px-4 py-4">
                       <div className="flex justify-between items-start mb-1">
-                        <p className="font-medium text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>{sale.clientName}</p>
-                        <p className="font-semibold text-sm" style={{ color: "oklch(0.45 0.12 65)" }}>{formatCurrency(sale.amount)}</p>
+                        <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>{sale.clientName}</p>
+                        <p className="font-semibold text-sm" style={{ color: "var(--primary)" }}>{formatCurrency(sale.amount)}</p>
                       </div>
-                      <p className="text-xs mb-2" style={{ color: "oklch(0.52 0.015 260)" }}>
+                      <p className="text-xs mb-2" style={{ color: "var(--muted-foreground)" }}>
                         {sale.productName}
                         {sale.productCategory === "promocao" && <span className="ml-1 text-xs">⭐</span>}
                         {sale.productCategory === "coletivo" && <span className="ml-1 text-xs">👥</span>}
@@ -575,7 +576,7 @@ export default function AdminVendas() {
                         {sale.attachmentUrl && (
                           <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg"
-                            style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                            style={{ background: "var(--secondary)", color: "var(--primary)" }}>
                             <ExternalLink className="w-3 h-3" /> Comprovante
                           </a>
                         )}
@@ -594,7 +595,7 @@ export default function AdminVendas() {
                             </button>
                             <button onClick={() => setDeleteConfirmId(null)}
                               className="text-xs px-2 py-1 rounded-lg"
-                              style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)" }}>
+                              style={{ background: "var(--secondary)", color: "var(--foreground)" }}>
                               Cancelar
                             </button>
                           </div>

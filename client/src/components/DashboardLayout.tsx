@@ -1,16 +1,20 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   BarChart3, Bell, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
   PlusCircle, User, Users, Menu, X, ChevronRight, Sparkles, Calendar,
+  Sun, Moon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
+import { ShimmerText, PulseStar } from "./Animations";
 
-// Cores mapeadas para variáveis CSS — compatível com browsers antigos (sem oklch hardcoded)
+// Cores mapeadas para variáveis CSS
 const C = {
   sidebar:        "var(--sidebar)",
   sidebarFg:      "var(--sidebar-foreground)",
@@ -20,7 +24,6 @@ const C = {
   primaryFg:      "var(--primary-foreground)",
   bg:             "var(--background)",
   mutedFg:        "var(--muted-foreground)",
-  // Fallback para cores sem variável CSS direta
   textHint:       "#8888a0",
   textFaint:      "#6b6b80",
   roleBadgeAdminBg:   "rgba(193,127,36,0.2)",
@@ -59,6 +62,66 @@ const adminMenuItems = [
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: User, label: "Minha Conta", path: "/admin/configuracoes" },
 ];
+
+// Lógica corrigida para determinar item ativo
+function getActiveItem(menuItems: typeof adminMenuItems, location: string) {
+  // Primeiro: match exato
+  const exact = menuItems.find(item => item.path === location);
+  if (exact) return exact;
+
+  // Segundo: match por prefixo (mais longo primeiro para evitar falsos positivos)
+  const sorted = [...menuItems]
+    .filter(item => item.path !== "/admin" && item.path !== "/") // Evitar que /admin match tudo
+    .sort((a, b) => b.path.length - a.path.length);
+  const prefix = sorted.find(item => location.startsWith(item.path));
+  if (prefix) return prefix;
+
+  // Fallback: se estamos em /admin/algo e nenhum match, não marcar nada
+  return null;
+}
+
+// Theme toggle button component
+function ThemeToggle({ size = "sm" }: { size?: "sm" | "md" }) {
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const iconSize = size === "sm" ? "w-4 h-4" : "w-5 h-5";
+  const btnSize = size === "sm" ? "w-8 h-8" : "w-10 h-10";
+
+  return (
+    <motion.button
+      onClick={toggleTheme}
+      className={`${btnSize} flex items-center justify-center rounded-xl transition-colors`}
+      style={{ color: C.mutedFg }}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9, rotate: 180 }}
+      transition={{ type: "spring", stiffness: 300, damping: 15 }}
+      title={resolvedTheme === "dark" ? "Modo claro" : "Modo escuro"}
+    >
+      <AnimatePresence mode="wait">
+        {resolvedTheme === "dark" ? (
+          <motion.div
+            key="sun"
+            initial={{ opacity: 0, rotate: -90, scale: 0 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            exit={{ opacity: 0, rotate: 90, scale: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Sun className={iconSize} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="moon"
+            initial={{ opacity: 0, rotate: 90, scale: 0 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            exit={{ opacity: 0, rotate: -90, scale: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Moon className={iconSize} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
@@ -108,9 +171,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
   const isConsultora = user?.role === "consultora";
   const menuItems = isAdmin ? adminMenuItems : isConsultora ? consultoraMenuItems : sellerMenuItems;
-  const activeMenuItem = menuItems.find(item =>
-    item.path === location || (item.path !== "/" && location.startsWith(item.path))
-  );
+  const activeMenuItem = getActiveItem(menuItems, location);
 
   const displayName = user?.name || user?.email || "Usuário";
   const firstName = displayName.split(" ")[0];
@@ -121,14 +182,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     color: isAdmin ? C.roleBadgeAdminFg : isConsultora ? C.roleBadgeConsultFg : C.roleBadgeSellerFg,
   };
 
-  // Fecha menu ao navegar
   const navigate = (path: string) => {
     setLocation(path);
     setMenuOpen(false);
   };
 
   // Bloqueia scroll do body quando menu mobile está aberto
-  // Técnica compatível com iOS Safari antigo (position: fixed + top calculado)
   useEffect(() => {
     if (!menuOpen) {
       const savedTop = document.body.style.top;
@@ -165,17 +224,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 shadow-sm"
           style={{ background: C.sidebar, borderBottom: `1px solid ${C.sidebarBorder}` }}>
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: C.gradientGold }}>
-              <svg width="14" height="14" viewBox="0 0 40 40" fill="none">
-                <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" />
-              </svg>
-            </div>
+            <PulseStar className="text-amber-500" />
             <span className="font-semibold text-sm" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>
               {activeMenuItem?.label ?? "Mundo Da Magia"}
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <ThemeToggle size="md" />
             <div style={{ color: C.mutedFg }}>
               <PushNotificationButton />
             </div>
@@ -190,72 +245,89 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Drawer menu mobile */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-50 flex">
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
+        <AnimatePresence>
+          {menuOpen && (
+            <div className="fixed inset-0 z-50 flex">
+              {/* Overlay */}
+              <motion.div
+                className="absolute inset-0 bg-black/60"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMenuOpen(false)}
+              />
 
-            {/* Drawer */}
-            <div className="relative ml-auto w-72 h-full flex flex-col shadow-2xl"
-              style={{ background: C.sidebar }}>
+              {/* Drawer */}
+              <motion.div
+                className="relative ml-auto w-72 h-full flex flex-col shadow-2xl"
+                style={{ background: C.sidebar }}
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
 
-              {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b"
-                style={{ borderColor: C.sidebarBorder }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm"
-                    style={{ background: C.gradientGold, color: "white" }}>
-                    {initials}
+                {/* Drawer header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b"
+                  style={{ borderColor: C.sidebarBorder }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm"
+                      style={{ background: C.gradientGold, color: "white" }}>
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: C.sidebarFg }}>{firstName}</p>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={roleBadgeStyle}>
+                        {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: C.sidebarFg }}>{firstName}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full" style={roleBadgeStyle}>
-                      {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
-                    </span>
-                  </div>
+                  <button onClick={() => setMenuOpen(false)}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px]"
+                    style={{ color: C.textFaint }}>
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button onClick={() => setMenuOpen(false)}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px]"
-                  style={{ color: C.textFaint }}>
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              {/* Menu items */}
-              <nav className="flex-1 overflow-y-auto py-3 px-3">
-                {menuItems.map(item => {
-                  const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => navigate(item.path)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl mb-1 transition-all text-left min-h-[44px]"
-                      style={isActive ? {
-                        background: C.sidebarAccent,
-                        borderLeft: `3px solid ${C.primary}`,
-                        color: C.sidebarFg,
-                      } : { color: C.textFaint }}>
-                      <item.icon className="w-5 h-5 shrink-0" style={isActive ? { color: C.primary } : {}} />
-                      <span className="font-medium text-sm">{item.label}</span>
-                      {isActive && <ChevronRight className="w-4 h-4 ml-auto" style={{ color: C.primary }} />}
-                    </button>
-                  );
-                })}
-              </nav>
+                {/* Menu items */}
+                <nav className="flex-1 overflow-y-auto py-3 px-3">
+                  {menuItems.map((item, i) => {
+                    const isActive = activeMenuItem?.path === item.path;
+                    return (
+                      <motion.button
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.04, type: "spring", stiffness: 300, damping: 24 }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl mb-1 transition-all text-left min-h-[44px]"
+                        style={isActive ? {
+                          background: C.sidebarAccent,
+                          borderLeft: `3px solid ${C.primary}`,
+                          color: C.sidebarFg,
+                        } : { color: C.textFaint }}>
+                        <item.icon className="w-5 h-5 shrink-0" style={isActive ? { color: C.primary } : {}} />
+                        <span className="font-medium text-[15px]">{item.label}</span>
+                        {isActive && <ChevronRight className="w-4 h-4 ml-auto" style={{ color: C.primary }} />}
+                      </motion.button>
+                    );
+                  })}
+                </nav>
 
-              {/* Logout */}
-              <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
-                <button
-                  onClick={() => logoutMutation.mutate()}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px]"
-                  style={{ color: C.logoutFg, background: C.logoutBg }}>
-                  <LogOut className="w-5 h-5" />
-                  <span className="font-medium text-sm">Sair do Sistema</span>
-                </button>
-              </div>
+                {/* Logout */}
+                <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
+                  <button
+                    onClick={() => logoutMutation.mutate()}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px]"
+                    style={{ color: C.logoutFg, background: C.logoutBg }}>
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium text-sm">Sair do Sistema</span>
+                  </button>
+                </div>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
 
         {/* Conteúdo principal mobile */}
         <main className="flex-1 pt-14 pb-4">
@@ -273,77 +345,118 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <aside className="w-72 shrink-0 flex flex-col sticky top-0 h-screen"
         style={{ background: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}` }}>
 
-        {/* Logo */}
+        {/* Logo com animação */}
         <div className="h-16 flex items-center gap-3 px-5 border-b" style={{ borderColor: C.sidebarBorder }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: C.gradientGold }}>
-            <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
-              <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" />
-            </svg>
-          </div>
-          <span className="font-semibold text-sm" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>
+          <PulseStar className="text-amber-500" />
+          <ShimmerText className="font-semibold text-base" style={{ fontFamily: "'Playfair Display', serif" }}>
             Mundo Da Magia
-          </span>
+          </ShimmerText>
         </div>
 
         {/* Role badge */}
         <div className="px-4 py-3">
-          <span className="text-xs font-medium px-2 py-1 rounded-full" style={roleBadgeStyle}>
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={roleBadgeStyle}>
             {isAdmin ? "Administrador" : isConsultora ? "Consultora" : "Vendedor"}
           </span>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-1">
-          {menuItems.map(item => {
-            const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
+        {/* Nav - fontes maiores, ícones maiores, melhor contraste */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5">
+          {menuItems.map((item, i) => {
+            const isActive = activeMenuItem?.path === item.path;
             return (
-              <button
+              <motion.button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-left"
-                style={isActive ? {
-                  background: C.sidebarAccent,
-                  borderLeft: `3px solid ${C.primary}`,
-                  color: C.sidebarFg,
-                } : { color: C.textFaint }}>
-                <item.icon className="w-4 h-4 shrink-0" style={isActive ? { color: C.primary } : {}} />
-                <span className="font-medium text-sm">{item.label}</span>
-              </button>
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left relative"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 24 }}
+                whileHover={{ x: 4 }}
+                style={{ color: isActive ? C.sidebarFg : "rgba(200,200,215,0.65)" }}
+              >
+                {/* Barra lateral ativa com animação */}
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
+                    style={{ background: C.primary }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                {/* Background ativo */}
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-bg"
+                    className="absolute inset-0 rounded-xl"
+                    style={{ background: C.sidebarAccent }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <item.icon
+                  className="w-5 h-5 shrink-0 relative z-10"
+                  style={isActive ? { color: C.primary } : {}}
+                />
+                <span className="font-medium text-[15px] relative z-10">{item.label}</span>
+              </motion.button>
             );
           })}
         </nav>
 
         {/* Footer */}
         <div className="p-3 border-t" style={{ borderColor: C.sidebarBorder }}>
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl mb-1"
+          {/* User info */}
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl mb-2"
             style={{ color: C.sidebarFg }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-xs shrink-0"
-              style={{ background: C.sidebarAccent, color: C.roleBadgeAdminFg, border: `2px solid rgba(193,127,36,0.5)` }}>
+            <motion.div
+              className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-xs shrink-0"
+              style={{ background: C.gradientGold, color: "white" }}
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            >
               {initials}
-            </div>
+            </motion.div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: C.sidebarFg }}>{displayName}</p>
-              <p className="text-xs truncate" style={{ color: C.textFaint }}>{(user as any)?.username || user?.email || ""}</p>
+              <p className="text-[15px] font-medium truncate" style={{ color: C.sidebarFg }}>{displayName}</p>
+              <p className="text-xs truncate" style={{ color: "rgba(200,200,215,0.5)" }}>{(user as any)?.username || user?.email || ""}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between px-1 mb-1">
-            <div style={{ color: C.mutedFg }}>
-              <PushNotificationButton />
+
+          {/* Actions row */}
+          <div className="flex items-center justify-between px-1 mb-2">
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <div style={{ color: C.mutedFg }}>
+                <PushNotificationButton />
+              </div>
             </div>
           </div>
-          <button
+
+          {/* Logout */}
+          <motion.button
             onClick={() => logoutMutation.mutate()}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all text-sm"
-            style={{ color: C.logoutFg }}>
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[15px] font-medium"
+            style={{ color: C.logoutFg }}
+            whileHover={{ background: "rgba(192,57,43,0.1)", x: 2 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
             <LogOut className="w-4 h-4" />
             Sair
-          </button>
+          </motion.button>
         </div>
       </aside>
 
-      {/* Main content desktop */}
-      <main className="flex-1 min-w-0 p-6 overflow-y-auto">{children}</main>
+      {/* Main content desktop com animação de transição */}
+      <main className="flex-1 min-w-0 p-6 overflow-y-auto">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
+      </main>
     </div>
   );
 }

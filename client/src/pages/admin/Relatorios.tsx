@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
+import { useTheme } from "@/contexts/ThemeContext";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -159,10 +160,10 @@ export default function AdminRelatorios() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
               Relatórios
             </h1>
-            <p className="text-sm mt-1" style={{ color: "oklch(0.52 0.015 260)" }}>
+            <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
               Análise detalhada de performance e exportação de dados
             </p>
           </div>
@@ -187,28 +188,28 @@ export default function AdminRelatorios() {
         </div>
 
         {/* Filtro de período */}
-        <div className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-          <h2 className="font-semibold text-sm mb-3" style={{ color: "oklch(0.15 0.02 260)" }}>Período de Análise</h2>
+        <div className="rounded-2xl p-5 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--foreground)" }}>Período de Análise</h2>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <input
               type="date"
               value={dateFilter.startDate}
               onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
               className="px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+              style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}
             />
-            <span className="text-sm" style={{ color: "oklch(0.52 0.015 260)" }}>até</span>
+            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>até</span>
             <input
               type="date"
               value={dateFilter.endDate}
               onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
               className="px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-              style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)", color: "oklch(0.15 0.02 260)" }}
+              style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}
             />
             {(dateFilter.startDate || dateFilter.endDate) && (
               <button onClick={() => setDateFilter({ startDate: "", endDate: "" })}
                 className="px-3 py-2 rounded-xl text-sm"
-                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.45 0.10 65)" }}>
+                style={{ background: "var(--secondary)", color: "var(--primary)" }}>
                 Limpar
               </button>
             )}
@@ -220,7 +221,7 @@ export default function AdminRelatorios() {
             ].map(btn => (
               <button key={btn.label} onClick={btn.fn}
                 className="px-3 py-2 rounded-xl text-xs font-medium transition-colors"
-                style={{ background: "oklch(0.94 0.012 65)", color: "oklch(0.35 0.02 260)" }}>
+                style={{ background: "var(--secondary)", color: "var(--foreground)" }}>
                 {btn.label}
               </button>
             ))}
@@ -230,20 +231,20 @@ export default function AdminRelatorios() {
         {/* Resumo */}
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--primary)" }} />
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl p-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-                <p className="text-xs font-medium mb-1" style={{ color: "oklch(0.52 0.015 260)" }}>Total Vendido</p>
-                <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.45 0.12 65)" }}>
+              <div className="rounded-2xl p-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Total Vendido</p>
+                <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--primary)" }}>
                   {formatCurrency(summary?.totalAmount ?? 0)}
                 </p>
               </div>
-              <div className="rounded-2xl p-6 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-                <p className="text-xs font-medium mb-1" style={{ color: "oklch(0.52 0.015 260)" }}>Número de Vendas</p>
-                <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+              <div className="rounded-2xl p-6 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Número de Vendas</p>
+                <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
                   {summary?.totalSales ?? 0}
                 </p>
               </div>
@@ -256,30 +257,30 @@ export default function AdminRelatorios() {
                 { title: "Top Clientes", data: topClients, nameKey: "clientName", fallbackKey: "clientName", valueKey: "totalAmount", countKey: "totalSales" },
                 { title: "Trabalhos Mais Vendidos", data: topProducts, nameKey: "productName", fallbackKey: "productName", valueKey: "totalAmount", countKey: "totalSales" },
               ].map(({ title, data, nameKey, fallbackKey, valueKey, countKey }) => (
-                <div key={title} className="rounded-2xl p-5 shadow-sm" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-                  <h2 className="font-semibold mb-4 flex items-center gap-2 text-sm" style={{ color: "oklch(0.15 0.02 260)" }}>
-                    <BarChart3 className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
+                <div key={title} className="rounded-2xl p-5 shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <h2 className="font-semibold mb-4 flex items-center gap-2 text-sm" style={{ color: "var(--foreground)" }}>
+                    <BarChart3 className="w-4 h-4" style={{ color: "var(--primary)" }} />
                     {title}
                   </h2>
                   {data.length === 0 ? (
-                    <p className="text-sm text-center py-4" style={{ color: "oklch(0.60 0.01 260)" }}>Sem dados</p>
+                    <p className="text-sm text-center py-4" style={{ color: "var(--muted-foreground)" }}>Sem dados</p>
                   ) : (
                     <div className="space-y-2">
                       {data.slice(0, 5).map((item: any, i: number) => (
                         <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl"
-                          style={{ background: i === 0 ? "oklch(0.96 0.02 65)" : "oklch(0.98 0.006 65)" }}>
-                          <span className="text-xs font-bold w-5 text-center shrink-0" style={{ color: "oklch(0.60 0.13 65)" }}>
+                          style={{ background: i === 0 ? "var(--secondary)" : "var(--muted)" }}>
+                          <span className="text-xs font-bold w-5 text-center shrink-0" style={{ color: "var(--primary)" }}>
                             {i + 1}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate" style={{ color: "oklch(0.15 0.02 260)" }}>
+                            <p className="text-xs font-medium truncate" style={{ color: "var(--foreground)" }}>
                               {item[nameKey] || item[fallbackKey] || "—"}
                             </p>
-                            <p className="text-xs" style={{ color: "oklch(0.60 0.01 260)" }}>
+                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                               {item[countKey]} venda{Number(item[countKey]) !== 1 ? "s" : ""}
                             </p>
                           </div>
-                          <span className="text-xs font-semibold shrink-0" style={{ color: "oklch(0.45 0.12 65)" }}>
+                          <span className="text-xs font-semibold shrink-0" style={{ color: "var(--primary)" }}>
                             {formatCurrency(item[valueKey])}
                           </span>
                         </div>
@@ -293,16 +294,16 @@ export default function AdminRelatorios() {
         )}
 
         {/* Relatórios Automáticos por Email */}
-        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "white", border: "1px solid oklch(0.88 0.012 65)" }}>
-          <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "oklch(0.88 0.012 65)" }}>
+        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4" style={{ color: "oklch(0.60 0.13 65)" }} />
-              <h2 className="font-semibold" style={{ color: "oklch(0.15 0.02 260)" }}>Relatórios Automáticos por Email</h2>
+              <Mail className="w-4 h-4" style={{ color: "var(--primary)" }} />
+              <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Relatórios Automáticos por Email</h2>
             </div>
             <button
               onClick={() => setShowScheduleForm(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", color: "white" }}>
+              style={{ background: "linear-gradient(135deg, var(--primary), oklch(0.68 0.14 70))", color: "white" }}>
               <Plus className="w-4 h-4" />
               Adicionar
             </button>
@@ -310,29 +311,29 @@ export default function AdminRelatorios() {
 
           {/* Form */}
           {showScheduleForm && (
-            <div className="px-4 sm:px-6 py-5 border-b" style={{ borderColor: "oklch(0.88 0.012 65)", background: "oklch(0.98 0.006 65)" }}>
+            <div className="px-4 sm:px-6 py-5 border-b" style={{ borderColor: "var(--border)", background: "var(--muted)" }}>
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Frequência</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Frequência</label>
                   <select
                     value={scheduleForm.frequency}
                     onChange={e => setScheduleForm(f => ({ ...f, frequency: e.target.value as any }))}
                     className="px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 cursor-pointer"
-                    style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}>
+                    style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}>
                     <option value="daily">Diário</option>
                     <option value="weekly">Semanal</option>
                     <option value="monthly">Mensal</option>
                   </select>
                 </div>
                 <div className="flex-1 min-w-48">
-                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.40 0.02 260)" }}>Email do destinatário</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>Email do destinatário</label>
                   <input
                     type="email"
                     value={scheduleForm.recipientEmail}
                     onChange={e => setScheduleForm(f => ({ ...f, recipientEmail: e.target.value }))}
                     placeholder="email@exemplo.com"
                     className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-                    style={{ border: "1.5px solid oklch(0.88 0.012 65)", background: "white", color: "oklch(0.15 0.02 260)" }}
+                    style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}
                   />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -350,7 +351,7 @@ export default function AdminRelatorios() {
                   <button
                     onClick={() => setShowScheduleForm(false)}
                     className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl font-medium active:scale-95"
-                    style={{ background: "oklch(0.92 0.008 65)", color: "oklch(0.30 0.02 260)", fontSize: "16px" }}>
+                    style={{ background: "var(--secondary)", color: "var(--foreground)", fontSize: "16px" }}>
                     Cancelar
                   </button>
                 </div>
@@ -361,30 +362,30 @@ export default function AdminRelatorios() {
           {/* Lista de agendamentos */}
           {loadingSchedules ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} />
             </div>
           ) : schedules.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 px-4">
-              <Mail className="w-8 h-8 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
-              <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum agendamento configurado</p>
-              <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
+              <Mail className="w-8 h-8 mb-3" style={{ color: "var(--muted-foreground)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Nenhum agendamento configurado</p>
+              <p className="text-xs mt-1 text-center" style={{ color: "var(--muted-foreground)" }}>
                 Adicione emails para receber relatorios automaticos.<br />
                 Diario: todo dia as 7h · Semanal: segunda-feira as 7h · Mensal: dia 1 as 7h
               </p>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: "oklch(0.92 0.008 65)" }}>
+            <div className="divide-y" style={{ borderColor: "var(--border)" }}>
               {schedules.map((schedule: any) => (
                 <div key={schedule.id} className="flex items-center gap-4 px-6 py-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: schedule.active ? "oklch(0.92 0.04 160)" : "oklch(0.92 0.008 65)" }}>
-                    <Mail className="w-5 h-5" style={{ color: schedule.active ? "oklch(0.55 0.15 160)" : "oklch(0.65 0.01 260)" }} />
+                    style={{ background: schedule.active ? "var(--secondary)" : "var(--muted)" }}>
+                    <Mail className="w-5 h-5" style={{ color: schedule.active ? "oklch(0.55 0.15 160)" : "var(--muted-foreground)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: "oklch(0.15 0.02 260)" }}>
+                    <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                       {schedule.recipientEmail}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
                       {FREQ_LABELS[schedule.frequency]} · {schedule.active ? "Ativo" : "Pausado"}
                       {schedule.lastSentAt && ` · Ultimo envio: ${new Date(schedule.lastSentAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
                     </p>
@@ -394,8 +395,8 @@ export default function AdminRelatorios() {
                       onClick={() => toggleSchedule.mutate({ id: schedule.id, active: !schedule.active })}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                       style={{
-                        background: schedule.active ? "oklch(0.93 0.04 30)" : "oklch(0.92 0.04 160)",
-                        color: schedule.active ? "oklch(0.55 0.20 30)" : "oklch(0.45 0.15 160)",
+background: schedule.active ? "oklch(0.93 0.04 30)" : "oklch(0.92 0.04 160)",
+                         color: schedule.active ? "oklch(0.55 0.20 30)" : "oklch(0.45 0.15 160)",
                       }}>
                       {schedule.active ? "Pausar" : "Ativar"}
                     </button>
@@ -404,7 +405,7 @@ export default function AdminRelatorios() {
                       disabled={sendTestEmail.isPending}
                       title="Enviar email de teste agora"
                       className="p-2 rounded-lg transition-colors hover:bg-amber-50"
-                      style={{ color: "oklch(0.60 0.13 65)" }}>
+                      style={{ color: "var(--primary)" }}>
                       {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                     </button>
                     <button
