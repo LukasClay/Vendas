@@ -14,8 +14,32 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
 import { ShimmerText, PulseStar } from "./Animations";
 
-// Cores mapeadas para variáveis CSS
-const C = {
+// Cores clássicas (v1.8.x)
+const CLASSIC_COLORS = {
+  sidebar:        "#111111",
+  sidebarFg:      "#ffffff",
+  sidebarAccent:  "rgba(255,255,255,0.05)",
+  sidebarBorder:  "rgba(255,255,255,0.1)",
+  primary:        "#c17f24",
+  primaryFg:      "#ffffff",
+  bg:             "#faf8f4",
+  mutedFg:        "#8888a0",
+  textHint:       "#8888a0",
+  textFaint:      "#6b6b80",
+  roleBadgeAdminBg:   "rgba(193,127,36,0.2)",
+  roleBadgeAdminFg:   "#b8860b",
+  roleBadgeConsultBg: "rgba(107,79,173,0.2)",
+  roleBadgeConsultFg: "#7b5ea7",
+  roleBadgeSellerBg:  "rgba(39,174,96,0.2)",
+  roleBadgeSellerFg:  "#1e8449",
+  logoutFg:       "#c0392b",
+  logoutBg:       "rgba(192,57,43,0.08)",
+  gradientGold:   "linear-gradient(135deg, #c17f24, #d4932a)",
+  gradientDark:   "linear-gradient(135deg, #181824 0%, #1e1e30 100%)",
+};
+
+// Cores modernas (Dark Mode / Admin)
+const MODERN_COLORS = {
   sidebar:        "var(--sidebar)",
   sidebarFg:      "var(--sidebar-foreground)",
   sidebarAccent:  "var(--sidebar-accent)",
@@ -63,25 +87,18 @@ const adminMenuItems = [
   { icon: User, label: "Minha Conta", path: "/admin/configuracoes" },
 ];
 
-// Lógica corrigida para determinar item ativo
 function getActiveItem(menuItems: typeof adminMenuItems, location: string) {
-  // Primeiro: match exato
   const exact = menuItems.find(item => item.path === location);
   if (exact) return exact;
-
-  // Segundo: match por prefixo (mais longo primeiro para evitar falsos positivos)
   const sorted = [...menuItems]
-    .filter(item => item.path !== "/admin" && item.path !== "/") // Evitar que /admin match tudo
+    .filter(item => item.path !== "/admin" && item.path !== "/")
     .sort((a, b) => b.path.length - a.path.length);
   const prefix = sorted.find(item => location.startsWith(item.path));
   if (prefix) return prefix;
-
-  // Fallback: se estamos em /admin/algo e nenhum match, não marcar nada
   return null;
 }
 
-// Theme toggle button component
-function ThemeToggle({ size = "sm" }: { size?: "sm" | "md" }) {
+function ThemeToggle({ size = "sm", colors }: { size?: "sm" | "md", colors: typeof MODERN_COLORS }) {
   const { resolvedTheme, toggleTheme } = useTheme();
   const iconSize = size === "sm" ? "w-4 h-4" : "w-5 h-5";
   const btnSize = size === "sm" ? "w-8 h-8" : "w-10 h-10";
@@ -90,7 +107,7 @@ function ThemeToggle({ size = "sm" }: { size?: "sm" | "md" }) {
     <motion.button
       onClick={toggleTheme}
       className={`${btnSize} flex items-center justify-center rounded-xl transition-colors`}
-      style={{ color: C.mutedFg }}
+      style={{ color: colors.mutedFg }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9, rotate: 180 }}
       transition={{ type: "spring", stiffness: 300, damping: 15 }}
@@ -125,6 +142,8 @@ function ThemeToggle({ size = "sm" }: { size?: "sm" | "md" }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const C = isAdmin ? MODERN_COLORS : CLASSIC_COLORS;
 
   if (loading) return <DashboardLayoutSkeleton />;
 
@@ -133,14 +152,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex items-center justify-center min-h-screen"
         style={{ background: C.gradientDark }}>
         <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full rounded-3xl shadow-2xl border border-[var(--border)]"
-          style={{ background: "var(--card)" }}>
+          style={{ background: isAdmin ? "var(--card)" : "#ffffff" }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center"
             style={{ background: C.gradientGold }}>
             <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
               <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" opacity="0.9" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-center" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+          <h1 className="text-2xl font-bold text-center" style={{ fontFamily: "'Playfair Display', serif", color: isAdmin ? "var(--foreground)" : "#111111" }}>
             Acesso Necessário
           </h1>
           <p className="text-sm text-center" style={{ color: C.textHint }}>
@@ -171,24 +190,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.role === "admin";
   const isConsultora = user?.role === "consultora";
+  const C = isAdmin ? MODERN_COLORS : CLASSIC_COLORS;
   const menuItems = isAdmin ? adminMenuItems : isConsultora ? consultoraMenuItems : sellerMenuItems;
   const activeMenuItem = getActiveItem(menuItems, location);
 
   const displayName = user?.name || user?.email || "Usuário";
-  const firstName = displayName.split(" ")[0];
   const initials = displayName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
-
-  const roleBadgeStyle = {
-    background: isAdmin ? C.roleBadgeAdminBg : isConsultora ? C.roleBadgeConsultBg : C.roleBadgeSellerBg,
-    color: isAdmin ? C.roleBadgeAdminFg : isConsultora ? C.roleBadgeConsultFg : C.roleBadgeSellerFg,
-  };
 
   const navigate = (path: string) => {
     setLocation(path);
     setMenuOpen(false);
   };
 
-  // Bloqueia scroll do body quando menu mobile está aberto
   useEffect(() => {
     if (!menuOpen) {
       const savedTop = document.body.style.top;
@@ -196,9 +209,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       document.body.style.top = "";
       document.body.style.width = "";
       document.body.style.overflow = "";
-      if (savedTop) {
-        window.scrollTo(0, -parseInt(savedTop, 10));
-      }
+      if (savedTop) window.scrollTo(0, -parseInt(savedTop, 10));
       return;
     }
     const scrollY = window.scrollY;
@@ -216,12 +227,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     };
   }, [menuOpen]);
 
-  // ─── MOBILE LAYOUT ───────────────────────────────────────────────
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
-
-        {/* Header fixo mobile */}
         <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 shadow-sm"
           style={{ background: C.sidebar, borderBottom: `1px solid ${C.sidebarBorder}` }}>
           <div className="flex items-center gap-3">
@@ -231,7 +239,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <ThemeToggle size="md" />
+            {isAdmin && <ThemeToggle size="md" colors={C} />}
             <div style={{ color: C.mutedFg }}>
               <PushNotificationButton />
             </div>
@@ -245,11 +253,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Drawer menu mobile */}
         <AnimatePresence>
           {menuOpen && (
             <div className="fixed inset-0 z-50 flex">
-              {/* Overlay */}
               <motion.div
                 className="absolute inset-0 bg-black/60"
                 initial={{ opacity: 0 }}
@@ -257,8 +263,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 exit={{ opacity: 0 }}
                 onClick={() => setMenuOpen(false)}
               />
-
-              {/* Drawer */}
               <motion.div
                 className="relative ml-auto w-72 h-full flex flex-col shadow-2xl"
                 style={{ background: C.sidebar }}
@@ -270,46 +274,49 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center justify-between p-4 border-b"
                   style={{ borderColor: C.sidebarBorder }}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold"
-                      style={{ background: C.gradientGold }}>
-                      {initials}
-                    </div>
-                    <div>
-                      <ShimmerText className="font-bold text-sm" style={{ color: C.sidebarFg }}>{firstName}</ShimmerText>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-semibold uppercase"
-                        style={roleBadgeStyle}>
-                        {user?.role === "admin" ? "Admin" : user?.role === "consultora" ? "Consultora" : "Vendedor"}
-                      </span>
-                    </div>
+                    <PulseStar className="text-amber-500" />
+                    <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>Mundo Da Magia</span>
                   </div>
-                  <button onClick={() => setMenuOpen(false)} className="p-2 rounded-xl text-white hover:bg-white/10">
-                    <X className="w-5 h-5" />
-                  </button>
+                  <button onClick={() => setMenuOpen(false)} className="p-2" style={{ color: C.sidebarFg }}><X className="w-6 h-6" /></button>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
-                  {menuItems.map((item, index) => (
-                    <motion.button
-                      key={index}
-                      onClick={() => navigate(item.path)}
-                      className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors
-                        ${activeMenuItem?.path === item.path ? "bg-[var(--sidebar-accent)] text-[var(--primary-foreground)]" : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)]"}`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      {item.label}
-                    </motion.button>
-                  ))}
+                <div className="flex flex-col items-center p-6 border-b" style={{ borderColor: C.sidebarBorder }}>
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-bold mb-3"
+                    style={{ background: C.gradientGold }}>{initials}</div>
+                  <p className="font-bold text-lg" style={{ color: C.sidebarFg }}>{displayName}</p>
+                  <div className="mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : "rgba(255,255,255,0.1)", color: isAdmin ? "#b8860b" : "#ffffff" }}>
+                    {user?.role}
+                  </div>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+                  {menuItems.map((item) => {
+                    const isActive = activeMenuItem?.path === item.path;
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => navigate(item.path)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                        style={{
+                          background: isActive ? (isAdmin ? "var(--sidebar-accent)" : "rgba(255,255,255,0.1)") : "transparent",
+                          color: isActive ? (isAdmin ? "var(--primary)" : "#ffffff") : C.sidebarFg,
+                          opacity: isActive ? 1 : 0.7
+                        }}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </nav>
 
-                <div className="p-4 border-t flex items-center justify-between"
-                  style={{ borderColor: C.sidebarBorder }}>
-                  <ThemeToggle size="md" />
+                <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
                   <button
                     onClick={() => logoutMutation.mutate()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-colors"
                     style={{ background: C.logoutBg, color: C.logoutFg }}>
-                    <LogOut className="w-4 h-4" />
-                    Sair
+                    <LogOut className="w-4 h-4" /> Sair
                   </button>
                 </div>
               </motion.div>
@@ -317,86 +324,71 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
 
-        {/* Conteúdo principal mobile */}
         <main className="flex-1 p-4 pt-16">
-          {children}
+          {isAdmin ? <FadeIn>{children}</FadeIn> : children}
         </main>
       </div>
     );
   }
 
-  // ─── DESKTOP LAYOUT ──────────────────────────────────────────────
   return (
     <div className="flex min-h-screen" style={{ background: C.bg }}>
-      {/* Sidebar */}
-      <motion.aside
-        initial={{ x: -50, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="w-64 shrink-0 flex flex-col border-r shadow-lg"
+      <aside className="w-64 shrink-0 flex flex-col border-r shadow-lg"
         style={{ background: C.sidebar, borderColor: C.sidebarBorder }}>
-        <div className="flex items-center gap-3 p-4 border-b"
-          style={{ borderColor: C.sidebarBorder }}>
+        <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
           <PulseStar className="text-amber-500" />
-          <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>
-            Mundo Da Magia
-          </span>
+          <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>Mundo Da Magia</span>
         </div>
 
-        <div className="flex flex-col items-center p-4 border-b"
-          style={{ borderColor: C.sidebarBorder }}>
+        <div className="flex flex-col items-center p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2"
-            style={{ background: C.gradientGold }}>
-            {initials}
+            style={{ background: C.gradientGold }}>{initials}</div>
+          <p className="font-bold text-sm text-center" style={{ color: C.sidebarFg }}>{displayName}</p>
+          <div className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : "rgba(255,255,255,0.1)", color: isAdmin ? "#b8860b" : "#ffffff" }}>
+            {user?.role}
           </div>
-          <ShimmerText className="font-bold text-base" style={{ color: C.sidebarFg }}>{displayName}</ShimmerText>
-          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold uppercase mt-1"
-            style={roleBadgeStyle}>
-            {user?.role === "admin" ? "Administrador" : user?.role === "consultora" ? "Consultora" : "Vendedor"}
-          </span>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item, index) => (
-            <motion.button
-              key={index}
-              onClick={() => navigate(item.path)}
-              whileHover={{ x: 5 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${activeMenuItem?.path === item.path ? "bg-[var(--sidebar-accent)] text-[var(--primary-foreground)] shadow-sm" : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)]"}`}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-              {activeMenuItem?.path === item.path && (
-                <motion.div
-                  layoutId="active-indicator"
-                  className="absolute right-2 w-1 h-5 rounded-full bg-[var(--primary)]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                />
-              )}
-            </motion.button>
-          ))}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {menuItems.map((item) => {
+            const isActive = activeMenuItem?.path === item.path;
+            return (
+              <button
+                key={item.path}
+                onClick={() => setLocation(item.path)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: isActive ? (isAdmin ? "var(--sidebar-accent)" : "rgba(255,255,255,0.1)") : "transparent",
+                  color: isActive ? (isAdmin ? "var(--primary)" : "#ffffff") : C.sidebarFg,
+                  opacity: isActive ? 1 : 0.7
+                }}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="p-4 border-t flex items-center justify-between"
-          style={{ borderColor: C.sidebarBorder }}>
-          <ThemeToggle size="md" />
+        <div className="p-4 border-t flex flex-col gap-2" style={{ borderColor: C.sidebarBorder }}>
+          {isAdmin && (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <ThemeToggle size="sm" colors={C} />
+              <div style={{ color: C.mutedFg }}><PushNotificationButton /></div>
+            </div>
+          )}
           <button
             onClick={() => logoutMutation.mutate()}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
             style={{ background: C.logoutBg, color: C.logoutFg }}>
-            <LogOut className="w-4 h-4" />
-            Sair
+            <LogOut className="w-4 h-4" /> Sair
           </button>
         </div>
-      </motion.aside>
+      </aside>
 
-      {/* Conteúdo principal desktop */}
       <main className="flex-1 overflow-y-auto p-6">
-        {children}
+        {isAdmin ? <FadeIn>{children}</FadeIn> : children}
       </main>
     </div>
   );
