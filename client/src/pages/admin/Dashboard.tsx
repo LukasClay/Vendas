@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2, ClipboardList } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem, AnimatedCard } from "@/components/Animations";
@@ -63,8 +63,7 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        {!isLoading && (
-          <FadeIn>
+        <FadeIn>
           <div className="flex flex-col gap-4">
             <div>
               <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
@@ -117,8 +116,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          </FadeIn>
-        )
+        </FadeIn>
 
         {/* KPI Cards */}
         <StaggerList className="grid grid-cols-2 gap-3">
@@ -172,8 +170,7 @@ export default function AdminDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            </FadeIn>
-        )
+          </FadeIn>
 
           {/* Top Vendedores */}
           <FadeIn delay={0.3}>
@@ -204,8 +201,7 @@ export default function AdminDashboard() {
                 </ul>
               )}
             </div>
-            </FadeIn>
-        )
+          </FadeIn>
         </div>
 
         {/* Alertas de Trabalhos */}
