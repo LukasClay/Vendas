@@ -294,21 +294,21 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-1">
           {menuItems.map(item => {
             const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
             return (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-left"
                 style={isActive ? {
                   background: C.sidebarAccent,
                   borderLeft: `3px solid ${C.primary}`,
                   color: C.sidebarFg,
                 } : { color: C.textFaint }}>
                 <item.icon className="w-4 h-4 shrink-0" style={isActive ? { color: C.primary } : {}} />
-                <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                <span className="font-medium text-sm">{item.label}</span>
               </button>
             );
           })}
