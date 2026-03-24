@@ -12,7 +12,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
-import { ShimmerText, PulseStar } from "./Animations";
+import { ShimmerText, PulseStar, FadeIn } from "./Animations";
 
 // Cores clássicas (v1.8.x)
 const CLASSIC_COLORS = {
