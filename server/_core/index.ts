@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
+import { startReportsJob } from "../jobs/reportsJob";
 import { ensureSystemProducts } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -66,6 +67,8 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Iniciar job de alertas de prazo
     startAlertsJob();
+    // Iniciar job de relatorios por email
+    startReportsJob();
   });
 }
 

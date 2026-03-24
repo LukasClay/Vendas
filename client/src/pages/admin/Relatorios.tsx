@@ -363,7 +363,8 @@ export default function AdminRelatorios() {
               <Mail className="w-8 h-8 mb-3" style={{ color: "oklch(0.75 0.06 65)" }} />
               <p className="text-sm font-medium" style={{ color: "oklch(0.30 0.02 260)" }}>Nenhum agendamento configurado</p>
               <p className="text-xs mt-1 text-center" style={{ color: "oklch(0.60 0.01 260)" }}>
-                Adicione emails para receber relatórios automáticos.
+                Adicione emails para receber relatorios automaticos.<br />
+                Diario: todo dia as 7h · Semanal: segunda-feira as 7h · Mensal: dia 1 as 7h
               </p>
             </div>
           ) : (
@@ -380,6 +381,7 @@ export default function AdminRelatorios() {
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "oklch(0.52 0.015 260)" }}>
                       {FREQ_LABELS[schedule.frequency]} · {schedule.active ? "Ativo" : "Pausado"}
+                      {schedule.lastSentAt && ` · Ultimo envio: ${new Date(schedule.lastSentAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
