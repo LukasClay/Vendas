@@ -9,7 +9,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
-import { ensureSystemProducts } from "../db";
+import { ensureSystemProducts, getDb } from "../db";
+import { sql } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,6 +37,21 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // ─── Health Check (Railway zero-downtime deploy) ──────────────────────────
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) {
+        return res.status(503).json({ status: "error", message: "Database not configured" });
+      }
+      // Verifica conexão real com o banco
+      await db.execute(sql`SELECT 1`);
+      return res.json({ status: "ok", timestamp: new Date().toISOString() });
+    } catch (err) {
+      return res.status(503).json({ status: "error", message: String(err) });
+    }
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
