@@ -5,7 +5,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   BarChart3, Bell, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
   PlusCircle, User, Users, Menu, X, ChevronRight, Sparkles, Calendar,
-  Sun, Moon,
+  Sun, Moon, Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -87,6 +87,7 @@ const adminMenuItems = [
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Bell, label: "Alertas", path: "/admin/alertas" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
+  { icon: Trash2, label: "Lixeira", path: "/admin/lixeira" },
   { icon: User, label: "Minha Conta", path: "/admin/configuracoes" },
 ];
 

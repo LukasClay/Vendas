@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, like, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { appSettings, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
@@ -361,6 +361,71 @@ export async function deleteSale(id: number) {
   await db.update(sales)
     .set({ deletedAt: new Date() })
     .where(eq(sales.id, id));
+}
+
+// ─── Lixeira (Trash) ─────────────────────────────────────────────────────────
+
+export async function getDeletedSales() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    sale: sales,
+    sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+    sellerDisplayName: users.displayName,
+  })
+    .from(sales)
+    .leftJoin(users, eq(sales.sellerId, users.id))
+    .where(isNotNull(sales.deletedAt))
+    .orderBy(desc(sales.deletedAt));
+}
+
+export async function restoreSale(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Restaura a venda (remove deletedAt)
+  await db.update(sales)
+    .set({ deletedAt: null })
+    .where(eq(sales.id, id));
+}
+
+export async function permanentDeleteSale(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Libera o horário de consulta se houver
+  await db.update(consultationSlots)
+    .set({ sold: false, saleId: null, status: "pendente" })
+    .where(eq(consultationSlots.saleId, id));
+
+  // Delete permanente real
+  await db.delete(sales).where(eq(sales.id, id));
+}
+
+export async function cleanupExpiredTrash(daysOld = 30) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - daysOld);
+
+  // Primeiro libera slots de consulta das vendas que vão ser excluídas
+  const expiredSales = await db.select({ id: sales.id })
+    .from(sales)
+    .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
+
+  for (const s of expiredSales) {
+    await db.update(consultationSlots)
+      .set({ sold: false, saleId: null, status: "pendente" })
+      .where(eq(consultationSlots.saleId, s.id));
+  }
+
+  // Delete permanente
+  const result = await db.delete(sales)
+    .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
+
+  return expiredSales.length;
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@ const AdminConfiguracoes = lazy(() => import("./pages/admin/Configuracoes"));
 const AdminConsultas = lazy(() => import("./pages/admin/Consultas"));
 const AdminTrabalhos = lazy(() => import("./pages/admin/Trabalhos"));
 const AdminAlertas = lazy(() => import("./pages/admin/Alertas"));
+const AdminLixeira = lazy(() => import("./pages/admin/Lixeira"));
 const ConsultoraPage = lazy(() => import("./pages/Consultora"));
 const ConsultasPage = lazy(() => import("./pages/Consultas"));
 
@@ -135,6 +136,9 @@ function Router() {
         </Route>
         <Route path="/admin/alertas">
           <AuthGuard adminOnly><AdminAlertas /></AuthGuard>
+        </Route>
+        <Route path="/admin/lixeira">
+          <AuthGuard adminOnly><AdminLixeira /></AuthGuard>
         </Route>
 
         <Route path="/404" component={NotFound} />
