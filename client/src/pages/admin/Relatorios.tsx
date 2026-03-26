@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, ToggleLeft, ToggleRight, Building2 } from "lucide-react";
+import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, X, ToggleLeft, ToggleRight, Building2 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +28,8 @@ export default function AdminRelatorios() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({ frequency: "daily" as "daily" | "weekly" | "monthly", recipientEmail: "" });
+  const [confirmDeleteScheduleId, setConfirmDeleteScheduleId] = useState<number | null>(null);
+  const [confirmToggleScheduleId, setConfirmToggleScheduleId] = useState<number | null>(null);
 
   const summaryInput = useMemo(
     () => (dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined),
@@ -434,14 +436,46 @@ export default function AdminRelatorios() {
                           className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]">
                           {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => toggleSchedule.mutate({ id: schedule.id, active: !schedule.active })}
-                          className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-green-500 border border-[var(--border)]">
-                          {schedule.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                        </button>
-                        <button onClick={() => deleteSchedule.mutate({ id: schedule.id })}
-                          className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {confirmToggleScheduleId === schedule.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold" style={{ color: schedule.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
+                              {schedule.active ? "Desativar?" : "Ativar?"}
+                            </span>
+                            <button onClick={() => { toggleSchedule.mutate({ id: schedule.id, active: !schedule.active }); setConfirmToggleScheduleId(null); }}
+                              className="p-2 rounded-lg text-white border transition-colors"
+                              style={{ background: schedule.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)", borderColor: schedule.active ? "oklch(0.50 0.20 25)" : "oklch(0.48 0.13 160)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setConfirmToggleScheduleId(null)}
+                              className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirmToggleScheduleId(schedule.id)}
+                            className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors border border-[var(--border)]"
+                            style={{ color: schedule.active ? "oklch(0.55 0.15 160)" : "oklch(0.60 0.01 260)" }}>
+                            {schedule.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                          </button>
+                        )}
+                        {confirmDeleteScheduleId === schedule.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-red-500">Excluir?</span>
+                            <button onClick={() => { deleteSchedule.mutate({ id: schedule.id }); setConfirmDeleteScheduleId(null); }}
+                              className="p-2 rounded-lg bg-red-500 text-white border border-red-600 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setConfirmDeleteScheduleId(null)}
+                              className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setConfirmDeleteScheduleId(schedule.id)}
+                            className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </li>
                   ))}

@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
-  Users, Pencil, Check, X, UserCheck, UserX,
+  Users, Pencil, Check, X, UserCheck, UserX, XCircle,
   Plus, Eye, EyeOff, KeyRound, Shield, Loader2
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -36,6 +36,7 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
   const [isResetting, setIsResetting] = useState(false);
   const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"deactivate" | "reactivate" | null>(null);
 
   const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
     onSuccess: () => {
@@ -142,9 +143,25 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
             <button onClick={startEditing} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]"><Pencil className="w-4 h-4" /></button>
             <button onClick={() => setIsResetting(true)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-orange-500 border border-[var(--border)]"><KeyRound className="w-4 h-4" /></button>
             {user.active ? (
-              <button onClick={() => onDeactivate(user.id)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]"><UserX className="w-4 h-4" /></button>
+              confirmAction === "deactivate" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-red-500">Desativar?</span>
+                  <button onClick={() => { onDeactivate(user.id); setConfirmAction(null); }} className="p-2 rounded-lg bg-red-500 text-white border border-red-600 transition-colors"><UserX className="w-4 h-4" /></button>
+                  <button onClick={() => setConfirmAction(null)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors"><XCircle className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmAction("deactivate")} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]"><UserX className="w-4 h-4" /></button>
+              )
             ) : (
-              <button onClick={() => onReactivate(user.id)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-green-500 border border-[var(--border)]"><UserCheck className="w-4 h-4" /></button>
+              confirmAction === "reactivate" ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-green-500">Reativar?</span>
+                  <button onClick={() => { onReactivate(user.id); setConfirmAction(null); }} className="p-2 rounded-lg bg-green-500 text-white border border-green-600 transition-colors"><UserCheck className="w-4 h-4" /></button>
+                  <button onClick={() => setConfirmAction(null)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors"><XCircle className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmAction("reactivate")} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-green-500 border border-[var(--border)]"><UserCheck className="w-4 h-4" /></button>
+              )
             )}
           </div>
         )}

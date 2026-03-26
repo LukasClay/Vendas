@@ -13,6 +13,7 @@ export default function AdminProdutos() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -210,13 +211,33 @@ export default function AdminProdutos() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <button
-                      onClick={() => updateProduct.mutate({ id: product.id, active: !product.active })}
-                      className="p-2 rounded-lg transition-colors"
-                      title={product.active ? "Desativar" : "Ativar"}
-                      style={{ color: product.active ? "oklch(0.55 0.15 160)" : "oklch(0.60 0.01 260)" }}>
-                      {product.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                    </button>
+                    {togglingId === product.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold" style={{ color: product.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
+                          {product.active ? "Desativar?" : "Ativar?"}
+                        </span>
+                        <button
+                          onClick={() => { updateProduct.mutate({ id: product.id, active: !product.active }); setTogglingId(null); }}
+                          className="p-2 rounded-lg text-white"
+                          style={{ background: product.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setTogglingId(null)}
+                          className="p-2 rounded-lg"
+                          style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setTogglingId(product.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        title={product.active ? "Desativar" : "Ativar"}
+                        style={{ color: product.active ? "oklch(0.55 0.15 160)" : "oklch(0.60 0.01 260)" }}>
+                        {product.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                      </button>
+                    )}
                     <button
                       onClick={() => startEdit(product)}
                       className="p-2 rounded-lg transition-colors hover:bg-blue-50"

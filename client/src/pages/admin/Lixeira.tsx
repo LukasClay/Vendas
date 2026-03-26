@@ -37,6 +37,7 @@ export default function AdminLixeira() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState<number | null>(null);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
 
   const { data: deletedSales = [], isLoading } = trpc.sales.listDeleted.useQuery();
@@ -203,25 +204,53 @@ export default function AdminLixeira() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => restoreMutation.mutate({ id: sale.id })}
-                          disabled={restoreMutation.isPending}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
-                          style={{
-                            background: "rgba(34, 197, 94, 0.1)",
-                            color: "#22c55e",
-                            border: "1px solid rgba(34, 197, 94, 0.3)",
-                          }}
-                        >
-                          {restoreMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-4 h-4" />
-                          )}
-                          Restaurar
-                        </motion.button>
+                        {confirmRestore === sale.id ? (
+                          <div className="flex items-center gap-2">
+                            <motion.button
+                              initial={{ scale: 0.9 }}
+                              animate={{ scale: 1 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => { restoreMutation.mutate({ id: sale.id }); setConfirmRestore(null); }}
+                              disabled={restoreMutation.isPending}
+                              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+                              style={{ background: "#22c55e", color: "white" }}
+                            >
+                              {restoreMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <RotateCcw className="w-4 h-4" />
+                              )}
+                              Confirmar
+                            </motion.button>
+                            <button
+                              onClick={() => setConfirmRestore(null)}
+                              className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                              style={{ background: "var(--secondary)", color: "var(--foreground)" }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { setConfirmRestore(sale.id); setConfirmDelete(null); }}
+                            disabled={restoreMutation.isPending}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+                            style={{
+                              background: "rgba(34, 197, 94, 0.1)",
+                              color: "#22c55e",
+                              border: "1px solid rgba(34, 197, 94, 0.3)",
+                            }}
+                          >
+                            {restoreMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-4 h-4" />
+                            )}
+                            Restaurar
+                          </motion.button>
+                        )}
 
                         {confirmDelete === sale.id ? (
                           <div className="flex items-center gap-2">
