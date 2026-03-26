@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, X, ToggleLeft, ToggleRight, Building2 } from "lucide-react";
+import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, X, ToggleLeft, ToggleRight, Building2, CalendarDays, TrendingUp, Users, Package, AlertTriangle, Send } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -91,7 +91,6 @@ export default function AdminRelatorios() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Vendas");
-      // Auto column widths
       const colWidths = Object.keys(rows[0] ?? {}).map(k => ({ wch: Math.max(k.length, 15) }));
       ws["!cols"] = colWidths;
       const filename = `vendas_${dateFilter.startDate || "all"}_${dateFilter.endDate || "all"}.xlsx`;
@@ -167,32 +166,32 @@ export default function AdminRelatorios() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-10 pb-20">
         {/* Header */}
         <FadeIn>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div>
-              <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+              <h1 className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
                 Relatórios
               </h1>
               <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
                 Análise detalhada de performance e exportação de dados
               </p>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex gap-3 w-full sm:w-auto">
               <button
                 onClick={handleExportExcel}
                 disabled={exportLoading}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
-                style={{ background: "var(--primary)", color: "white", fontSize: "16px" }}>
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all hover:opacity-90 disabled:opacity-60 active:scale-95 shadow-lg shadow-green-500/10"
+                style={{ background: "#10b981", color: "white" }}>
                 {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 Excel
               </button>
               <button
                 onClick={handleExportPDF}
                 disabled={exportLoading}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
-                style={{ background: "var(--primary)", color: "white", fontSize: "16px" }}>
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all hover:opacity-90 disabled:opacity-60 active:scale-95 shadow-lg shadow-red-500/10"
+                style={{ background: "#ef4444", color: "white" }}>
                 {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 PDF
               </button>
@@ -201,164 +200,206 @@ export default function AdminRelatorios() {
         </FadeIn>
 
         {/* Filtro de período */}
-        <div className="rounded-2xl p-5 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-          <h2 className="font-bold text-sm mb-3" style={{ color: "var(--foreground)" }}>Período de Análise</h2>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <input
-              type="date"
-              value={dateFilter.startDate}
-              onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
-              className="px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
-              style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
-            />
-            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>até</span>
-            <input
-              type="date"
-              value={dateFilter.endDate}
-              onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
-              className="px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
-              style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
-            />
-            {(dateFilter.startDate || dateFilter.endDate) && (
-              <button onClick={() => setDateFilter({ startDate: "", endDate: "" })}
-                className="px-3 py-2 rounded-xl text-sm bg-[var(--secondary)] text-[var(--primary)] hover:bg-[var(--secondary)]/70 transition-colors">
-                Limpar
-              </button>
-            )}
-            {/* Quick filters */}
-            {[
-              { label: "Hoje", fn: () => { const d = new Date().toISOString().split("T")[0]; setDateFilter({ startDate: d, endDate: d }); } },
-              { label: "Esta semana", fn: () => { const now = new Date(); const mon = new Date(now); mon.setDate(now.getDate() - now.getDay() + 1); setDateFilter({ startDate: mon.toISOString().split("T")[0], endDate: now.toISOString().split("T")[0] }); } },
-              { label: "Este mês", fn: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1); setDateFilter({ startDate: first.toISOString().split("T")[0], endDate: now.toISOString().split("T")[0] }); } },
-            ].map(btn => (
-              <button key={btn.label} onClick={btn.fn}
-                className="px-3 py-2 rounded-xl text-xs font-medium transition-colors bg-[var(--secondary)] text-[var(--foreground)] hover:bg-[var(--secondary)]/70">
-                {btn.label}
-              </button>
-            ))}
+        <div className="rounded-3xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="w-4 h-4 text-[var(--primary)]" />
+            <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: "var(--foreground)" }}>Período de Análise</h2>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <input
+                type="date"
+                value={dateFilter.startDate}
+                onChange={e => setDateFilter(f => ({ ...f, startDate: e.target.value }))}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
+              />
+              <span className="text-xs font-bold uppercase text-[var(--muted-foreground)]">até</span>
+              <input
+                type="date"
+                value={dateFilter.endDate}
+                onChange={e => setDateFilter(f => ({ ...f, endDate: e.target.value }))}
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {(dateFilter.startDate || dateFilter.endDate) && (
+                <button onClick={() => setDateFilter({ startDate: "", endDate: "" })}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
+                  Limpar Filtros
+                </button>
+              )}
+              {[
+                { label: "Hoje", fn: () => { const d = new Date().toISOString().split("T")[0]; setDateFilter({ startDate: d, endDate: d }); } },
+                { label: "Esta semana", fn: () => { const now = new Date(); const mon = new Date(now); mon.setDate(now.getDate() - now.getDay() + 1); setDateFilter({ startDate: mon.toISOString().split("T")[0], endDate: now.toISOString().split("T")[0] }); } },
+                { label: "Este mês", fn: () => { const now = new Date(); const first = new Date(now.getFullYear(), now.getMonth(), 1); setDateFilter({ startDate: first.toISOString().split("T")[0], endDate: now.toISOString().split("T")[0] }); } },
+              ].map(btn => (
+                <button key={btn.label} onClick={btn.fn}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-[var(--secondary)] text-[var(--foreground)] hover:bg-[var(--border)] active:scale-95">
+                  {btn.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Resumo */}
+        {/* Resumo Geral */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-[var(--primary)]" />
+            <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Processando dados...</p>
           </div>
         ) : (
-          <StaggerList>
+          <StaggerList className="space-y-10">
             <StaggerItem>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <p className="text-xs font-bold uppercase mb-1 text-[var(--muted-foreground)]">Total Vendido</p>
-                  <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--primary)" }}>
-                    {formatCurrency(summary?.totalAmount ?? 0)}
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2">
+                  <TrendingUp className="w-4 h-4 text-[var(--primary)]" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Visão Geral</h2>
                 </div>
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <p className="text-xs font-bold uppercase mb-1 text-[var(--muted-foreground)]">Total de Vendas</p>
-                  <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-                    {summary?.totalSales ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <p className="text-xs font-bold uppercase mb-1 text-[var(--muted-foreground)]">Média por Venda</p>
-                  <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-                    {formatCurrency(summary?.averageSale ?? 0)}
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="rounded-3xl p-8 shadow-xl border border-[var(--border)] bg-[var(--card)] relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
+                    <p className="text-xs font-bold uppercase mb-2 text-[var(--muted-foreground)] tracking-wider">Total Vendido</p>
+                    <p className="text-4xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--primary)" }}>
+                      {formatCurrency(summary?.totalAmount ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-3xl p-8 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                    <p className="text-xs font-bold uppercase mb-2 text-[var(--muted-foreground)] tracking-wider">Total de Vendas</p>
+                    <p className="text-4xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+                      {summary?.totalSales ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-3xl p-8 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                    <p className="text-xs font-bold uppercase mb-2 text-[var(--muted-foreground)] tracking-wider">Média por Venda</p>
+                    <p className="text-4xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+                      {formatCurrency(summary?.averageSale ?? 0)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </StaggerItem>
 
             {/* Resumo por Empresa */}
             <StaggerItem>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { info: getCompanyInfo("mundo_da_magia"), data: magiaData },
-                  { info: getCompanyInfo("mundo_cigano"), data: ciganoData },
-                ].map(({ info, data }) => (
-                  <div key={info.short} className="rounded-2xl p-5 shadow-xl border" style={{ background: "var(--card)", borderColor: info.border }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: info.bg }}>
-                        <Building2 className="w-4 h-4" style={{ color: info.color }} />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2">
+                  <Building2 className="w-4 h-4 text-[var(--primary)]" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Performance por Empresa</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { info: getCompanyInfo("mundo_da_magia"), data: magiaData },
+                    { info: getCompanyInfo("mundo_cigano"), data: ciganoData },
+                  ].map(({ info, data }) => (
+                    <div key={info.short} className="rounded-3xl p-6 shadow-xl border-2 transition-all hover:shadow-2xl" style={{ background: "var(--card)", borderColor: info.border }}>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner" style={{ background: info.bg }}>
+                          <Building2 className="w-6 h-6" style={{ color: info.color }} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold" style={{ color: info.color }}>{info.short}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Indicadores de Performance</p>
+                        </div>
                       </div>
-                      <p className="text-sm font-bold" style={{ color: info.color }}>{info.short}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-5 rounded-2xl shadow-inner" style={{ background: info.bg }}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-2 opacity-60">Vendido</p>
+                          <p className="text-2xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                            {formatCurrency(data?.totalAmount ?? 0)}
+                          </p>
+                        </div>
+                        <div className="p-5 rounded-2xl shadow-inner" style={{ background: info.bg }}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-2 opacity-60">Vendas</p>
+                          <p className="text-2xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                            {String(data?.totalSales ?? 0)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl" style={{ background: info.bg }}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendido</p>
-                        <p className="text-xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
-                          {formatCurrency(data?.totalAmount ?? 0)}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-xl" style={{ background: info.bg }}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
-                        <p className="text-xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
-                          {String(data?.totalSales ?? 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </StaggerItem>
 
+            {/* Rankings */}
             <StaggerItem>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <h2 className="font-bold text-sm mb-3" style={{ color: "var(--foreground)" }}>Top Vendedores</h2>
-                  <ul className="space-y-2">
-                    {topSellers.length === 0 ? (
-                      <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
-                    ) : (
-                      topSellers.map((seller: any, index: number) => (
-                        <li key={seller.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
-                            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{seller.name}</p>
-                          </div>
-                          <p className="text-sm text-[var(--muted-foreground)]">{formatCurrency(seller.totalAmount)}</p>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-2">
+                  <BarChart3 className="w-4 h-4 text-[var(--primary)]" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Rankings de Performance</h2>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Top Vendedores */}
+                  <div className="rounded-3xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Users className="w-4 h-4 text-blue-500" />
+                      <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: "var(--foreground)" }}>Top Vendedores</h2>
+                    </div>
+                    <ul className="space-y-4">
+                      {topSellers.length === 0 ? (
+                        <li className="text-sm text-[var(--muted-foreground)] italic py-4 text-center">Nenhum dado disponível.</li>
+                      ) : (
+                        topSellers.map((seller: any, index: number) => (
+                          <li key={seller.id} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{seller.name}</p>
+                            </div>
+                            <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(seller.totalAmount)}</p>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
 
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <h2 className="font-bold text-sm mb-3" style={{ color: "var(--foreground)" }}>Top Clientes</h2>
-                  <ul className="space-y-2">
-                    {topClients.length === 0 ? (
-                      <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
-                    ) : (
-                      topClients.map((client: any, index: number) => (
-                        <li key={client.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
-                            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{client.name}</p>
-                          </div>
-                          <p className="text-sm text-[var(--muted-foreground)]">{formatCurrency(client.totalAmount)}</p>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
+                  {/* Top Clientes */}
+                  <div className="rounded-3xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Users className="w-4 h-4 text-purple-500" />
+                      <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: "var(--foreground)" }}>Top Clientes</h2>
+                    </div>
+                    <ul className="space-y-4">
+                      {topClients.length === 0 ? (
+                        <li className="text-sm text-[var(--muted-foreground)] italic py-4 text-center">Nenhum dado disponível.</li>
+                      ) : (
+                        topClients.map((client: any, index: number) => (
+                          <li key={client.id} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{client.name}</p>
+                            </div>
+                            <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(client.totalAmount)}</p>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
 
-                <div className="rounded-2xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-                  <h2 className="font-bold text-sm mb-3" style={{ color: "var(--foreground)" }}>Top Trabalhos</h2>
-                  <ul className="space-y-2">
-                    {topProducts.length === 0 ? (
-                      <li className="text-sm text-[var(--muted-foreground)]">Nenhum dado.</li>
-                    ) : (
-                      topProducts.map((product: any, index: number) => (
-                        <li key={product.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
-                            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{product.name}</p>
-                          </div>
-                          <p className="text-sm text-[var(--muted-foreground)]">{formatCurrency(product.totalAmount)}</p>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                  {/* Top Trabalhos */}
+                  <div className="rounded-3xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Package className="w-4 h-4 text-orange-500" />
+                      <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: "var(--foreground)" }}>Top Trabalhos</h2>
+                    </div>
+                    <ul className="space-y-4">
+                      {topProducts.length === 0 ? (
+                        <li className="text-sm text-[var(--muted-foreground)] italic py-4 text-center">Nenhum dado disponível.</li>
+                      ) : (
+                        topProducts.map((product: any, index: number) => (
+                          <li key={product.id} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{product.name}</p>
+                            </div>
+                            <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(product.totalAmount)}</p>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
                 </div>
               </div>
             </StaggerItem>
@@ -366,124 +407,157 @@ export default function AdminRelatorios() {
         )}
 
         {/* Agendamentos de Relatórios */}
-        <StaggerList>
-          <StaggerItem>
-            <div className="rounded-2xl p-5 shadow-xl border border-[var(--border)] bg-[var(--card)]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-lg" style={{ color: "var(--foreground)" }}>Agendamentos de Relatórios</h2>
-                <button onClick={() => setShowScheduleForm(!showScheduleForm)}
-                  className="px-4 py-2 rounded-xl text-sm font-bold bg-[var(--primary)] text-white shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Novo Agendamento
-                </button>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-2">
+            <Mail className="w-4 h-4 text-[var(--primary)]" />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Automação de Relatórios</h2>
+          </div>
+          <div className="rounded-3xl p-8 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="font-bold text-xl" style={{ color: "var(--foreground)" }}>Agendamentos de Relatórios</h2>
+                <p className="text-sm text-[var(--muted-foreground)]">Receba relatórios automáticos diretamente no seu e-mail</p>
               </div>
+              <button onClick={() => setShowScheduleForm(!showScheduleForm)}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold bg-[var(--primary)] text-white shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> Novo Agendamento
+              </button>
+            </div>
 
-              <AnimatePresence>
-                {showScheduleForm && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-                    <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--secondary)] space-y-3">
-                      <h3 className="font-bold text-base" style={{ color: "var(--foreground)" }}>Criar Novo Agendamento</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider mb-1 text-[var(--muted-foreground)]">Frequência</label>
-                          <select value={scheduleForm.frequency} onChange={e => setScheduleForm(f => ({ ...f, frequency: e.target.value as any }))}
-                            className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20" style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}>
-                            <option value="daily">Diário</option>
-                            <option value="weekly">Semanal</option>
-                            <option value="monthly">Mensal</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider mb-1 text-[var(--muted-foreground)]">Email do Destinatário</label>
-                          <input type="email" value={scheduleForm.recipientEmail} onChange={e => setScheduleForm(f => ({ ...f, recipientEmail: e.target.value }))}
-                            className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20" style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }} placeholder="email@exemplo.com" />
-                        </div>
+            <AnimatePresence>
+              {showScheduleForm && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-8">
+                  <div className="p-6 rounded-2xl border-2 border-[var(--primary)]/20 bg-[var(--secondary)]/30 space-y-6">
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-[var(--primary)]" />
+                      <h3 className="font-bold text-base" style={{ color: "var(--foreground)" }}>Configurar Novo Agendamento</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Frequência de Envio</label>
+                        <select value={scheduleForm.frequency} onChange={e => setScheduleForm(f => ({ ...f, frequency: e.target.value as any }))}
+                          className="w-full px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }}>
+                          <option value="daily">Diário (Todo dia às 07:00)</option>
+                          <option value="weekly">Semanal (Toda segunda às 07:00)</option>
+                          <option value="monthly">Mensal (Todo dia 1º às 07:00)</option>
+                        </select>
                       </div>
-                      <div className="flex justify-end gap-2 pt-2">
-                        <button onClick={() => createSchedule.mutate(scheduleForm)} disabled={createSchedule.isPending || !scheduleForm.recipientEmail}
-                          className="px-5 py-2 rounded-xl text-sm font-bold bg-[var(--primary)] text-white shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2">
-                          {createSchedule.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                          Agendar
-                        </button>
-                        <button onClick={() => setShowScheduleForm(false)}
-                          className="px-5 py-2 rounded-xl text-sm font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--secondary)] transition-colors">
-                          Cancelar
-                        </button>
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Email do Destinatário</label>
+                        <input type="email" value={scheduleForm.recipientEmail} onChange={e => setScheduleForm(f => ({ ...f, recipientEmail: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={{ border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--foreground)" }} placeholder="exemplo@email.com" />
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {loadingSchedules ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
-                </div>
-              ) : schedules.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
-                  <Mail className="w-10 h-10 text-[var(--muted-foreground)] opacity-20" />
-                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum agendamento de relatório.</p>
-                </div>
-              ) : (
-                <ul className="divide-y divide-[var(--border)]">
-                  {schedules.map(schedule => (
-                    <li key={schedule.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>Relatório {FREQ_LABELS[schedule.frequency]}</p>
-                        <p className="text-xs text-[var(--muted-foreground)]">Para: {schedule.recipientEmail}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => sendTestEmail.mutate({ email: schedule.recipientEmail })} disabled={sendTestEmail.isPending}
-                          className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]">
-                          {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                        </button>
-                        {confirmToggleScheduleId === schedule.id ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold" style={{ color: schedule.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
-                              {schedule.active ? "Desativar?" : "Ativar?"}
-                            </span>
-                            <button onClick={() => { toggleSchedule.mutate({ id: schedule.id, active: !schedule.active }); setConfirmToggleScheduleId(null); }}
-                              className="p-2 rounded-lg text-white border transition-colors"
-                              style={{ background: schedule.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)", borderColor: schedule.active ? "oklch(0.50 0.20 25)" : "oklch(0.48 0.13 160)" }}>
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setConfirmToggleScheduleId(null)}
-                              className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setConfirmToggleScheduleId(schedule.id)}
-                            className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors border border-[var(--border)]"
-                            style={{ color: schedule.active ? "oklch(0.55 0.15 160)" : "oklch(0.60 0.01 260)" }}>
-                            {schedule.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                          </button>
-                        )}
-                        {confirmDeleteScheduleId === schedule.id ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold text-red-500">Excluir?</span>
-                            <button onClick={() => { deleteSchedule.mutate({ id: schedule.id }); setConfirmDeleteScheduleId(null); }}
-                              className="p-2 rounded-lg bg-red-500 text-white border border-red-600 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setConfirmDeleteScheduleId(null)}
-                              className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)] transition-colors">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setConfirmDeleteScheduleId(schedule.id)}
-                            className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-red-500 border border-[var(--border)]">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button onClick={() => setShowScheduleForm(false)}
+                        className="px-6 py-3 rounded-xl text-sm font-bold bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--secondary)] transition-colors">
+                        Cancelar
+                      </button>
+                      <button onClick={() => createSchedule.mutate(scheduleForm)} disabled={createSchedule.isPending || !scheduleForm.recipientEmail}
+                        className="px-8 py-3 rounded-xl text-sm font-bold bg-[var(--primary)] text-white shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50">
+                        {createSchedule.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Confirmar Agendamento
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               )}
-            </div>
-          </StaggerItem>
-        </StaggerList>
+            </AnimatePresence>
+
+            {loadingSchedules ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+                <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Carregando agendamentos...</p>
+              </div>
+            ) : schedules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4 rounded-2xl border-2 border-dashed border-[var(--border)] bg-[var(--secondary)]/10">
+                <div className="w-16 h-16 rounded-full bg-[var(--secondary)] flex items-center justify-center">
+                  <Mail className="w-8 h-8 text-[var(--muted-foreground)] opacity-30" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[var(--foreground)]">Nenhum agendamento ativo</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">Crie um agendamento para receber relatórios automáticos.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-[var(--border)]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[var(--secondary)]/50">
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Frequência</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Destinatário</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-center">Status</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {schedules.map(schedule => (
+                      <tr key={schedule.id} className="hover:bg-[var(--secondary)]/20 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <span className="text-sm font-bold text-[var(--foreground)]">{FREQ_LABELS[schedule.frequency]}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-[var(--muted-foreground)]">{schedule.recipientEmail}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            {confirmToggleScheduleId === schedule.id ? (
+                              <div className="flex items-center gap-2 bg-amber-500/10 p-1 rounded-lg border border-amber-500/20">
+                                <span className="text-[10px] font-bold text-amber-600 px-1 uppercase">{schedule.active ? "Desativar?" : "Ativar?"}</span>
+                                <button onClick={() => { toggleSchedule.mutate({ id: schedule.id, active: !schedule.active }); setConfirmToggleScheduleId(null); }}
+                                  className="p-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-all active:scale-90">
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => setConfirmToggleScheduleId(null)}
+                                  className="p-1 rounded-md bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] active:scale-90">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmToggleScheduleId(schedule.id)}
+                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${schedule.active ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}>
+                                {schedule.active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                                {schedule.active ? "Ativo" : "Inativo"}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => sendTestEmail.mutate({ id: schedule.id })} disabled={sendTestEmail.isPending}
+                              className="p-2 rounded-xl text-blue-500 hover:bg-blue-500/10 transition-all active:scale-90" title="Enviar email de teste">
+                              {sendTestEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            </button>
+                            {confirmDeleteScheduleId === schedule.id ? (
+                              <div className="flex items-center gap-1 bg-red-500/10 p-1 rounded-lg border border-red-500/20">
+                                <button onClick={() => { deleteSchedule.mutate({ id: schedule.id }); setConfirmDeleteScheduleId(null); }}
+                                  className="p-1.5 rounded-md bg-red-500 text-white hover:bg-red-600 transition-all active:scale-90">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => setConfirmDeleteScheduleId(null)}
+                                  className="p-1.5 rounded-md bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] active:scale-90">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteScheduleId(schedule.id)}
+                                className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all active:scale-90" title="Excluir agendamento">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
