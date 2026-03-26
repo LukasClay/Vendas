@@ -14,13 +14,13 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Componente isolado: CancelModal ──────────────────────────────────────────
 function CancelModal({ modalData, onClose, onConfirm }: {
-  modalData: { id: number; clientName?: string | null };
+  modalData: { id: number; clientName?: string | null; sold?: boolean };
   onClose: () => void;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reason: string, requestRefund: boolean) => void;
 }) {
   const [reason, setReason] = useState("");
+  const [requestRefund, setRequestRefund] = useState(false);
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
 
   return (
     <div
@@ -57,6 +57,33 @@ function CancelModal({ modalData, onClose, onConfirm }: {
           }}
           autoFocus
         />
+
+        {/* Checkbox de Reembolso (apenas se já foi vendida) */}
+        {modalData.sold && (
+          <label
+            className="flex items-center gap-3 mt-4 p-3 rounded-xl cursor-pointer transition-all border-2"
+            style={{
+              background: requestRefund ? "rgba(34, 197, 94, 0.1)" : "var(--secondary)",
+              borderColor: requestRefund ? "#22c55e" : "var(--border)",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={requestRefund}
+              onChange={(e) => setRequestRefund(e.target.checked)}
+              className="w-4 h-4 rounded accent-green-600"
+            />
+            <div>
+              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                Dinheiro Reembolsado
+              </p>
+              <p className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>
+                Solicita aprovação de reembolso ao administrador
+              </p>
+            </div>
+          </label>
+        )}
+
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
@@ -65,10 +92,11 @@ function CancelModal({ modalData, onClose, onConfirm }: {
             Voltar
           </button>
           <button
-            onClick={() => onConfirm(reason)}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all bg-red-600 active:scale-95"
+            onClick={() => onConfirm(reason, requestRefund)}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
+            style={{ background: requestRefund ? "#22c55e" : "#ef4444" }}
           >
-            Confirmar
+            {requestRefund ? "Cancelar + Reembolso" : "Confirmar"}
           </button>
         </div>
       </motion.div>
@@ -243,11 +271,6 @@ function ConsultaCard({
               Motivo: {slot.cancelReason}
             </div>
           )}
-          {isCancelled && slot.cancelledAt && (
-            <p className="mt-1 text-[10px] text-red-400 dark:text-red-500">
-              Cancelada em: {new Date(slot.cancelledAt).toLocaleDateString("pt-BR")}
-            </p>
-          )}
         </div>
       )}
     </div>
@@ -262,7 +285,7 @@ export default function Consultas() {
   const [activeTab, setActiveTab] = useState<"pendentes" | "realizadas" | "canceladas" | "reembolsos" | "gerenciar">("pendentes");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedTime, setSelectedTime] = useState("");
-  const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null; sold?: boolean } | null>(null);
   const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState<number | null>(null);
   const [confirmRestoreId, setConfirmRestoreId] = useState<number | null>(null);
   const [confirmDeleteCancelledId, setConfirmDeleteCancelledId] = useState<number | null>(null);
@@ -317,12 +340,10 @@ export default function Consultas() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // O backend aceita um slot por vez
   const [creatingSlots, setCreatingSlots] = useState(false);
   const createSlotMutation = trpc.consultationSlots.create.useMutation();
   const createSlotsMutation = { isPending: creatingSlots };
 
-  // Criar um único slot (data + horário específico)
   const handleCreateSingleSlot = async () => {
     if (!selectedTime) { toast.error("Selecione um horário."); return; }
     setCreatingSlots(true);
@@ -337,13 +358,10 @@ export default function Consultas() {
     setCreatingSlots(false);
   };
 
-
-
   const isLoading = activeTab === "pendentes" ? loadingPendentes : activeTab === "realizadas" ? loadingRealizadas : activeTab === "canceladas" ? loadingCanceladas : activeTab === "reembolsos" ? loadingRefunds : loadingAll;
 
   const listToRender = activeTab === "pendentes" ? pendentes : activeTab === "realizadas" ? realizadas : canceladas;
 
-  // Agrupar por data
   const grouped = listToRender.reduce((acc, s) => {
     const d = fmtDate(s.consultationDate);
     if (!acc[d]) acc[d] = [];
@@ -468,15 +486,10 @@ export default function Consultas() {
                                     Motivo: {r.cancelReason}
                                   </div>
                                 )}
-                                {r.refundRequestedAt && (
-                                  <p className="text-[10px] text-[var(--muted-foreground)]">
-                                    Solicitado em {new Date(r.refundRequestedAt).toLocaleDateString("pt-BR")} às {new Date(r.refundRequestedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                  </p>
-                                )}
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex gap-3">
                                 <motion.button
-                                  whileHover={{ scale: 1.03 }}
+                                  whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.97 }}
                                   onClick={() => {
                                     if (confirmApproveRefundId === r.id) {
@@ -497,7 +510,7 @@ export default function Consultas() {
                                   {confirmApproveRefundId === r.id ? "Confirmar Aprovação" : "Aprovar"}
                                 </motion.button>
                                 <motion.button
-                                  whileHover={{ scale: 1.03 }}
+                                  whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.97 }}
                                   onClick={() => {
                                     if (confirmRejectRefundId === r.id) {
@@ -584,7 +597,6 @@ export default function Consultas() {
                 <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Crie e gerencie horários de consulta</p>
               </div>
 
-              {/* Seletor de Data */}
               <div className="max-w-md mx-auto">
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--muted-foreground)" }}>Data</label>
                 <input 
@@ -596,7 +608,6 @@ export default function Consultas() {
                 />
               </div>
 
-              {/* Criar horário individual */}
               <div className="max-w-md mx-auto space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Horário Específico</label>
                 <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
@@ -637,7 +648,6 @@ export default function Consultas() {
                 </button>
               </div>
 
-              {/* Todos os Horários (igual consultora) */}
               <div className="max-w-2xl mx-auto rounded-2xl p-5 border border-[var(--border)]" style={{ background: "var(--card)" }}>
                 <h2 className="text-sm font-bold mb-4" style={{ color: "var(--foreground)" }}>
                   Todos os Horários
@@ -690,23 +700,20 @@ export default function Consultas() {
                                   className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all active:scale-90 disabled:opacity-50"
                                   title="Confirmar exclusão"
                                 >
-                                  {deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id
-                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={() => setConfirmDeleteSlotId(null)}
-                                  className="p-1.5 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--border)] transition-all active:scale-90"
-                                  title="Cancelar"
+                                  className="p-1.5 rounded-lg bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] active:scale-90"
                                 >
-                                  <XCircle className="w-3.5 h-3.5" />
+                                  <RotateCcw className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ) : (
                               <button
                                 onClick={() => setConfirmDeleteSlotId(s.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-90"
-                                title="Remover horário"
+                                className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90"
+                                title="Excluir horário"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -716,9 +723,9 @@ export default function Consultas() {
                       ))}
                   </div>
                 )}
-                {slots.length > 0 && (
-                  <p className="text-[10px] text-center mt-3" style={{ color: "var(--muted-foreground)" }}>
-                    {slots.length} horário{slots.length !== 1 ? "s" : ""} cadastrado{slots.length !== 1 ? "s" : ""}
+                {!loadingAll && slots.length > 0 && (
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-center mt-4" style={{ color: "var(--muted-foreground)" }}>
+                    {slots.length} horário{slots.length !== 1 ? "s" : ""} no total
                     {" • "}{slots.filter((s: any) => s.sold).length} vendido{slots.filter((s: any) => s.sold).length !== 1 ? "s" : ""}
                     {" • "}{slots.filter((s: any) => !s.sold).length} disponíve{slots.filter((s: any) => !s.sold).length !== 1 ? "is" : "l"}
                   </p>
@@ -757,7 +764,7 @@ export default function Consultas() {
                           key={slot.id} 
                           slot={slot} 
                           showDate={false}
-                          onCancel={activeTab === "pendentes" ? () => setCancelModal({ id: slot.id, clientName: slot.clientName }) : undefined}
+                          onCancel={activeTab === "pendentes" ? () => setCancelModal({ id: slot.id, clientName: slot.clientName, sold: slot.sold }) : undefined}
                           onRestore={activeTab === "canceladas" ? () => {
                             if (confirmRestoreId === slot.id) {
                               restoreMutation.mutate({ id: slot.id });
@@ -793,10 +800,12 @@ export default function Consultas() {
 
         <AnimatePresence>
           {cancelModal && (
-            <CancelModal 
-              modalData={cancelModal} 
-              onClose={() => setCancelModal(null)} 
-              onConfirm={(reason) => cancelMutation.mutate({ id: cancelModal.id, reason })}
+            <CancelModal
+              modalData={cancelModal}
+              onClose={() => setCancelModal(null)}
+              onConfirm={(reason, requestRefund) => {
+                cancelMutation.mutate({ id: cancelModal.id, reason, requestRefund: !!requestRefund });
+              }}
             />
           )}
         </AnimatePresence>
