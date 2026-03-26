@@ -268,6 +268,7 @@ export default function Consultas() {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   // Modal de cancelamento com motivo
   const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
+  const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -622,10 +623,30 @@ export default function Consultas() {
                           <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "oklch(0.88 0.08 160)", color: "oklch(0.35 0.15 160)" }}>
                             Vendido
                           </span>
+                        ) : confirmDeleteSlotId === slot.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold" style={{ color: "oklch(0.58 0.22 25)" }}>Confirmar?</span>
+                            <button
+                              onClick={() => { deleteSlot.mutate({ id: slot.id }); setConfirmDeleteSlotId(null); }}
+                              disabled={deleteSlot.isPending}
+                              className="p-1.5 rounded-lg transition-all"
+                              style={{ background: "oklch(0.58 0.22 25)", color: "white" }}
+                              title="Confirmar exclusão"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteSlotId(null)}
+                              className="p-1.5 rounded-lg transition-all"
+                              style={{ background: "oklch(0.92 0.01 260)", color: "oklch(0.45 0.02 260)" }}
+                              title="Cancelar"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <button
-                            onClick={() => deleteSlot.mutate({ id: slot.id })}
-                            disabled={deleteSlot.isPending}
+                            onClick={() => setConfirmDeleteSlotId(slot.id)}
                             className="p-1.5 rounded-lg transition-all"
                             style={{ color: "oklch(0.58 0.22 25)" }}
                             title="Remover horário"

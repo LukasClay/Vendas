@@ -111,6 +111,8 @@ function ConsultaCard({
   cancelling = false,
   restoring = false,
   deleting = false,
+  confirmingRestore = false,
+  confirmingDelete = false,
 }: {
   slot: any;
   showDate?: boolean;
@@ -120,6 +122,8 @@ function ConsultaCard({
   cancelling?: boolean;
   restoring?: boolean;
   deleting?: boolean;
+  confirmingRestore?: boolean;
+  confirmingDelete?: boolean;
 }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -185,7 +189,7 @@ function ConsultaCard({
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800 active:scale-95"
             >
               {restoring ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-              Restaurar
+              {confirmingRestore ? "Confirmar?" : "Restaurar"}
             </button>
           )}
           {onDelete && isCancelled && (
@@ -195,7 +199,7 @@ function ConsultaCard({
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] active:scale-95"
             >
               {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlock className="w-3 h-3" />}
-              Liberar
+              {confirmingDelete ? "Confirmar?" : "Liberar"}
             </button>
           )}
         </div>
@@ -259,6 +263,11 @@ export default function Consultas() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedTime, setSelectedTime] = useState("");
   const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
+  const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState<number | null>(null);
+  const [confirmRestoreId, setConfirmRestoreId] = useState<number | null>(null);
+  const [confirmDeleteCancelledId, setConfirmDeleteCancelledId] = useState<number | null>(null);
+  const [confirmApproveRefundId, setConfirmApproveRefundId] = useState<number | null>(null);
+  const [confirmRejectRefundId, setConfirmRejectRefundId] = useState<number | null>(null);
 
   // Queries separadas para cada aba
   const { data: slots = [], isLoading: loadingAll } = trpc.consultationSlots.listAll.useQuery();
@@ -469,7 +478,15 @@ export default function Consultas() {
                                 <motion.button
                                   whileHover={{ scale: 1.03 }}
                                   whileTap={{ scale: 0.97 }}
-                                  onClick={() => approveRefundMutation.mutate({ id: r.id })}
+                                  onClick={() => {
+                                    if (confirmApproveRefundId === r.id) {
+                                      approveRefundMutation.mutate({ id: r.id });
+                                      setConfirmApproveRefundId(null);
+                                    } else {
+                                      setConfirmApproveRefundId(r.id);
+                                      setConfirmRejectRefundId(null);
+                                    }
+                                  }}
                                   disabled={approveRefundMutation.isPending}
                                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
                                   style={{ background: "#22c55e" }}
@@ -477,12 +494,20 @@ export default function Consultas() {
                                   {approveRefundMutation.isPending && approveRefundMutation.variables?.id === r.id
                                     ? <Loader2 className="w-4 h-4 animate-spin" />
                                     : <ThumbsUp className="w-4 h-4" />}
-                                  Aprovar
+                                  {confirmApproveRefundId === r.id ? "Confirmar Aprovação" : "Aprovar"}
                                 </motion.button>
                                 <motion.button
                                   whileHover={{ scale: 1.03 }}
                                   whileTap={{ scale: 0.97 }}
-                                  onClick={() => rejectRefundMutation.mutate({ id: r.id })}
+                                  onClick={() => {
+                                    if (confirmRejectRefundId === r.id) {
+                                      rejectRefundMutation.mutate({ id: r.id });
+                                      setConfirmRejectRefundId(null);
+                                    } else {
+                                      setConfirmRejectRefundId(r.id);
+                                      setConfirmApproveRefundId(null);
+                                    }
+                                  }}
                                   disabled={rejectRefundMutation.isPending}
                                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
                                   style={{ background: "#ef4444" }}
@@ -490,7 +515,7 @@ export default function Consultas() {
                                   {rejectRefundMutation.isPending && rejectRefundMutation.variables?.id === r.id
                                     ? <Loader2 className="w-4 h-4 animate-spin" />
                                     : <ThumbsDown className="w-4 h-4" />}
-                                  Rejeitar
+                                  {confirmRejectRefundId === r.id ? "Confirmar Rejeição" : "Rejeitar"}
                                 </motion.button>
                               </div>
                             </motion.div>
@@ -612,58 +637,93 @@ export default function Consultas() {
                 </button>
               </div>
 
-              {/* Horários já criados para a data selecionada */}
-              {(() => {
-                const slotsForDate = slots.filter((s: any) => s.consultationDate === selectedDate);
-                if (slotsForDate.length === 0) return null;
-                return (
-                  <div className="max-w-md mx-auto space-y-3">
-                    <div className="flex items-center gap-4">
-                      <div className="h-px flex-1 bg-[var(--border)]" />
-                      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Horários em {fmtDate(selectedDate)}</span>
-                      <div className="h-px flex-1 bg-[var(--border)]" />
-                    </div>
-                    <div className="space-y-2">
-                      {slotsForDate
-                        .sort((a: any, b: any) => a.consultationTime.localeCompare(b.consultationTime))
-                        .map((s: any) => (
-                          <div key={s.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)]" style={{ background: "var(--secondary)" }}>
-                            <div className="flex items-center gap-3">
-                              <Clock className="w-4 h-4" style={{ color: "var(--primary)" }} />
-                              <span className="font-bold text-sm" style={{ color: "var(--foreground)" }}>{s.consultationTime}</span>
-                              {s.sold ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                  Vendido{s.clientName ? ` — ${s.clientName}` : ""}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                  Disponível
-                                </span>
-                              )}
-                            </div>
-                            {!s.sold && (
+              {/* Todos os Horários (igual consultora) */}
+              <div className="max-w-2xl mx-auto rounded-2xl p-5 border border-[var(--border)]" style={{ background: "var(--card)" }}>
+                <h2 className="text-sm font-bold mb-4" style={{ color: "var(--foreground)" }}>
+                  Todos os Horários
+                </h2>
+                {loadingAll ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-[var(--primary)]" />
+                  </div>
+                ) : slots.length === 0 ? (
+                  <p className="text-sm text-center py-6" style={{ color: "var(--muted-foreground)" }}>
+                    Nenhum horário cadastrado ainda.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {[...slots]
+                      .sort((a: any, b: any) => {
+                        const dateComp = String(a.consultationDate).localeCompare(String(b.consultationDate));
+                        return dateComp !== 0 ? dateComp : a.consultationTime.localeCompare(b.consultationTime);
+                      })
+                      .map((s: any) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all"
+                          style={{
+                            background: s.sold ? (isDark ? "rgba(34, 197, 94, 0.05)" : "oklch(0.96 0.01 160)") : "var(--secondary)",
+                            borderColor: s.sold ? (isDark ? "rgba(34, 197, 94, 0.2)" : "oklch(0.85 0.05 160)") : "var(--border)",
+                          }}
+                        >
+                          <div>
+                            <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                              {fmtDate(s.consultationDate)} — {s.consultationTime}
+                            </p>
+                            {s.sold && s.clientName && (
+                              <p className="text-xs mt-0.5" style={{ color: isDark ? "#4ade80" : "oklch(0.45 0.12 160)" }}>
+                                ✓ {s.clientName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {s.sold ? (
+                              <span className="text-xs px-2 py-1 rounded-lg font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                Vendido
+                              </span>
+                            ) : confirmDeleteSlotId === s.id ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-red-500 mr-1">Confirmar?</span>
+                                <button
+                                  onClick={() => { deleteSlotMutation.mutate({ id: s.id }); setConfirmDeleteSlotId(null); }}
+                                  disabled={deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id}
+                                  className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all active:scale-90 disabled:opacity-50"
+                                  title="Confirmar exclusão"
+                                >
+                                  {deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteSlotId(null)}
+                                  className="p-1.5 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--border)] transition-all active:scale-90"
+                                  title="Cancelar"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
                               <button
-                                onClick={() => deleteSlotMutation.mutate({ id: s.id })}
-                                disabled={deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-90 disabled:opacity-50"
+                                onClick={() => setConfirmDeleteSlotId(s.id)}
+                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-90"
                                 title="Remover horário"
                               >
-                                {deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id
-                                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                                  : <Trash2 className="w-4 h-4" />}
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                           </div>
-                        ))}
-                    </div>
-                    <p className="text-[10px] text-center" style={{ color: "var(--muted-foreground)" }}>
-                      {slotsForDate.length} horário{slotsForDate.length !== 1 ? "s" : ""} cadastrado{slotsForDate.length !== 1 ? "s" : ""}
-                      {" • "}{slotsForDate.filter((s: any) => s.sold).length} vendido{slotsForDate.filter((s: any) => s.sold).length !== 1 ? "s" : ""}
-                      {" • "}{slotsForDate.filter((s: any) => !s.sold).length} disponíve{slotsForDate.filter((s: any) => !s.sold).length !== 1 ? "is" : "l"}
-                    </p>
+                        </div>
+                      ))}
                   </div>
-                );
-              })()}
+                )}
+                {slots.length > 0 && (
+                  <p className="text-[10px] text-center mt-3" style={{ color: "var(--muted-foreground)" }}>
+                    {slots.length} horário{slots.length !== 1 ? "s" : ""} cadastrado{slots.length !== 1 ? "s" : ""}
+                    {" • "}{slots.filter((s: any) => s.sold).length} vendido{slots.filter((s: any) => s.sold).length !== 1 ? "s" : ""}
+                    {" • "}{slots.filter((s: any) => !s.sold).length} disponíve{slots.filter((s: any) => !s.sold).length !== 1 ? "is" : "l"}
+                  </p>
+                )}
+              </div>
             </motion.div>
           ) : (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
@@ -698,11 +758,29 @@ export default function Consultas() {
                           slot={slot} 
                           showDate={false}
                           onCancel={activeTab === "pendentes" ? () => setCancelModal({ id: slot.id, clientName: slot.clientName }) : undefined}
-                          onRestore={activeTab === "canceladas" ? () => restoreMutation.mutate({ id: slot.id }) : undefined}
-                          onDelete={activeTab === "canceladas" ? () => deleteMutation.mutate({ id: slot.id }) : undefined}
+                          onRestore={activeTab === "canceladas" ? () => {
+                            if (confirmRestoreId === slot.id) {
+                              restoreMutation.mutate({ id: slot.id });
+                              setConfirmRestoreId(null);
+                            } else {
+                              setConfirmRestoreId(slot.id);
+                              setConfirmDeleteCancelledId(null);
+                            }
+                          } : undefined}
+                          onDelete={activeTab === "canceladas" ? () => {
+                            if (confirmDeleteCancelledId === slot.id) {
+                              deleteMutation.mutate({ id: slot.id });
+                              setConfirmDeleteCancelledId(null);
+                            } else {
+                              setConfirmDeleteCancelledId(slot.id);
+                              setConfirmRestoreId(null);
+                            }
+                          } : undefined}
                           cancelling={cancelMutation.isPending && cancelMutation.variables?.id === slot.id}
                           restoring={restoreMutation.isPending && restoreMutation.variables?.id === slot.id}
                           deleting={deleteMutation.isPending && deleteMutation.variables?.id === slot.id}
+                          confirmingRestore={confirmRestoreId === slot.id}
+                          confirmingDelete={confirmDeleteCancelledId === slot.id}
                         />
                       ))}
                     </div>
