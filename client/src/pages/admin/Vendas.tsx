@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
+import { CompanyBadge } from "@/components/CompanySwitch";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -304,13 +305,14 @@ export default function AdminVendas() {
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Trabalho</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Valor</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Vendedor</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Empresa</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center">
+                    <td colSpan={7} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
                         <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Carregando vendas...</p>
@@ -319,7 +321,7 @@ export default function AdminVendas() {
                   </tr>
                 ) : salesData.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center">
+                    <td colSpan={7} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center gap-3 opacity-20">
                         <FileText className="w-12 h-12 text-[var(--muted-foreground)]" />
                         <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Nenhuma venda encontrada</p>
@@ -359,6 +361,9 @@ export default function AdminVendas() {
                           <span className="text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)]">
                             {sale.sellerName || "—"}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <CompanyBadge company={sale.company} />
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -475,7 +480,7 @@ export default function AdminVendas() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[var(--border)]" style={{ background: "var(--card)" }}>
               <h3 className="text-xl font-bold mb-2 text-[var(--foreground)]" style={{ fontFamily: "'Playfair Display', serif" }}>Excluir Venda?</h3>
-              <p className="text-sm text-[var(--muted-foreground)] mb-6">Esta ação não pode ser desfeita. O registro será removido permanentemente do sistema.</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-6">A venda será movida para a Lixeira e poderá ser restaurada em até 30 dias.</p>
               <div className="flex gap-3">
                 <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-xl font-bold bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-[10px]">Cancelar</button>
                 <button onClick={() => deleteSale.mutate({ id: deleteConfirmId })} disabled={deleteSale.isPending} className="flex-1 py-3 rounded-xl font-bold bg-red-600 text-white active:scale-95 uppercase tracking-widest text-[10px]">

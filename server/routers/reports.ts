@@ -6,6 +6,7 @@ import {
   deleteReportSchedule,
   getReportSchedules,
   getReportSummary,
+  getReportSummaryByCompany,
   getSales,
   getSalesByMonth,
   getTopClients,
@@ -27,25 +28,16 @@ export const reportsRouter = router({
       endDate: z.string().optional(),
     }).optional())
     .query(async ({ input }) => {
-      const [summary, topSellers, topClients, topProducts] = await Promise.all([
-        getReportSummary(
-          input?.startDate ? new Date(input.startDate) : undefined,
-          input?.endDate ? new Date(input.endDate) : undefined,
-        ),
-        getTopSellers(
-          input?.startDate ? new Date(input.startDate) : undefined,
-          input?.endDate ? new Date(input.endDate) : undefined,
-        ),
-        getTopClients(
-          input?.startDate ? new Date(input.startDate) : undefined,
-          input?.endDate ? new Date(input.endDate) : undefined,
-        ),
-        getTopProducts(
-          input?.startDate ? new Date(input.startDate) : undefined,
-          input?.endDate ? new Date(input.endDate) : undefined,
-        ),
+      const sd = input?.startDate ? new Date(input.startDate) : undefined;
+      const ed = input?.endDate ? new Date(input.endDate) : undefined;
+      const [summary, topSellers, topClients, topProducts, summaryByCompany] = await Promise.all([
+        getReportSummary(sd, ed),
+        getTopSellers(sd, ed),
+        getTopClients(sd, ed),
+        getTopProducts(sd, ed),
+        getReportSummaryByCompany(sd, ed),
       ]);
-      return { summary, topSellers, topClients, topProducts };
+      return { summary, topSellers, topClients, topProducts, summaryByCompany };
     }),
 
   salesByMonth: adminProcedure

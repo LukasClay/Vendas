@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNull, like, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
+import { appSettings, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -278,9 +278,24 @@ export interface SaleFilters {
   offset?: number;
 }
 
+// Retorna a empresa ativa no momento (para carimbar vendas)
+export async function getActiveCompany(): Promise<"mundo_da_magia" | "mundo_cigano"> {
+  const db = await getDb();
+  if (!db) return "mundo_da_magia";
+  const rows = await withRetry(() =>
+    db.select().from(appSettings).where(eq(appSettings.key, "active_company")).limit(1)
+  );
+  if (rows.length === 0) return "mundo_da_magia";
+  return rows[0].value as "mundo_da_magia" | "mundo_cigano";
+}
+
 export async function createSale(data: InsertSale) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Carimba a venda com a empresa ativa se não foi fornecida
+  if (!data.company) {
+    data.company = await getActiveCompany();
+  }
   // PostgreSQL: usar .returning() para obter o ID gerado
   const result = await db.insert(sales).values(data).returning({ id: sales.id });
   return result[0].id;
@@ -368,6 +383,25 @@ export async function getReportSummary(startDate?: Date, endDate?: Date) {
     : await query;
 
   return result[0] ?? { totalAmount: 0, totalSales: 0 };
+}
+
+export async function getReportSummaryByCompany(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions: any[] = [isNull(sales.deletedAt)];
+  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
+  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+
+  const query = db.select({
+    company: sales.company,
+    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+    totalSales: sql<number>`COUNT(*)`,
+  }).from(sales).groupBy(sales.company);
+
+  return conditions.length > 0
+    ? (query as any).where(and(...conditions))
+    : query;
 }
 
 export async function getTopSellers(startDate?: Date, endDate?: Date, limit = 10) {

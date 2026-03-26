@@ -15,6 +15,7 @@ import { PushNotificationButton } from "./PushNotificationButton";
 import { ShimmerText, PulseStar, FadeIn } from "./Animations";
 import { lazy, Suspense } from "react";
 const AdminCelebration = lazy(() => import("./AdminCelebration"));
+import CompanyThemeProvider from "./CompanyThemeProvider";
 
 // Cores clássicas (v1.8.x)
 const CLASSIC_COLORS = {
@@ -182,9 +183,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
       {isAdmin && (
-        <Suspense fallback={null}>
-          <AdminCelebration />
-        </Suspense>
+        <>
+          <CompanyThemeProvider />
+          <Suspense fallback={null}>
+            <AdminCelebration />
+          </Suspense>
+        </>
       )}
     </>
   );

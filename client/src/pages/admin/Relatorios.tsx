@@ -2,11 +2,12 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, ToggleLeft, ToggleRight } from "lucide-react";
+import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, ToggleLeft, ToggleRight, Building2 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
+import { getCompanyInfo } from "@/components/CompanySwitch";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -158,6 +159,9 @@ export default function AdminRelatorios() {
   const topSellers = reportData?.topSellers ?? [];
   const topClients = reportData?.topClients ?? [];
   const topProducts = reportData?.topProducts ?? [];
+  const summaryByCompany: any[] = reportData?.summaryByCompany ?? [];
+  const magiaData = summaryByCompany.find((c: any) => c.company === "mundo_da_magia");
+  const ciganoData = summaryByCompany.find((c: any) => c.company === "mundo_cigano");
 
   return (
     <DashboardLayout>
@@ -260,6 +264,39 @@ export default function AdminRelatorios() {
                     {formatCurrency(summary?.averageSale ?? 0)}
                   </p>
                 </div>
+              </div>
+            </StaggerItem>
+
+            {/* Resumo por Empresa */}
+            <StaggerItem>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { info: getCompanyInfo("mundo_da_magia"), data: magiaData },
+                  { info: getCompanyInfo("mundo_cigano"), data: ciganoData },
+                ].map(({ info, data }) => (
+                  <div key={info.short} className="rounded-2xl p-5 shadow-xl border" style={{ background: "var(--card)", borderColor: info.border }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: info.bg }}>
+                        <Building2 className="w-4 h-4" style={{ color: info.color }} />
+                      </div>
+                      <p className="text-sm font-bold" style={{ color: info.color }}>{info.short}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-xl" style={{ background: info.bg }}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendido</p>
+                        <p className="text-xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                          {formatCurrency(data?.totalAmount ?? 0)}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-xl" style={{ background: info.bg }}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
+                        <p className="text-xl font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                          {String(data?.totalSales ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </StaggerItem>
 
