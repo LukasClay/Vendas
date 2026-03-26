@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry } from "../db";
+import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry, getDeletedSales, restoreSale, permanentDeleteSale, cleanupExpiredTrash } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
@@ -306,4 +306,28 @@ export const salesRouter = router({
         consultas: consultaRows,
       };
     }),
+
+  // ─── Lixeira (Trash) ──────────────────────────────────────────────────────────
+  listDeleted: adminProcedure.query(async () => {
+    return getDeletedSales();
+  }),
+
+  restore: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await restoreSale(input.id);
+      return { success: true };
+    }),
+
+  permanentDelete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await permanentDeleteSale(input.id);
+      return { success: true };
+    }),
+
+  cleanupTrash: adminProcedure.mutation(async () => {
+    const count = await cleanupExpiredTrash(30);
+    return { deletedCount: count };
+  }),
 });

@@ -7,6 +7,8 @@ import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem, AnimatedCard } from "@/components/Animations";
 import { useTheme } from "@/contexts/ThemeContext";
+import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
+import { Building2 } from "lucide-react";
 
 function formatDeadline(deadline: string | Date | undefined): string {
   if (!deadline) return "—";
@@ -45,6 +47,12 @@ export default function AdminDashboard() {
   const summary = reportData?.summary;
   const topSellers = reportData?.topSellers ?? [];
   const topClients = reportData?.topClients ?? [];
+  const summaryByCompany: any[] = reportData?.summaryByCompany ?? [];
+
+  const magiaData = summaryByCompany.find((c: any) => c.company === "mundo_da_magia");
+  const ciganoData = summaryByCompany.find((c: any) => c.company === "mundo_cigano");
+  const magiaInfo = getCompanyInfo("mundo_da_magia");
+  const ciganoInfo = getCompanyInfo("mundo_cigano");
 
   const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(undefined, { staleTime: 3 * 60 * 1000 });
   const pendingWorks: any[] = worksSummary?.pending ?? [];
@@ -62,6 +70,9 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Company Switch */}
+        <CompanySwitch />
+
         {/* Header */}
         <FadeIn>
           <div className="flex flex-col gap-4">
@@ -141,6 +152,42 @@ export default function AdminDashboard() {
             </StaggerItem>
           ))}
         </StaggerList>
+
+        {/* Cards por Empresa */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { info: magiaInfo, data: magiaData, key: "mundo_da_magia" },
+            { info: ciganoInfo, data: ciganoData, key: "mundo_cigano" },
+          ].map(({ info, data, key }) => (
+            <FadeIn key={key} delay={0.15}>
+              <div className="rounded-2xl p-4 shadow-xl border" style={{ background: "var(--card)", borderColor: info.border }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: info.bg }}>
+                    <Building2 className="w-4 h-4" style={{ color: info.color }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Empresa</p>
+                    <p className="text-sm font-bold" style={{ color: info.color }}>{info.short}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl" style={{ background: info.bg }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendido</p>
+                    <p className="text-lg font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                      {isLoading ? "..." : formatCurrency(data?.totalAmount ?? 0)}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl" style={{ background: info.bg }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
+                    <p className="text-lg font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
+                      {isLoading ? "..." : String(data?.totalSales ?? 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
 
         {/* Gráfico + Ranking */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

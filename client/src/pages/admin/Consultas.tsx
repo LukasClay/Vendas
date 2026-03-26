@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import {
   Calendar, Clock, Plus, Trash2, Loader2, User, Phone,
   CalendarDays, CheckCircle2, ClipboardList, XCircle, RotateCcw, Ban, Unlock,
+  DollarSign, ThumbsUp, ThumbsDown, AlertTriangle, Package,
 } from "lucide-react";
+import { CompanyBadge } from "@/components/CompanySwitch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
@@ -253,7 +255,7 @@ export default function Consultas() {
   const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
 
-  const [activeTab, setActiveTab] = useState<"pendentes" | "realizadas" | "canceladas" | "gerenciar">("pendentes");
+  const [activeTab, setActiveTab] = useState<"pendentes" | "realizadas" | "canceladas" | "reembolsos" | "gerenciar">("pendentes");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedTime, setSelectedTime] = useState("");
   const [cancelModal, setCancelModal] = useState<{ id: number; clientName?: string | null } | null>(null);
@@ -263,12 +265,17 @@ export default function Consultas() {
   const { data: pendentes = [], isLoading: loadingPendentes } = trpc.consultationSlots.listPending.useQuery();
   const { data: realizadas = [], isLoading: loadingRealizadas } = trpc.consultationSlots.listDone.useQuery();
   const { data: canceladas = [], isLoading: loadingCanceladas } = trpc.consultationSlots.listCancelled.useQuery();
+  const { data: refunds = [], isLoading: loadingRefunds } = trpc.consultationSlots.listRefunds.useQuery();
 
   const invalidateAll = () => {
     utils.consultationSlots.listAll.invalidate();
     utils.consultationSlots.listPending.invalidate();
     utils.consultationSlots.listDone.invalidate();
     utils.consultationSlots.listCancelled.invalidate();
+    utils.consultationSlots.listRefunds.invalidate();
+    utils.sales.listDeleted.invalidate();
+    utils.sales.list.invalidate();
+    utils.reports.summary.invalidate();
   };
 
   const cancelMutation = trpc.consultationSlots.cancel.useMutation({
@@ -283,6 +290,16 @@ export default function Consultas() {
 
   const deleteMutation = trpc.consultationSlots.deleteCancelled.useMutation({
     onSuccess: () => { toast.success("Horário liberado!"); invalidateAll(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const approveRefundMutation = trpc.consultationSlots.approveRefund.useMutation({
+    onSuccess: () => { toast.success("Reembolso aprovado! Venda movida para a lixeira."); invalidateAll(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const rejectRefundMutation = trpc.consultationSlots.rejectRefund.useMutation({
+    onSuccess: () => { toast.success("Reembolso rejeitado. Venda restaurada e consulta voltou para pendente."); invalidateAll(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -313,7 +330,7 @@ export default function Consultas() {
 
 
 
-  const isLoading = activeTab === "pendentes" ? loadingPendentes : activeTab === "realizadas" ? loadingRealizadas : activeTab === "canceladas" ? loadingCanceladas : loadingAll;
+  const isLoading = activeTab === "pendentes" ? loadingPendentes : activeTab === "realizadas" ? loadingRealizadas : activeTab === "canceladas" ? loadingCanceladas : activeTab === "reembolsos" ? loadingRefunds : loadingAll;
 
   const listToRender = activeTab === "pendentes" ? pendentes : activeTab === "realizadas" ? realizadas : canceladas;
 
@@ -348,7 +365,8 @@ export default function Consultas() {
           {[
             { id: "pendentes", label: "Pendentes", count: pendentes.length, icon: Clock },
             { id: "realizadas", label: "Realizadas", count: realizadas.length, icon: CheckCircle2 },
-            { id: "canceladas", label: "Canceladas", count: canceladas.length, icon: XCircle },  
+            { id: "canceladas", label: "Canceladas", count: canceladas.length, icon: XCircle },
+            { id: "reembolsos", label: "Reembolsos", count: refunds.filter((r: any) => r.refundStatus === "pending").length, icon: DollarSign },
             { id: "gerenciar", label: "Gerenciar Agenda", icon: Calendar }
           ].map((tab) => (
             <button
@@ -372,7 +390,165 @@ export default function Consultas() {
         </div>
 
         <AnimatePresence mode="wait">
-          {activeTab === "gerenciar" ? (
+          {activeTab === "reembolsos" ? (
+            <motion.div key="reembolsos" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+              {loadingRefunds ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--muted-foreground)]">
+                  <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+                  <p className="text-sm font-medium">Carregando reembolsos...</p>
+                </div>
+              ) : refunds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
+                  <DollarSign className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhuma solicitação de reembolso.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Pendentes */}
+                  {(() => {
+                    const pending = refunds.filter((r: any) => r.refundStatus === "pending");
+                    if (pending.length === 0) return null;
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                          <div className="h-px flex-1 bg-[var(--border)]" />
+                          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">Aguardando Aprovação ({pending.length})</span>
+                          </div>
+                          <div className="h-px flex-1 bg-[var(--border)]" />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {pending.map((r: any) => (
+                            <motion.div key={r.id} layout className="rounded-2xl p-5 border-2 border-amber-300 dark:border-amber-700 bg-[var(--card)] shadow-xl">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                                    <DollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-[var(--foreground)]">{r.clientName || "Cliente"}</p>
+                                    <p className="text-[10px] text-[var(--muted-foreground)]">{fmtDate(r.consultationDate)} às {r.consultationTime}</p>
+                                  </div>
+                                </div>
+                                <CompanyBadge company={r.company} />
+                              </div>
+                              <div className="space-y-1.5 mb-4">
+                                {r.clientPhone && (
+                                  <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                                    <Phone className="w-3 h-3 text-green-500" />
+                                    {r.clientPhone}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                                  <Package className="w-3 h-3 text-purple-500" />
+                                  {r.productName || "Consulta"}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                                  <User className="w-3 h-3 text-blue-500" />
+                                  Vendedor: {r.sellerName || r.sellerUsername || "—"}
+                                </div>
+                                {r.amount && (
+                                  <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "var(--primary)" }}>
+                                    <DollarSign className="w-3.5 h-3.5" />
+                                    {Number(r.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                  </div>
+                                )}
+                                {r.cancelReason && (
+                                  <div className="mt-2 p-2 rounded-lg bg-[var(--secondary)] text-xs italic text-[var(--muted-foreground)] border border-[var(--border)]">
+                                    Motivo: {r.cancelReason}
+                                  </div>
+                                )}
+                                {r.refundRequestedAt && (
+                                  <p className="text-[10px] text-[var(--muted-foreground)]">
+                                    Solicitado em {new Date(r.refundRequestedAt).toLocaleDateString("pt-BR")} às {new Date(r.refundRequestedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.03 }}
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => approveRefundMutation.mutate({ id: r.id })}
+                                  disabled={approveRefundMutation.isPending}
+                                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
+                                  style={{ background: "#22c55e" }}
+                                >
+                                  {approveRefundMutation.isPending && approveRefundMutation.variables?.id === r.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <ThumbsUp className="w-4 h-4" />}
+                                  Aprovar
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.03 }}
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => rejectRefundMutation.mutate({ id: r.id })}
+                                  disabled={rejectRefundMutation.isPending}
+                                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
+                                  style={{ background: "#ef4444" }}
+                                >
+                                  {rejectRefundMutation.isPending && rejectRefundMutation.variables?.id === r.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <ThumbsDown className="w-4 h-4" />}
+                                  Rejeitar
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Histórico (aprovados/rejeitados) */}
+                  {(() => {
+                    const resolved = refunds.filter((r: any) => r.refundStatus === "approved" || r.refundStatus === "rejected");
+                    if (resolved.length === 0) return null;
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                          <div className="h-px flex-1 bg-[var(--border)]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Histórico</span>
+                          <div className="h-px flex-1 bg-[var(--border)]" />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {resolved.map((r: any) => {
+                            const isApproved = r.refundStatus === "approved";
+                            return (
+                              <div key={r.id} className="rounded-2xl p-4 border border-[var(--border)] bg-[var(--card)] opacity-70">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isApproved ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
+                                      {isApproved ? <ThumbsUp className="w-3 h-3 text-green-600" /> : <ThumbsDown className="w-3 h-3 text-red-600" />}
+                                    </div>
+                                    <p className="text-sm font-bold text-[var(--foreground)]">{r.clientName || "Cliente"}</p>
+                                  </div>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isApproved ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                                    {isApproved ? "Aprovado" : "Rejeitado"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--muted-foreground)]">
+                                  <span>{fmtDate(r.consultationDate)} às {r.consultationTime}</span>
+                                  {r.amount && <span className="font-bold">{Number(r.amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>}
+                                  <span>Vendedor: {r.sellerName || r.sellerUsername || "—"}</span>
+                                  <CompanyBadge company={r.company} />
+                                </div>
+                                {r.refundResolvedAt && (
+                                  <p className="text-[10px] text-[var(--muted-foreground)] mt-1">
+                                    Resolvido em {new Date(r.refundResolvedAt).toLocaleDateString("pt-BR")}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </motion.div>
+          ) : activeTab === "gerenciar" ? (
             <motion.div key="gerenciar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
               className="p-8 rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl space-y-8">
               <div className="text-center">

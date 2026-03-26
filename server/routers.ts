@@ -10,6 +10,7 @@ import { ownAuthRouter } from "./routers/auth";
 import { consultoraRouter } from "./routers/consultora";
 import { consultationSlotsRouter } from "./routers/consultationSlots";
 import { pushRouter } from "./routers/push";
+import { settingsRouter } from "./routers/settings";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
@@ -42,6 +43,7 @@ export const appRouter = router({
   consultora: consultoraRouter,
   consultationSlots: consultationSlotsRouter,
   push: pushRouter,
+  settings: settingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

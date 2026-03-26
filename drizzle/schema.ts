@@ -17,6 +17,8 @@ export const productCategoryEnum = pgEnum("productCategory", ["individual", "pro
 export const workStatusEnum = pgEnum("workStatus", ["para_escrever", "pendente", "feito"]);
 export const consultationStatusEnum = pgEnum("consultationStatus", ["pendente", "realizada", "cancelada"]);
 export const frequencyEnum = pgEnum("frequency", ["daily", "weekly", "monthly"]);
+export const companyEnum = pgEnum("company", ["mundo_da_magia", "mundo_cigano"]);
+export const refundStatusEnum = pgEnum("refundStatus", ["none", "pending", "approved", "rejected"]);
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -91,6 +93,8 @@ export const sales = pgTable("sales", {
   attachmentUrl: text("attachmentUrl"),
   attachmentKey: varchar("attachmentKey", { length: 512 }),
   attachmentMime: varchar("attachmentMime", { length: 64 }),
+  // Empresa que "carimbou" esta venda no momento do registro
+  company: companyEnum("company").default("mundo_da_magia"),
   // Workflow de 3 etapas da consultora
   workStatus: workStatusEnum("workStatus").default("para_escrever").notNull(),
   writtenAt: timestamp("writtenAt"),    // quando passou de para_escrever → pendente
@@ -117,6 +121,12 @@ export const consultationSlots = pgTable("consultation_slots", {
   cancelledBy: integer("cancelledBy"),                   // FK → users.id (quem cancelou)
   cancelledAt: timestamp("cancelledAt"),
   cancelReason: text("cancelReason"),                    // Motivo opcional do cancelamento
+  // Reembolso
+  refundStatus: refundStatusEnum("refundStatus").default("none").notNull(),
+  refundRequestedAt: timestamp("refundRequestedAt"),      // quando a consultora pediu reembolso
+  refundRequestedBy: integer("refundRequestedBy"),        // FK → users.id (quem pediu)
+  refundResolvedAt: timestamp("refundResolvedAt"),        // quando o admin aprovou/rejeitou
+  refundResolvedBy: integer("refundResolvedBy"),          // FK → users.id (admin que resolveu)
   createdBy: integer("createdBy").notNull(),             // FK → users.id (quem criou)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
@@ -153,3 +163,14 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// ─── App Settings (configuração global do sistema) ──────────────────────────
+export const appSettings = pgTable("app_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;
