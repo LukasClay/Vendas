@@ -286,6 +286,11 @@ export default function Consultas() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const deleteSlotMutation = trpc.consultationSlots.delete.useMutation({
+    onSuccess: () => { toast.success("Horário removido!"); invalidateAll(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   // O backend aceita um slot por vez
   const [creatingSlots, setCreatingSlots] = useState(false);
   const createSlotMutation = trpc.consultationSlots.create.useMutation();
@@ -306,24 +311,7 @@ export default function Consultas() {
     setCreatingSlots(false);
   };
 
-  // Criar todos os slots do dia (7h-20h a cada 15min)
-  const handleCreateAllSlots = async () => {
-    setCreatingSlots(true);
-    let created = 0;
-    for (const time of TIME_OPTIONS) {
-      try {
-        await createSlotMutation.mutateAsync({ consultationDate: selectedDate, consultationTime: time });
-        created++;
-      } catch { /* slot já existe, pula */ }
-    }
-    setCreatingSlots(false);
-    if (created > 0) {
-      toast.success(`${created} horários criados para ${fmtDate(selectedDate)}!`);
-      invalidateAll();
-    } else {
-      toast.info("Todos os horários já existem para esta data.");
-    }
-  };
+
 
   const isLoading = activeTab === "pendentes" ? loadingPendentes : activeTab === "realizadas" ? loadingRealizadas : activeTab === "canceladas" ? loadingCanceladas : loadingAll;
 
@@ -392,7 +380,7 @@ export default function Consultas() {
                   <Calendar className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                 </div>
                 <h2 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>Gerenciar Agenda</h2>
-                <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Crie horários individuais ou gere a agenda completa do dia</p>
+                <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Crie e gerencie horários de consulta</p>
               </div>
 
               {/* Seletor de Data */}
@@ -448,26 +436,58 @@ export default function Consultas() {
                 </button>
               </div>
 
-              {/* Separador */}
-              <div className="flex items-center gap-4 max-w-md mx-auto">
-                <div className="h-px flex-1 bg-[var(--border)]" />
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>ou</span>
-                <div className="h-px flex-1 bg-[var(--border)]" />
-              </div>
-
-              {/* Gerar agenda completa */}
-              <div className="max-w-md mx-auto">
-                <button 
-                  onClick={handleCreateAllSlots} 
-                  disabled={createSlotsMutation.isPending}
-                  className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-[var(--border)]"
-                  style={{ background: "var(--secondary)", color: "var(--foreground)" }}
-                >
-                  {createSlotsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarDays className="w-5 h-5" />}
-                  Gerar Agenda Completa para {fmtDate(selectedDate)}
-                </button>
-                <p className="text-[10px] mt-2 text-center" style={{ color: "var(--muted-foreground)" }}>Cria todos os horários de 07:00 às 19:45 (a cada 15 min) que ainda não existem</p>
-              </div>
+              {/* Horários já criados para a data selecionada */}
+              {(() => {
+                const slotsForDate = slots.filter((s: any) => s.consultationDate === selectedDate);
+                if (slotsForDate.length === 0) return null;
+                return (
+                  <div className="max-w-md mx-auto space-y-3">
+                    <div className="flex items-center gap-4">
+                      <div className="h-px flex-1 bg-[var(--border)]" />
+                      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Horários em {fmtDate(selectedDate)}</span>
+                      <div className="h-px flex-1 bg-[var(--border)]" />
+                    </div>
+                    <div className="space-y-2">
+                      {slotsForDate
+                        .sort((a: any, b: any) => a.consultationTime.localeCompare(b.consultationTime))
+                        .map((s: any) => (
+                          <div key={s.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--border)]" style={{ background: "var(--secondary)" }}>
+                            <div className="flex items-center gap-3">
+                              <Clock className="w-4 h-4" style={{ color: "var(--primary)" }} />
+                              <span className="font-bold text-sm" style={{ color: "var(--foreground)" }}>{s.consultationTime}</span>
+                              {s.sold ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                  Vendido{s.clientName ? ` — ${s.clientName}` : ""}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                  Disponível
+                                </span>
+                              )}
+                            </div>
+                            {!s.sold && (
+                              <button
+                                onClick={() => deleteSlotMutation.mutate({ id: s.id })}
+                                disabled={deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id}
+                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-90 disabled:opacity-50"
+                                title="Remover horário"
+                              >
+                                {deleteSlotMutation.isPending && deleteSlotMutation.variables?.id === s.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-center" style={{ color: "var(--muted-foreground)" }}>
+                      {slotsForDate.length} horário{slotsForDate.length !== 1 ? "s" : ""} cadastrado{slotsForDate.length !== 1 ? "s" : ""}
+                      {" • "}{slotsForDate.filter((s: any) => s.sold).length} vendido{slotsForDate.filter((s: any) => s.sold).length !== 1 ? "s" : ""}
+                      {" • "}{slotsForDate.filter((s: any) => !s.sold).length} disponíve{slotsForDate.filter((s: any) => !s.sold).length !== 1 ? "is" : "l"}
+                    </p>
+                  </div>
+                );
+              })()}
             </motion.div>
           ) : (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
