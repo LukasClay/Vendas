@@ -11,9 +11,10 @@ import {
 function CancelModal({ modalData, onClose, onConfirm }: {
   modalData: { id: number; clientName?: string | null };
   onClose: () => void;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reason: string, requestRefund: boolean) => void;
 }) {
   const [reason, setReason] = useState("");
+  const [requestRefund, setRequestRefund] = useState(false);
 
   return (
     <div
@@ -46,6 +47,31 @@ function CancelModal({ modalData, onClose, onConfirm }: {
           }}
           autoFocus
         />
+
+        {/* Checkbox de Reembolso */}
+        <label
+          className="flex items-center gap-3 mt-4 p-3 rounded-xl cursor-pointer transition-all"
+          style={{
+            background: requestRefund ? "oklch(0.95 0.04 145)" : "oklch(0.97 0.006 65)",
+            border: requestRefund ? "1.5px solid oklch(0.65 0.15 145)" : "1.5px solid oklch(0.88 0.012 65)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={requestRefund}
+            onChange={(e) => setRequestRefund(e.target.checked)}
+            className="w-4 h-4 rounded accent-green-600"
+          />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "oklch(0.25 0.02 260)" }}>
+              Dinheiro Reembolsado
+            </p>
+            <p className="text-[10px]" style={{ color: "oklch(0.55 0.015 260)" }}>
+              Solicita aprovação de reembolso ao administrador
+            </p>
+          </div>
+        </label>
+
         <div className="flex gap-2 mt-4">
           <button
             onClick={onClose}
@@ -55,11 +81,11 @@ function CancelModal({ modalData, onClose, onConfirm }: {
             Voltar
           </button>
           <button
-            onClick={() => onConfirm(reason)}
+            onClick={() => onConfirm(reason, requestRefund)}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-            style={{ background: "oklch(0.55 0.20 25)" }}
+            style={{ background: requestRefund ? "oklch(0.50 0.15 145)" : "oklch(0.55 0.20 25)" }}
           >
-            Confirmar Cancelamento
+            {requestRefund ? "Cancelar + Reembolso" : "Confirmar Cancelamento"}
           </button>
         </div>
       </div>
@@ -622,9 +648,9 @@ export default function Consultas() {
         <CancelModal
           modalData={cancelModal}
           onClose={() => setCancelModal(null)}
-          onConfirm={(reason) => {
+          onConfirm={(reason, requestRefund) => {
             setCancellingId(cancelModal.id);
-            cancelSlot.mutate({ id: cancelModal.id, reason: reason.trim() || undefined });
+            cancelSlot.mutate({ id: cancelModal.id, reason: reason.trim() || undefined, requestRefund: requestRefund || undefined });
             setCancelModal(null);
           }}
         />

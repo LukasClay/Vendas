@@ -18,6 +18,7 @@ export const workStatusEnum = pgEnum("workStatus", ["para_escrever", "pendente",
 export const consultationStatusEnum = pgEnum("consultationStatus", ["pendente", "realizada", "cancelada"]);
 export const frequencyEnum = pgEnum("frequency", ["daily", "weekly", "monthly"]);
 export const companyEnum = pgEnum("company", ["mundo_da_magia", "mundo_cigano"]);
+export const refundStatusEnum = pgEnum("refundStatus", ["none", "pending", "approved", "rejected"]);
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -120,6 +121,12 @@ export const consultationSlots = pgTable("consultation_slots", {
   cancelledBy: integer("cancelledBy"),                   // FK → users.id (quem cancelou)
   cancelledAt: timestamp("cancelledAt"),
   cancelReason: text("cancelReason"),                    // Motivo opcional do cancelamento
+  // Reembolso
+  refundStatus: refundStatusEnum("refundStatus").default("none").notNull(),
+  refundRequestedAt: timestamp("refundRequestedAt"),      // quando a consultora pediu reembolso
+  refundRequestedBy: integer("refundRequestedBy"),        // FK → users.id (quem pediu)
+  refundResolvedAt: timestamp("refundResolvedAt"),        // quando o admin aprovou/rejeitou
+  refundResolvedBy: integer("refundResolvedBy"),          // FK → users.id (admin que resolveu)
   createdBy: integer("createdBy").notNull(),             // FK → users.id (quem criou)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),

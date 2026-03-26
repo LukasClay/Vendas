@@ -228,6 +228,7 @@ export const consultationSlotsRouter = router({
     .input(z.object({
       id: z.number(),
       reason: z.string().optional(), // Motivo opcional do cancelamento
+      requestRefund: z.boolean().optional(), // Se true, solicita reembolso ao admin
     }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "consultora") {
@@ -258,6 +259,12 @@ export const consultationSlotsRouter = router({
       if (!slot) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
       if (slot.status === "cancelada") throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta já está cancelada." });
 
+      const refundFields = input.requestRefund ? {
+        refundStatus: "pending" as const,
+        refundRequestedAt: new Date(),
+        refundRequestedBy: ctx.user.id,
+      } : {};
+
       await withRetry(() =>
         db.update(consultationSlots)
           .set({
@@ -265,9 +272,19 @@ export const consultationSlotsRouter = router({
             cancelledBy: ctx.user.id,
             cancelledAt: new Date(),
             cancelReason: input.reason ?? null,
+            ...refundFields,
           })
           .where(eq(consultationSlots.id, input.id))
       );
+
+      // Se pediu reembolso, move a venda para a lixeira (soft delete)
+      if (input.requestRefund && slot.saleId) {
+        await withRetry(() =>
+          db.update(sales)
+            .set({ deletedAt: new Date() })
+            .where(eq(sales.id, slot.saleId!))
+        );
+      }
 
       // Envia notificação ao dono do projeto informando o cancelamento
       if (slot.saleId) {
@@ -383,6 +400,110 @@ export const consultationSlotsRouter = router({
           createdBy: ctx.user.id,
         })
       );
+      return { success: true };
+    }),
+
+  // ─── Reembolsos ────────────────────────────────────────────────────────────────
+  listRefunds: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    const db = await getDb();
+    if (!db) return [];
+
+    const rows = await withRetry(() =>
+      db.select({
+        id: consultationSlots.id,
+        consultationDate: consultationSlots.consultationDate,
+        consultationTime: consultationSlots.consultationTime,
+        saleId: consultationSlots.saleId,
+        refundStatus: consultationSlots.refundStatus,
+        refundRequestedAt: consultationSlots.refundRequestedAt,
+        refundRequestedBy: consultationSlots.refundRequestedBy,
+        refundResolvedAt: consultationSlots.refundResolvedAt,
+        cancelReason: consultationSlots.cancelReason,
+        clientName: sales.clientName,
+        clientPhone: sales.clientPhone,
+        amount: sales.amount,
+        company: sales.company,
+        productName: sales.productName,
+        sellerName: users.displayName,
+        sellerUsername: users.username,
+      })
+        .from(consultationSlots)
+        .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
+        .leftJoin(users, eq(sales.sellerId, users.id))
+        .where(ne(consultationSlots.refundStatus, "none"))
+        .orderBy(desc(consultationSlots.refundRequestedAt))
+    );
+    return rows;
+  }),
+
+  approveRefund: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const slot = await withRetry(() =>
+        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+      );
+      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND" });
+      if (slot[0].refundStatus !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Reembolso não está pendente." });
+
+      // Aprova: venda permanece na lixeira (será excluída em 30 dias), slot liberado
+      await withRetry(() =>
+        db.update(consultationSlots)
+          .set({
+            refundStatus: "approved",
+            refundResolvedAt: new Date(),
+            refundResolvedBy: ctx.user.id,
+            // Libera o slot para recadastro
+            sold: false,
+            saleId: null,
+          })
+          .where(eq(consultationSlots.id, input.id))
+      );
+
+      return { success: true };
+    }),
+
+  rejectRefund: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const slot = await withRetry(() =>
+        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+      );
+      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND" });
+      if (slot[0].refundStatus !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Reembolso não está pendente." });
+
+      // Rejeita: restaura a venda da lixeira, consulta volta para pendente
+      if (slot[0].saleId) {
+        await withRetry(() =>
+          db.update(sales)
+            .set({ deletedAt: null })
+            .where(eq(sales.id, slot[0].saleId!))
+        );
+      }
+
+      await withRetry(() =>
+        db.update(consultationSlots)
+          .set({
+            refundStatus: "rejected",
+            refundResolvedAt: new Date(),
+            refundResolvedBy: ctx.user.id,
+            // Restaura a consulta
+            status: "pendente",
+            cancelledBy: null,
+            cancelledAt: null,
+            cancelReason: null,
+          })
+          .where(eq(consultationSlots.id, input.id))
+      );
+
       return { success: true };
     }),
 
