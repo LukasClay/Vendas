@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -179,27 +179,86 @@ export default function AdminVendas() {
     });
   }, [rawSalesData, filters.category]);
 
-  // Exportar CSV com os filtros ativos
-  const [csvLoading, setCsvLoading] = useState(false);
-  const exportCsvQuery = trpc.sales.exportCsv.useQuery(queryFilters, { enabled: false });
-  async function handleExportCsv() {
-    setCsvLoading(true);
+  // Exportar Excel e PDF
+  const [exportLoading, setExportLoading] = useState(false);
+
+  async function handleExportExcel() {
+    if (salesData.length === 0) { toast.error("Nenhuma venda para exportar."); return; }
+    setExportLoading(true);
     try {
-      const result = await exportCsvQuery.refetch();
-      if (!result.data?.csv) { toast.error('Nenhum dado para exportar'); return; }
-      const bom = '\uFEFF';
-      const blob = new Blob([bom + result.data.csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `vendas_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${result.data.total} vendas exportadas`);
-    } catch { toast.error('Erro ao exportar CSV'); }
-    finally { setCsvLoading(false); }
+      const XLSX = await import("xlsx");
+      const rows = salesData.map((item: any) => {
+        const sale = item.sale ?? item;
+        const seller = item.seller;
+        return {
+          "Data da Venda": formatDate(sale.saleDate),
+          "Cliente": sale.clientName ?? "",
+          "Telefone": sale.clientPhone ?? "",
+          "Data Nascimento": sale.clientBirthDate ? formatDate(sale.clientBirthDate) : "",
+          "Trabalho": sale.productName ?? "",
+          "Categoria": sale.productCategory ?? "individual",
+          "Vendedor": seller?.displayName || seller?.name || sale.sellerName || "",
+          "Empresa": sale.company === "mundo_cigano" ? "Mundo Cigano" : "Mundo Da Magia",
+          "Valor (R$)": Number(sale.amount) || 0,
+          "Observações": sale.notes ?? "",
+        };
+      });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+      const colWidths = Object.keys(rows[0] ?? {}).map(k => ({ wch: Math.max(k.length, 15) }));
+      ws["!cols"] = colWidths;
+      XLSX.writeFile(wb, `vendas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(`${rows.length} vendas exportadas para Excel!`);
+    } catch { toast.error("Erro ao exportar Excel."); }
+    finally { setExportLoading(false); }
   }
 
+  async function handleExportPDF() {
+    if (salesData.length === 0) { toast.error("Nenhuma venda para exportar."); return; }
+    setExportLoading(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      const doc = new jsPDF({ orientation: "landscape" });
+
+      doc.setFontSize(16);
+      doc.text("Relatório de Vendas", 14, 15);
+      const period = [filters.startDate, filters.endDate].filter(Boolean).join(" até ");
+      if (period) { doc.setFontSize(10); doc.text(`Período: ${period}`, 14, 23); }
+
+      const total = salesData.reduce((acc: number, item: any) => acc + Number((item.sale ?? item).amount), 0);
+      doc.setFontSize(11);
+      doc.text(`Total: ${formatCurrency(total)}   |   Vendas: ${salesData.length}`, 14, period ? 30 : 23);
+
+      const rows = salesData.map((item: any) => {
+        const sale = item.sale ?? item;
+        const seller = item.seller;
+        return [
+          formatDate(sale.saleDate),
+          sale.clientName ?? "",
+          sale.clientPhone ?? "",
+          sale.productName ?? "",
+          seller?.displayName || seller?.name || sale.sellerName || "",
+          sale.company === "mundo_cigano" ? "M. Cigano" : "M. Magia",
+          formatCurrency(sale.amount),
+        ];
+      });
+
+      autoTable(doc, {
+        startY: period ? 36 : 29,
+        head: [["Data", "Cliente", "Telefone", "Trabalho", "Vendedor", "Empresa", "Valor"]],
+        body: rows,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [153, 102, 51], textColor: 255 },
+        alternateRowStyles: { fillColor: [252, 249, 245] },
+      });
+
+      doc.save(`vendas_${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success(`${rows.length} vendas exportadas para PDF!`);
+    } catch { toast.error("Erro ao exportar PDF."); }
+    finally { setExportLoading(false); }
+  }
   const [editSale, setEditSale] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -243,10 +302,15 @@ export default function AdminVendas() {
                 <Filter className="w-4 h-4" />
                 Filtros
               </button>
-              <button onClick={handleExportCsv} disabled={csvLoading}
+              <button onClick={handleExportExcel} disabled={exportLoading}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-green-600 text-white shadow-lg shadow-green-500/20 active:scale-95 disabled:opacity-50">
-                {csvLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Exportar CSV
+                {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                Excel
+              </button>
+              <button onClick={handleExportPDF} disabled={exportLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-red-600 text-white shadow-lg shadow-red-500/20 active:scale-95 disabled:opacity-50">
+                {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                PDF
               </button>
             </div>
           </div>
