@@ -13,11 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
 import { ShimmerText, PulseStar, FadeIn } from "./Animations";
-import { lazy, Suspense } from "react";
-const AdminCelebration = lazy(() => import("./AdminCelebration"));
 import CompanyThemeProvider from "./CompanyThemeProvider";
 
-// Cores clássicas (v1.8.x)
+// Cores clássicas (Consultora + Vendedor — âmbar fixo, NÃO muda)
 const CLASSIC_COLORS = {
   sidebar:        "#111111",
   sidebarFg:      "#ffffff",
@@ -41,7 +39,7 @@ const CLASSIC_COLORS = {
   gradientDark:   "linear-gradient(135deg, #181824 0%, #1e1e30 100%)",
 };
 
-// Cores modernas (Dark Mode / Admin)
+// Cores modernas (Admin — dinâmicas via CSS vars do CompanyThemeProvider)
 const MODERN_COLORS = {
   sidebar:        "var(--sidebar)",
   sidebarFg:      "var(--sidebar-foreground)",
@@ -53,16 +51,16 @@ const MODERN_COLORS = {
   mutedFg:        "var(--muted-foreground)",
   textHint:       "var(--muted-foreground)",
   textFaint:      "var(--muted-foreground)",
-  roleBadgeAdminBg:   "rgba(var(--primary-rgb), 0.2)",
+  roleBadgeAdminBg:   "rgba(var(--primary-rgb, 124,58,237), 0.2)",
   roleBadgeAdminFg:   "var(--primary)",
-  roleBadgeConsultBg: "rgba(var(--accent-rgb), 0.2)",
+  roleBadgeConsultBg: "rgba(var(--accent-rgb, 107,79,173), 0.2)",
   roleBadgeConsultFg: "var(--accent)",
-  roleBadgeSellerBg:  "rgba(var(--success-rgb), 0.2)",
+  roleBadgeSellerBg:  "rgba(var(--success-rgb, 39,174,96), 0.2)",
   roleBadgeSellerFg:  "var(--success)",
   logoutFg:       "var(--destructive)",
-  logoutBg:       "rgba(var(--destructive-rgb), 0.08)",
-  gradientGold:   "linear-gradient(135deg, var(--primary), var(--primary-darker))",
-  gradientDark:   "linear-gradient(135deg, var(--background-start), var(--background-end))",
+  logoutBg:       "rgba(var(--destructive-rgb, 192,57,43), 0.08)",
+  gradientGold:   "linear-gradient(135deg, var(--primary), var(--primary-darker, var(--primary)))",
+  gradientDark:   "linear-gradient(135deg, var(--background-start, var(--background)), var(--background-end, var(--background)))",
 };
 
 const sellerMenuItems = [
@@ -144,6 +142,20 @@ function ThemeToggle({ size = "sm", colors }: { size?: "sm" | "md", colors: type
   );
 }
 
+// ─── Stagger animation variants para itens do menu ───────────────────────────
+const menuContainerVariants = {
+  hidden: { opacity: 1 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04, delayChildren: 0.1 },
+  },
+};
+
+const menuItemVariants = {
+  hidden: { opacity: 0, x: -12 },
+  show: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
+};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -183,14 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
-      {isAdmin && (
-        <>
-          <CompanyThemeProvider />
-          <Suspense fallback={null}>
-            <AdminCelebration />
-          </Suspense>
-        </>
-      )}
+      {isAdmin && <CompanyThemeProvider />}
     </>
   );
 }
@@ -243,6 +248,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     };
   }, [menuOpen]);
 
+  // ─── MOBILE ──────────────────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
@@ -273,7 +279,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
         <AnimatePresence>
           {menuOpen && (
-            <div className="fixed inset-0 z-50 flex">
+            <div className="fixed inset-0 z-[60]">
               <motion.div
                 className="absolute inset-0 bg-black/60"
                 initial={{ opacity: 0 }}
@@ -298,36 +304,81 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   <button onClick={() => setMenuOpen(false)} className="p-2" style={{ color: C.sidebarFg }}><X className="w-6 h-6" /></button>
                 </div>
 
+                {/* Perfil */}
                 <div className="flex flex-col items-center p-6 border-b" style={{ borderColor: C.sidebarBorder }}>
                   <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-bold mb-3"
                     style={{ background: C.gradientGold }}>{initials}</div>
                   <p className="font-bold text-lg" style={{ color: C.sidebarFg }}>{displayName}</p>
                   <div className="mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)", color: isAdmin ? "#b8860b" : isConsultora ? "#7b5ea7" : "#27ae60" }}>
+                    style={{
+                      background: isAdmin ? "rgba(var(--primary-rgb, 124,58,237), 0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)",
+                      color: isAdmin ? "var(--primary)" : isConsultora ? "#7b5ea7" : "#27ae60"
+                    }}>
                     {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
                   </div>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {menuItems.map((item) => {
-                    const isActive = activeMenuItem?.path === item.path;
-                    return (
-                      <button
-                        key={item.path}
-                        onClick={() => navigate(item.path)}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
-                        style={{
-                          background: isActive ? (isAdmin ? "var(--sidebar-accent)" : "rgba(255,255,255,0.1)") : "transparent",
-                          color: isActive ? (isAdmin ? "var(--primary)" : "#ffffff") : C.sidebarFg,
-                          opacity: isActive ? 1 : 0.7
-                        }}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </nav>
+                {/* Menu items com stagger (apenas ADM) */}
+                {isAdmin ? (
+                  <motion.nav
+                    className="flex-1 overflow-y-auto p-4 space-y-1"
+                    variants={menuContainerVariants}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {menuItems.map((item) => {
+                      const isActive = activeMenuItem?.path === item.path;
+                      return (
+                        <motion.button
+                          key={item.path}
+                          variants={menuItemVariants}
+                          onClick={() => navigate(item.path)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium relative overflow-hidden"
+                          style={{
+                            background: isActive ? "var(--sidebar-accent)" : "transparent",
+                            color: isActive ? "var(--primary)" : C.sidebarFg,
+                            opacity: isActive ? 1 : 0.7,
+                            transition: "all 0.2s ease",
+                          }}
+                          whileHover={{ x: 3, opacity: 1 }}
+                        >
+                          {/* Barra lateral ativa */}
+                          {isActive && (
+                            <motion.div
+                              layoutId="mobile-active-bar"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
+                              style={{ background: "var(--primary)" }}
+                              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            />
+                          )}
+                          <item.icon className="w-5 h-5 transition-colors duration-200" />
+                          {item.label}
+                        </motion.button>
+                      );
+                    })}
+                  </motion.nav>
+                ) : (
+                  <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {menuItems.map((item) => {
+                      const isActive = activeMenuItem?.path === item.path;
+                      return (
+                        <button
+                          key={item.path}
+                          onClick={() => navigate(item.path)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                          style={{
+                            background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                            color: isActive ? "#ffffff" : C.sidebarFg,
+                            opacity: isActive ? 1 : 0.7
+                          }}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                )}
 
                 <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
                   <button
@@ -343,52 +394,131 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
 
         <main className="flex-1 p-4 pt-16">
-          {isAdmin ? <FadeIn>{children}</FadeIn> : children}
+          {isAdmin ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          ) : children}
         </main>
       </div>
     );
   }
 
+  // ─── DESKTOP ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen" style={{ background: C.bg }}>
       <aside className="w-64 shrink-0 flex flex-col border-r shadow-lg sticky top-0 h-screen"
         style={{ background: C.sidebar, borderColor: C.sidebarBorder }}>
+
+        {/* Logo / Empresa */}
         <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
-          <PulseStar className="text-amber-500" />
+          {isAdmin ? (
+            <motion.div
+              className="text-amber-500"
+              style={{ filter: "drop-shadow(0 0 6px rgba(217,119,6,0.3))" }}
+            >
+              <PulseStar />
+            </motion.div>
+          ) : (
+            <PulseStar className="text-amber-500" />
+          )}
           <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>Mundo Da Magia</span>
         </div>
 
+        {/* Perfil + Badge */}
         <div className="flex flex-col items-center p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2"
             style={{ background: C.gradientGold }}>{initials}</div>
           <p className="font-bold text-sm text-center" style={{ color: C.sidebarFg }}>{displayName}</p>
           <div className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: isAdmin ? "rgba(193,127,36,0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)", color: isAdmin ? "#b8860b" : isConsultora ? "#7b5ea7" : "#27ae60" }}>
+            style={{
+              background: isAdmin ? "rgba(var(--primary-rgb, 124,58,237), 0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)",
+              color: isAdmin ? "var(--primary)" : isConsultora ? "#7b5ea7" : "#27ae60",
+              transition: "all 0.3s ease",
+            }}>
             {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = activeMenuItem?.path === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => setLocation(item.path)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
-                style={{
-                  background: isActive ? (isAdmin ? "var(--sidebar-accent)" : "rgba(255,255,255,0.1)") : "transparent",
-                  color: isActive ? (isAdmin ? "var(--primary)" : "#ffffff") : C.sidebarFg,
-                  opacity: isActive ? 1 : 0.7
-                }}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Separador sutil */}
+        {isAdmin && (
+          <div className="mx-4 my-1 h-px" style={{ background: C.sidebarBorder }} />
+        )}
 
+        {/* Menu items */}
+        {isAdmin ? (
+          <motion.nav
+            className="flex-1 overflow-y-auto p-3 space-y-1"
+            variants={menuContainerVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {menuItems.map((item) => {
+              const isActive = activeMenuItem?.path === item.path;
+              return (
+                <motion.button
+                  key={item.path}
+                  variants={menuItemVariants}
+                  onClick={() => setLocation(item.path)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium relative overflow-hidden group"
+                  style={{
+                    background: isActive ? "var(--sidebar-accent)" : "transparent",
+                    color: isActive ? "var(--primary)" : C.sidebarFg,
+                    opacity: isActive ? 1 : 0.7,
+                    transition: "all 0.2s ease",
+                  }}
+                  whileHover={{ x: 3, opacity: 1 }}
+                >
+                  {/* Barra lateral vertical fina no item ativo */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="desktop-active-bar"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                      style={{ background: "var(--primary)" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    />
+                  )}
+                  <item.icon
+                    className="w-4 h-4 transition-colors duration-200"
+                    style={{ color: isActive ? "var(--primary)" : undefined }}
+                  />
+                  {item.label}
+                </motion.button>
+              );
+            })}
+          </motion.nav>
+        ) : (
+          <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            {menuItems.map((item) => {
+              const isActive = activeMenuItem?.path === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => setLocation(item.path)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{
+                    background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: isActive ? "#ffffff" : C.sidebarFg,
+                    opacity: isActive ? 1 : 0.7
+                  }}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+
+        {/* Footer: Theme toggle + Notificações + Logout */}
         <div className="p-4 border-t flex flex-col gap-2" style={{ borderColor: C.sidebarBorder }}>
           {(isAdmin || isConsultora) && (
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -405,8 +535,21 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Main content com fade entre páginas (apenas ADM) */}
       <main className="flex-1 overflow-y-auto p-6">
-        {isAdmin ? <FadeIn>{children}</FadeIn> : children}
+        {isAdmin ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        ) : children}
       </main>
     </div>
   );

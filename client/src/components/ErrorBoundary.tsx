@@ -21,6 +21,27 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error) {
+    // Auto-reload on dynamic import failures (stale cache after deploy)
+    const msg = error?.message || "";
+    if (
+      msg.includes("dynamically imported module") ||
+      msg.includes("Failed to fetch dynamically imported") ||
+      msg.includes("Loading chunk") ||
+      msg.includes("Loading CSS chunk")
+    ) {
+      const key = "error_boundary_reload";
+      const last = Number(sessionStorage.getItem(key) || "0");
+      const now = Date.now();
+      // Only auto-reload once every 10 seconds to prevent infinite loops
+      if (now - last > 10000) {
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+        return;
+      }
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -31,13 +52,10 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
+            <h2 className="text-xl mb-4">Ocorreu um erro inesperado.</h2>
+            <p className="text-sm text-muted-foreground mb-6 text-center">
+              Isso pode ter acontecido por uma atualização recente do sistema. Tente recarregar a página.
+            </p>
 
             <button
               onClick={() => window.location.reload()}
@@ -48,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              Recarregar Página
             </button>
           </div>
         </div>
