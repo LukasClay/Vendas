@@ -346,7 +346,7 @@ export default function AdminRelatorios() {
                           <li key={seller.id} className="flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
-                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{seller.name}</p>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{seller.sellerDisplayName || seller.sellerName || seller.name}</p>
                             </div>
                             <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(seller.totalAmount)}</p>
                           </li>
@@ -369,7 +369,7 @@ export default function AdminRelatorios() {
                           <li key={client.id} className="flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
-                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{client.name}</p>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{client.clientName || client.name}</p>
                             </div>
                             <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(client.totalAmount)}</p>
                           </li>
@@ -392,7 +392,7 @@ export default function AdminRelatorios() {
                           <li key={product.id} className="flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{index + 1}</span>
-                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{product.name}</p>
+                              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{product.productName || product.name}</p>
                             </div>
                             <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(product.totalAmount)}</p>
                           </li>
