@@ -568,6 +568,21 @@ export async function getSalesByMonthByCompany(year: number) {
   }));
 }
 
+export async function getSalesLast7Days() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(
+    sql`SELECT "saleDate"::date AS day, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "saleDate" >= CURRENT_DATE - INTERVAL '6 days' AND "deletedAt" IS NULL GROUP BY "saleDate"::date ORDER BY "saleDate"::date`
+  );
+  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
+  return (rows as any[]).map((r: any) => ({
+    day: String(r.day).slice(0, 10),
+    totalAmount: Number(r.totalAmount),
+    totalSales: Number(r.totalSales),
+  }));
+}
+
 // ─── Report Schedules ─────────────────────────────────────────────────────────
 
 export async function getReportSchedules() {

@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2, ClipboardList } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -20,10 +20,8 @@ function formatCurrency(value: number | string) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const CURRENT_YEAR = new Date().getFullYear();
+const WEEKDAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const RECENT_SALES_INPUT = { limit: 8 } as const;
-const MONTHLY_INPUT = { year: CURRENT_YEAR } as const;
 
 export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState({ startDate: "", endDate: "" });
@@ -36,13 +34,30 @@ export default function AdminDashboard() {
   );
 
   const { data: reportData, isLoading } = trpc.reports.summary.useQuery(summaryInput);
-  const { data: monthlyData = [] } = trpc.reports.salesByMonth.useQuery(MONTHLY_INPUT);
+  const { data: last7DaysData = [] } = trpc.reports.salesLast7Days.useQuery();
   const { data: recentSales = [] } = trpc.sales.list.useQuery(RECENT_SALES_INPUT);
 
-  const chartData = MONTHS.map((name, i) => {
-    const found = monthlyData.find((m: any) => Number(m.month) === i + 1);
-    return { name, total: found ? Number(found.totalAmount) : 0, vendas: found ? Number(found.totalSales) : 0 };
-  });
+  // Gerar últimos 7 dias
+  const chartData = useMemo(() => {
+    const days: { name: string; total: number; vendas: number; fullDate: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const found = last7DaysData.find((r: any) => r.day === iso);
+      const dayName = i === 0 ? "Hoje" : i === 1 ? "Ontem" : WEEKDAYS_SHORT[d.getDay()];
+      days.push({
+        name: dayName,
+        total: found ? Number(found.totalAmount) : 0,
+        vendas: found ? Number(found.totalSales) : 0,
+        fullDate: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      });
+    }
+    return days;
+  }, [last7DaysData]);
+
+  const weekTotal = chartData.reduce((s, d) => s + d.total, 0);
+  const weekSales = chartData.reduce((s, d) => s + d.vendas, 0);
 
   const summary = reportData?.summary;
   const topSellers = reportData?.topSellers ?? [];
@@ -193,18 +208,40 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <FadeIn delay={0.2} className="xl:col-span-2">
             <div className="rounded-2xl p-4 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <h2 className="font-bold mb-5 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
-                <TrendingUp className="w-4 h-4" style={{ color: "var(--primary)" }} />
-                Vendas por Mês — {CURRENT_YEAR}
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+                  <TrendingUp className="w-4 h-4" style={{ color: "var(--primary)" }} />
+                  Últimos 7 Dias
+                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>Faturamento</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(weekTotal)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{weekSales}</p>
+                  </div>
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: chartTickColor }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: chartTickColor }} axisLine={false} tickLine={false}
                     tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                   <Tooltip
-                    formatter={(value: number) => [formatCurrency(value), "Total"]}
+                    formatter={(value: number) => [formatCurrency(value), "Faturamento"]}
+                    labelFormatter={(label: string, payload: any[]) => {
+                      const item = payload?.[0]?.payload;
+                      return item?.fullDate ? `${label} (${item.fullDate})` : label;
+                    }}
                     contentStyle={{
                       borderRadius: "12px",
                       border: "1px solid var(--border)",
@@ -213,8 +250,8 @@ export default function AdminDashboard() {
                       color: "var(--foreground)",
                     }}
                   />
-                  <Bar dataKey="total" fill={chartBarColor} radius={[6, 6, 0, 0]} />
-                </BarChart>
+                  <Area type="monotone" dataKey="total" stroke="var(--primary)" strokeWidth={2.5} fill="url(#colorTotal)" dot={{ r: 4, fill: "var(--primary)", strokeWidth: 2, stroke: "var(--card)" }} activeDot={{ r: 6 }} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </FadeIn>
