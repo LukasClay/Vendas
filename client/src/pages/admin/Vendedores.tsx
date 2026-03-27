@@ -26,7 +26,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   admin: { bg: "oklch(0.94 0.02 65)", text: "oklch(0.45 0.10 65)" },
 };
 
-function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivate: (id: number) => void; onReactivate: (id: number) => void }) {
+function UserCard({ user, onDeactivate, onReactivate, isDeactivatedTab }: { user: any; onDeactivate: (id: number) => void; onReactivate: (id: number) => void; isDeactivatedTab?: boolean }) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
@@ -82,15 +82,17 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
   };
 
   return (
-    <div className="px-4 sm:px-6 py-4 transition-colors border-b last:border-0 border-[var(--border)]" style={{ opacity: user.active ? 1 : 0.6 }}>
+    <div className="px-4 sm:px-6 py-4 transition-colors border-b last:border-0 border-[var(--border)]" style={{ opacity: isDeactivatedTab ? 0.7 : 1 }}>
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-sm text-white"
           style={{
-            background: user.role === "admin" 
-              ? "linear-gradient(135deg, var(--primary), oklch(0.75 0.18 75))" 
-              : user.role === "consultora"
-                ? "linear-gradient(135deg, oklch(0.55 0.20 290), oklch(0.65 0.22 295))"
-                : "oklch(0.30 0.05 265)"
+            background: isDeactivatedTab
+              ? "oklch(0.50 0.02 265)"
+              : user.role === "admin" 
+                ? "linear-gradient(135deg, var(--primary), oklch(0.75 0.18 75))" 
+                : user.role === "consultora"
+                  ? "linear-gradient(135deg, oklch(0.55 0.20 290), oklch(0.65 0.22 295))"
+                  : "oklch(0.30 0.05 265)"
           }}>
           {(user.displayName || user.name || "?").charAt(0).toUpperCase()}
         </div>
@@ -133,6 +135,11 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
                 }}>
                 {ROLE_LABELS[user.role] || user.role}
               </span>
+              {isDeactivatedTab && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-red-500/10 text-red-500">
+                  Desativado
+                </span>
+              )}
             </div>
             <p className="text-xs mt-0.5 text-[var(--muted-foreground)]">@{user.username || "sem-usuario"}</p>
           </div>
@@ -140,8 +147,12 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
 
         {!isEditing && (
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={startEditing} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]"><Pencil className="w-4 h-4" /></button>
-            <button onClick={() => setIsResetting(true)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-orange-500 border border-[var(--border)]"><KeyRound className="w-4 h-4" /></button>
+            {!isDeactivatedTab && (
+              <>
+                <button onClick={startEditing} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-blue-500 border border-[var(--border)]"><Pencil className="w-4 h-4" /></button>
+                <button onClick={() => setIsResetting(true)} className="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/70 transition-colors text-orange-500 border border-[var(--border)]"><KeyRound className="w-4 h-4" /></button>
+              </>
+            )}
             {user.active ? (
               confirmAction === "deactivate" ? (
                 <div className="flex items-center gap-1">
@@ -198,15 +209,16 @@ function UserCard({ user, onDeactivate, onReactivate }: { user: any; onDeactivat
 export default function Vendedores() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-  const [showResetPassword, setShowResetPassword] = useState(false); // Adicionado para o formulário de novo funcionário
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const { data: users = [], isLoading, refetch } = trpc.users.listAll.useQuery();
   const [isAdding, setIsAdding] = useState(false);
   const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
   const [newForm, setNewForm] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
+  const [activeTab, setActiveTab] = useState<"active" | "deactivated">("active");
 
   const createEmployee = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
-      const label = ROLE_LABELS[createRole] ?? "Funcionário";
+      const label = ROLE_LABELS[createRole] || "Funcionário";
       toast.success(`${label} criado com sucesso!`);
       refetch();
       setIsAdding(false);
@@ -228,11 +240,35 @@ export default function Vendedores() {
     mutate: (userId: number) => updateUserMutation.mutate({ userId, active: true }, { onSuccess: () => { toast.success("Acesso reativado"); refetch(); } }),
   };
 
-  const admins = users.filter(u => u.role === "admin");
-  const employees = users.filter(u => u.role === "user");
-  const consultoras = users.filter(u => u.role === "consultora");
+  // Separar ativos e desativados
+  const activeUsers = users.filter(u => u.active);
+  const deactivatedUsers = users.filter(u => !u.active);
+
+  // Agrupar por role
+  const groupByRole = (list: typeof users) => ({
+    admins: list.filter(u => u.role === "admin"),
+    consultoras: list.filter(u => u.role === "consultora"),
+    employees: list.filter(u => u.role === "user"),
+  });
+
+  const activeGroups = groupByRole(activeUsers);
+  const deactivatedGroups = groupByRole(deactivatedUsers);
 
   const inputStyle = { border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" };
+
+  const renderUserGroup = (title: string, userList: typeof users, isDeactivatedTab: boolean) => {
+    if (userList.length === 0) return null;
+    return (
+      <StaggerItem key={title}>
+        <h2 className="text-lg font-bold mb-3" style={{ color: "var(--foreground)" }}>{title}</h2>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
+          {userList.map((user) => (
+            <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} isDeactivatedTab={isDeactivatedTab} />
+          ))}
+        </div>
+      </StaggerItem>
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -250,6 +286,38 @@ export default function Vendedores() {
             </motion.button>
           </div>
         </FadeIn>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--secondary)] border border-[var(--border)] w-fit">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "active"
+                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            }`}>
+            <span className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              Ativos
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-600 font-bold">{activeUsers.length}</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("deactivated")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "deactivated"
+                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            }`}>
+            <span className="flex items-center gap-2">
+              <UserX className="w-4 h-4" />
+              Desativados
+              {deactivatedUsers.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 font-bold">{deactivatedUsers.length}</span>
+              )}
+            </span>
+          </button>
+        </div>
 
         <AnimatePresence>
           {isAdding && (
@@ -307,48 +375,42 @@ export default function Vendedores() {
             <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
             <p className="text-sm font-medium">Carregando funcionários...</p>
           </div>
-        ) : (
+        ) : activeTab === "active" ? (
           <StaggerList>
-            {admins.length > 0 && (
-              <StaggerItem>
-                <h2 className="text-lg font-bold mb-3" style={{ color: "var(--foreground)" }}>Administradores</h2>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
-                  {admins.map((user) => (
-                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
-                  ))}
-                </div>
-              </StaggerItem>
-            )}
-
-            {consultoras.length > 0 && (
-              <StaggerItem>
-                <h2 className="text-lg font-bold mt-6 mb-3" style={{ color: "var(--foreground)" }}>Consultoras</h2>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
-                  {consultoras.map((user) => (
-                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
-                  ))}
-                </div>
-              </StaggerItem>
-            )}
-
-            {employees.length > 0 && (
-              <StaggerItem>
-                <h2 className="text-lg font-bold mt-6 mb-3" style={{ color: "var(--foreground)" }}>Funcionários</h2>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
-                  {employees.map((user) => (
-                    <UserCard key={user.id} user={user} onDeactivate={deactivateMutation.mutate} onReactivate={reactivateMutation.mutate} />
-                  ))}
-                </div>
-              </StaggerItem>
-            )}
-
-            {users.length === 0 && (
+            {renderUserGroup("Administradores", activeGroups.admins, false)}
+            {activeGroups.consultoras.length > 0 && <div className="mt-6" />}
+            {renderUserGroup("Consultoras", activeGroups.consultoras, false)}
+            {activeGroups.employees.length > 0 && <div className="mt-6" />}
+            {renderUserGroup("Funcionários", activeGroups.employees, false)}
+            {activeUsers.length === 0 && (
               <StaggerItem>
                 <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
                   <Users className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
-                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário cadastrado.</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário ativo.</p>
                 </div>
               </StaggerItem>
+            )}
+          </StaggerList>
+        ) : (
+          <StaggerList>
+            {deactivatedUsers.length === 0 ? (
+              <StaggerItem>
+                <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
+                  <UserX className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário desativado.</p>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-1 opacity-60">Funcionários desativados aparecerão aqui.</p>
+                  </div>
+                </div>
+              </StaggerItem>
+            ) : (
+              <>
+                {renderUserGroup("Administradores", deactivatedGroups.admins, true)}
+                {deactivatedGroups.consultoras.length > 0 && <div className="mt-6" />}
+                {renderUserGroup("Consultoras", deactivatedGroups.consultoras, true)}
+                {deactivatedGroups.employees.length > 0 && <div className="mt-6" />}
+                {renderUserGroup("Funcionários", deactivatedGroups.employees, true)}
+              </>
             )}
           </StaggerList>
         )}

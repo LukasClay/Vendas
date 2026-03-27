@@ -218,10 +218,10 @@ export const ownAuthRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Verifica conflito de username
+      // Verifica conflito de username (apenas entre ativos e não-deletados)
       if (input.username) {
         const existing = await db.select().from(users)
-          .where(and(eq(users.username, input.username), isNull(users.deletedAt))).limit(1);
+          .where(and(eq(users.username, input.username), eq(users.active, true), isNull(users.deletedAt))).limit(1);
         if (existing.length > 0 && existing[0].id !== input.userId) {
           throw new TRPCError({ code: "CONFLICT", message: "Este nome de usuário já está em uso." });
         }
@@ -232,6 +232,29 @@ export const ownAuthRouter = router({
       if (input.username !== undefined) updateData.username = input.username;
       if (input.role !== undefined) updateData.role = input.role;
       if (input.active !== undefined) updateData.active = input.active;
+
+      // Ao desativar: renomeia username para username_old (libera o username original)
+      if (input.active === false) {
+        const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (user.length > 0 && user[0].username) {
+          const baseUsername = user[0].username;
+          // Não renomeia se já tem sufixo _old
+          if (!baseUsername.endsWith("_old") && !/_old\d+$/.test(baseUsername)) {
+            // Verifica quantos _old já existem para esse username
+            const oldUsers = await db.select({ username: users.username }).from(users)
+              .where(
+                sql`(${users.username} = ${baseUsername + "_old"} OR ${users.username} LIKE ${baseUsername + "_old%"})`
+              );
+            if (oldUsers.length === 0) {
+              updateData.username = `${baseUsername}_old`;
+            } else {
+              updateData.username = `${baseUsername}_old${oldUsers.length + 1}`;
+            }
+          }
+        }
+        // Invalida sessões ao desativar
+        updateData.sessionVersion = sql`${users.sessionVersion} + 1`;
+      }
 
       await db.update(users).set(updateData).where(eq(users.id, input.userId));
       return { success: true };
