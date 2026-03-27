@@ -69,6 +69,39 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Auto-reload quando um deploy novo invalida os chunks JS cacheados
+window.addEventListener("error", (event) => {
+  if (
+    event.message?.includes("Failed to fetch dynamically imported module") ||
+    event.message?.includes("Importing a module script failed")
+  ) {
+    // Evita loop infinito: só recarrega 1x
+    const key = "__reload_after_deploy";
+    const last = sessionStorage.getItem(key);
+    const now = Date.now();
+    if (!last || now - Number(last) > 10_000) {
+      sessionStorage.setItem(key, String(now));
+      window.location.reload();
+    }
+  }
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const msg = event.reason?.message || String(event.reason);
+  if (
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Importing a module script failed")
+  ) {
+    const key = "__reload_after_deploy";
+    const last = sessionStorage.getItem(key);
+    const now = Date.now();
+    if (!last || now - Number(last) > 10_000) {
+      sessionStorage.setItem(key, String(now));
+      window.location.reload();
+    }
+  }
+});
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
