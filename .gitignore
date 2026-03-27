@@ -112,3 +112,7 @@ temp/
 # Manus development logs
 .manus/
 .manus-logs/
+
+# Planos temporários de execução
+REFACTOR_PLAN.md
+SSL_FIX_PLAN.md
