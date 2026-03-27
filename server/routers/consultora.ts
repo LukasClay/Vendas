@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb } from "../db";
 import { sales, users, consultationSlots } from "../../drizzle/schema";
 import { and, asc, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
 
 // Apenas consultoras e admins podem acessar estes endpoints
@@ -11,12 +11,6 @@ const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "consultora" && ctx.user.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito à consultora." });
   }
-  return next({ ctx });
-});
-
-// Apenas admins
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
   return next({ ctx });
 });
 

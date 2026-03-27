@@ -16,12 +16,7 @@ import {
   getTopSellers,
   updateReportSchedule,
 } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
-
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
-  return next({ ctx });
-});
+import { adminProcedure, router } from "../_core/trpc";
 
 export const reportsRouter = router({
   summary: adminProcedure
@@ -70,8 +65,16 @@ export const reportsRouter = router({
         startDate: input.startDate ? new Date(input.startDate) : undefined,
         endDate: input.endDate ? new Date(input.endDate) : undefined,
         sellerId: input.sellerId,
-        limit: 10000,
+        limit: 5000,
       });
+
+      if (salesData.length >= 5000) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A exportação retornou 5.000+ registros. Refine os filtros de data ou vendedor para no máximo 5.000 registros por exportação.",
+        });
+      }
+
       return salesData;
     }),
 

@@ -12,10 +12,24 @@ import { notifyOwner } from "../_core/notification";
  * Converte a data do servidor (seja qual for o fuso) para o horário do Brasil.
  * Essencial para Railway/produção que roda em UTC.
  */
-function getBrazilTime() {
+function getBrazilTime(): Date {
   const now = new Date();
-  const tzString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
-  return new Date(tzString);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? "0";
+  return new Date(
+    +get("year"), +get("month") - 1, +get("day"),
+    +get("hour"), +get("minute"), +get("second")
+  );
 }
 
 function todayStr() {

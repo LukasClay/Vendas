@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
@@ -68,12 +68,6 @@ function clearRateLimit(ip: string, username: string): void {
   loginAttempts.delete(`${ip}:${username.toLowerCase()}`);
 }
 // ──────────────────────────────────────────────────────────────────────────
-
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin")
-    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
-  return next({ ctx });
-});
 
 export const ownAuthRouter = router({
   // Login com username e senha (sem email)
