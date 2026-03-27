@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { getDb, withRetry } from "../db";
+import { getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
@@ -79,11 +79,8 @@ export const ownAuthRouter = router({
       rememberMe: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
-      // IP extraído do header real (considera proxies como Nginx/Cloudflare)
-      const ip =
-        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-        ctx.req.socket?.remoteAddress ||
-        "unknown";
+      // IP seguro via trust proxy do Express
+      const ip = ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown";
 
       // Verifica rate limit ANTES de qualquer query no banco
       checkRateLimit(ip, input.username);
@@ -194,7 +191,7 @@ export const ownAuthRouter = router({
         openId,
         name: input.name,
         username: input.username,
-        loginMethod: "username_password",
+        loginMethod: "local",
         role: input.role,
         active: true,
         phone: input.phone ?? null,
@@ -285,7 +282,6 @@ export const ownAuthRouter = router({
   deleteUser: adminProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ input }) => {
-      const { deleteUser } = await import("../db");
       await deleteUser(input.userId);
       return { success: true };
     }),

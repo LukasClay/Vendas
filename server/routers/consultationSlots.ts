@@ -47,9 +47,9 @@ function effectiveStatus(slot: {
 }): "pendente" | "realizada" | "cancelada" {
   if (slot.status === "cancelada") return "cancelada";
 
-  // Monta datetime do slot: "2026-03-24T10:00:00"
+  // Monta datetime do slot no fuso de São Paulo (servidor roda em UTC no Railway)
   const slotDatetime = new Date(`${slot.consultationDate}T${slot.consultationTime}:00`);
-  const now = new Date();
+  const now = getBrazilTime();
   const diffMs = now.getTime() - slotDatetime.getTime();
   const diffMinutes = diffMs / 60000;
 

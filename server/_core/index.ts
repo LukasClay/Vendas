@@ -34,9 +34,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  app.set("trust proxy", 1); // Confia no proxy do Railway para pegar o IP real
+
+  // Configure body parser with safe size limit for file uploads
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ limit: "10mb", extended: true }));
   // ─── Health Check (Railway zero-downtime deploy) ──────────────────────────
   app.get("/api/health", async (_req, res) => {
     try {

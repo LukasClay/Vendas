@@ -17,7 +17,7 @@ export async function getDb() {
     max: 20,
     idleTimeoutMillis: 60000,
     connectionTimeoutMillis: 10000,
-    ssl: connStr.includes('railway') ? { rejectUnauthorized: false } : undefined,
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
   });
   _db = drizzle(_pool);
   return _db;
@@ -113,7 +113,21 @@ export async function getAllUsers() {
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const result = await db.select({
+    id: users.id,
+    openId: users.openId,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    displayName: users.displayName,
+    phone: users.phone,
+    active: users.active,
+    username: users.username,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+    deletedAt: users.deletedAt,
+    sessionVersion: users.sessionVersion,
+  }).from(users).where(eq(users.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -126,23 +140,33 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) return;
-  // Soft delete: salva snapshot do nome nas vendas e marca deletedAt
-  // 1. Buscar dados do usuário antes de deletar
+
+  // ⚠️ SOFT DELETE SEGURO: Histórico de vendas é sempre preservado
+  // Passo 1: Salvar snapshot do nome do funcionário ANTES de qualquer alteração
   const user = await getUserById(id);
   if (!user) return;
+  
   const snapshotName = user.displayName || user.name || user.username || `Usuário #${id}`;
-  // 2. Atualizar sellerName nas vendas que ainda não têm snapshot
+  
+  // Passo 1a: PROTEGER histórico de vendas — salvar snapshot do nome em todas as vendas
+  // Isso garante que mesmo depois de deletado, o nome aparece corretamente nos relatórios
   await db.update(sales).set({ sellerName: snapshotName }).where(
     and(eq(sales.sellerId, id), sql`${sales.sellerName} IS NULL`)
   );
-  // 3. Marcar como deletado, inativo, invalidar sessões e liberar username/openId para reutilização
-  const deletedAt = new Date();
-  const suffix = `_deleted_${deletedAt.getTime()}`;
+
+  // Passo 2: APENAS renomear username/openId para liberar para novos cadastros
+  // O suffix _old segue o padrão do projeto (não altera dados na tabela sales)
+  const suffix = `_old`;
+  const newUsername = user.username ? `${user.username}${suffix}` : null;
+  const newOpenId = `${user.openId}${suffix}`;
+  
+  // Passo 3: Marcar como deletado, inativo e invalidar sessões ativas
+  // ⚠️ IMPORTANTE: Tabela sales NÃO é tocada aqui (histórico 100% preservado)
   await db.update(users).set({
     active: false,
-    deletedAt,
-    username: user.username ? `${user.username}${suffix}` : user.username,
-    openId: `${user.openId}${suffix}`,
+    deletedAt: new Date(),
+    username: newUsername,
+    openId: newOpenId,
     sessionVersion: sql`${users.sessionVersion} + 1`
   }).where(eq(users.id, id));
 }
