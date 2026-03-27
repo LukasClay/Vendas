@@ -68,7 +68,7 @@ export default function AdminConfiguracoes() {
                 {[
                   ["Sistema", "Gestão de Vendas Espirituais"],
                   ["Versão", "2.0.0"],
-                  ["Banco de Dados", "MySQL/TiDB"],
+                  ["Banco de Dados", "PostgreSQL"],
                   ["Armazenamento", "S3 (5GB inicial)"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between items-center py-2 border-b last:border-0"
