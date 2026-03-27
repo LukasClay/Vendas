@@ -337,3 +337,32 @@
 ## Novas Funcionalidades (18/03/2026)
 - [x] Botão "Exportar para CSV" na página Todas as Vendas
 - [x] Filtro rápido por período (hoje/semana/mês) no dashboard
+
+## 📜 Guia do Projeto: Regras, Restrições e Padrões (Tech Lead)
+
+Este documento serve como um guia definitivo para qualquer desenvolvedor ou IA que for atuar neste projeto. Ele contém as preferências do dono do projeto, restrições arquiteturais e padrões de UX/UI que **NÃO** devem ser violados.
+
+### 1. Regras de Ouro (O que NÃO fazer)
+- **Painéis Consultora e Vendedor são intocáveis:** É de extrema importância que nenhuma alteração visual ou funcional seja aplicada aos painéis Consultora e Vendedor sem autorização explícita. Se for necessário modificar arquivos compartilhados, as mudanças devem ser isoladas (ex: via condicionais de `role`) para não afetar a aparência ou as funcionalidades atuais desses painéis.
+- **Foco Atual no ADM:** Atualmente, o foco de desenvolvimento e melhorias visuais é **exclusivamente o painel ADM**. Qualquer mudança que afete os painéis de Consulta ou Vendas deve ser previamente consultada com o dono do projeto.
+- **Não presuma, pergunte:** Antes de remover funcionalidades que parecem "desnecessárias" ou aplicar mudanças cosméticas do ADM nos outros painéis, pergunte ao dono do projeto. Avalie cuidadosamente as dependências antes de qualquer remoção.
+
+### 2. Padrões de Interface e UX
+- **Painel ADM (Desktop First, Mobile Ready):** O painel do ADM é utilizado 99% do tempo em computadores (desktop). Portanto, deve ser otimizado para telas grandes (layout amplo, tabelas completas, colunas lado a lado). No entanto, ele também será usado em dispositivos móveis em emergências, então a responsividade mobile deve ser impecável.
+- **Performance Mobile (Consultora e Vendedor):** Os painéis do Vendedor e da Consultora devem ser altamente responsivos e otimizados para uso em dispositivos móveis. O foco é a simplicidade (inputs grandes, teclado numérico, UX direta) e a garantia de bom desempenho mesmo em celulares mais antigos, evitando travamentos.
+- **Notificações e Alertas:** O botão de notificação (PushNotificationButton) e a aba "Alertas" devem aparecer **apenas** nos painéis ADM e Consultora. O painel do Vendedor deve ser estritamente focado em "Nova Venda" e "Minhas Vendas".
+- **Identidade Visual:** O nome oficial do sistema é **"Mundo Da Magia LTDA"** (deve constar na tela de login, cabeçalho e em todo o sistema). O design system utiliza tipografia *Playfair Display* para títulos e uma paleta elegante (com suporte a múltiplos temas por empresa no ADM, como roxo Nubank e âmbar Inter).
+- **Efeitos Visuais (Sutileza):** Animações e efeitos (como *lift effect* em cards, *hover* em ícones, *stagger* em listas e *fade* entre páginas) devem ser fluidos e sutis. Evite exageros visuais que poluam a interface (ex: confetes e fogos de artifício foram explicitamente removidos).
+
+### 3. Regras de Negócio e Arquitetura
+- **Paridade ADM e Consultora:** Sempre que uma nova funcionalidade for implementada para o painel da Consultora (ex: gestão de trabalhos, status, reembolsos), o painel do ADM também deve ter acesso a essa funcionalidade de alguma forma.
+- **Lixeira de Vendas (Soft Delete):** Ao excluir uma venda, ela **não** deve ser permanentemente deletada do banco de dados imediatamente. Ela deve ser movida para uma "Lixeira" por 30 dias. Durante esse período, não contabiliza em dashboards ou relatórios, mas pode ser restaurada. Exclusão permanente só após 30 dias.
+- **Desativação de Funcionários:** Quando um usuário é desativado, seu `username` deve ser renomeado internamente adicionando o sufixo `_old` (ex: `joao_old`), liberando o username original para novos cadastros. Nas tabelas de vendas históricas, o nome do vendedor desativado deve aparecer com esse sufixo.
+- **Reembolsos no ADM:** A opção de "reembolso" ao cancelar uma consulta no painel ADM deve seguir a mesma lógica e direcionar para a aba de reembolsos utilizando o código/fluxo já existente no painel da consultora, sem reinventar a roda.
+- **Otimização de Banco e Queries:** O sistema sofreu no passado com loops infinitos e excesso de conexões. Mantenha o uso de `staleTime` no React Query (evite `refetchInterval` agressivo), use `useMemo` para estabilizar inputs de queries e evite re-renders desnecessários.
+
+### 4. Como programar para este projeto (Mindset)
+- Aja como um Tech Lead sênior: pense nas consequências de cada linha de código.
+- Se uma refatoração for necessária para acomodar uma nova feature, garanta que o comportamento anterior seja estritamente mantido.
+- Entregue código limpo, componentizado e tipado (TypeScript).
+- Se a alteração for grande, faça um plano, explique o impacto e peça aprovação antes de sair codando.
