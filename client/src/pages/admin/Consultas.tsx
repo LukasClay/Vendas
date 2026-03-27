@@ -388,7 +388,7 @@ export default function Consultas() {
         </FadeIn>
 
         {/* Tabs */}
-        <div className="flex p-1 rounded-2xl bg-[var(--secondary)]/50 border border-[var(--border)] overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 p-2 rounded-2xl bg-[var(--secondary)]/50 border border-[var(--border)] overflow-x-auto no-scrollbar snap-x snap-mandatory">
           {[
             { id: "pendentes", label: "Pendentes", count: pendentes.length, icon: Clock },
             { id: "realizadas", label: "Realizadas", count: realizadas.length, icon: CheckCircle2 },
@@ -399,13 +399,13 @@ export default function Consultas() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`flex flex-shrink-0 items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap snap-start ${
                 activeTab === tab.id 
                   ? "bg-[var(--card)] text-[var(--primary)] shadow-sm border border-[var(--border)]" 
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
               }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               {tab.label}
               {"count" in tab && (
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>
