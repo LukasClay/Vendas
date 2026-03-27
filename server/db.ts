@@ -552,6 +552,22 @@ export async function getSalesByMonth(year: number) {
   }));
 }
 
+export async function getSalesByMonthByCompany(year: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(
+    sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(company, 'mundo_da_magia') AS company, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} AND "deletedAt" IS NULL GROUP BY EXTRACT(MONTH FROM "saleDate"), company ORDER BY EXTRACT(MONTH FROM "saleDate")`
+  );
+  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
+  return (rows as any[]).map((r: any) => ({
+    month: Number(r.month),
+    company: String(r.company),
+    totalAmount: Number(r.totalAmount),
+    totalSales: Number(r.totalSales),
+  }));
+}
+
 // ─── Report Schedules ─────────────────────────────────────────────────────────
 
 export async function getReportSchedules() {

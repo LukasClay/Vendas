@@ -9,6 +9,7 @@ import {
   getReportSummaryByCompany,
   getSales,
   getSalesByMonth,
+  getSalesByMonthByCompany,
   getTopClients,
   getTopProducts,
   getTopSellers,
@@ -44,6 +45,12 @@ export const reportsRouter = router({
     .input(z.object({ year: z.number() }))
     .query(async ({ input }) => {
       return getSalesByMonth(input.year);
+    }),
+
+  salesByMonthByCompany: adminProcedure
+    .input(z.object({ year: z.number() }))
+    .query(async ({ input }) => {
+      return getSalesByMonthByCompany(input.year);
     }),
 
   exportData: adminProcedure

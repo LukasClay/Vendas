@@ -2,12 +2,13 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, X, ToggleLeft, ToggleRight, Building2, CalendarDays, TrendingUp, Users, Package, AlertTriangle, Send } from "lucide-react";
+import { Download, Mail, Plus, Trash2, BarChart3, Loader2, Check, X, ToggleLeft, ToggleRight, Building2, CalendarDays, TrendingUp, Users, Package, AlertTriangle, Send, ChevronLeft, ChevronRight, DollarSign, Hash } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { getCompanyInfo } from "@/components/CompanySwitch";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -30,6 +31,8 @@ export default function AdminRelatorios() {
   const [scheduleForm, setScheduleForm] = useState({ frequency: "daily" as "daily" | "weekly" | "monthly", recipientEmail: "" });
   const [confirmDeleteScheduleId, setConfirmDeleteScheduleId] = useState<number | null>(null);
   const [confirmToggleScheduleId, setConfirmToggleScheduleId] = useState<number | null>(null);
+  const [chartYear, setChartYear] = useState(new Date().getFullYear());
+  const [chartMode, setChartMode] = useState<"value" | "count">("value");
 
   const summaryInput = useMemo(
     () => (dateFilter.startDate || dateFilter.endDate ? dateFilter : undefined),
@@ -39,6 +42,8 @@ export default function AdminRelatorios() {
   const { data: reportData, isLoading } = trpc.reports.summary.useQuery(summaryInput);
   const { data: exportData = [] } = trpc.reports.exportData.useQuery(dateFilter);
   const { data: schedules = [], isLoading: loadingSchedules } = trpc.reports.schedules.useQuery();
+  const { data: monthlyTotal = [] } = trpc.reports.salesByMonth.useQuery({ year: chartYear });
+  const { data: monthlyByCompany = [] } = trpc.reports.salesByMonthByCompany.useQuery({ year: chartYear });
 
   const createSchedule = trpc.reports.createSchedule.useMutation({
     onSuccess: () => {
@@ -405,6 +410,167 @@ export default function AdminRelatorios() {
             </StaggerItem>
           </StaggerList>
         )}
+
+        {/* Gráficos de Vendas */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 px-2">
+            <BarChart3 className="w-4 h-4 text-[var(--primary)]" />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Gráficos de Vendas</h2>
+          </div>
+
+          {/* Filtros do gráfico */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Seletor de ano */}
+            <div className="flex items-center gap-1 bg-[var(--card)] border border-[var(--border)] rounded-xl p-1 shadow-sm">
+              <button onClick={() => setChartYear(y => y - 1)}
+                className="p-2 rounded-lg hover:bg-[var(--secondary)] transition-colors active:scale-90">
+                <ChevronLeft className="w-4 h-4" style={{ color: "var(--foreground)" }} />
+              </button>
+              <span className="px-3 text-sm font-bold" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>{chartYear}</span>
+              <button onClick={() => setChartYear(y => y + 1)}
+                disabled={chartYear >= new Date().getFullYear()}
+                className="p-2 rounded-lg hover:bg-[var(--secondary)] transition-colors active:scale-90 disabled:opacity-30">
+                <ChevronRight className="w-4 h-4" style={{ color: "var(--foreground)" }} />
+              </button>
+            </div>
+
+            {/* Toggle valor/quantidade */}
+            <div className="flex items-center bg-[var(--card)] border border-[var(--border)] rounded-xl p-1 shadow-sm">
+              <button onClick={() => setChartMode("value")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  chartMode === "value" ? "bg-[var(--primary)] text-white shadow-md" : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)]"
+                }`}>
+                <DollarSign className="w-3.5 h-3.5" /> Valor (R$)
+              </button>
+              <button onClick={() => setChartMode("count")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  chartMode === "count" ? "bg-[var(--primary)] text-white shadow-md" : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)]"
+                }`}>
+                <Hash className="w-3.5 h-3.5" /> Quantidade
+              </button>
+            </div>
+          </div>
+
+          {/* Gráfico Total */}
+          {(() => {
+            const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            const totalChartData = MONTHS.map((name, i) => {
+              const found = (monthlyTotal as any[]).find((m: any) => Number(m.month) === i + 1);
+              return { name, value: found ? Number(chartMode === "value" ? found.totalAmount : found.totalSales) : 0 };
+            });
+
+            const magiaInfo = getCompanyInfo("mundo_da_magia");
+            const ciganoInfo = getCompanyInfo("mundo_cigano");
+
+            const magiaChartData = MONTHS.map((name, i) => {
+              const found = (monthlyByCompany as any[]).find((m: any) => Number(m.month) === i + 1 && m.company === "mundo_da_magia");
+              return { name, value: found ? Number(chartMode === "value" ? found.totalAmount : found.totalSales) : 0 };
+            });
+
+            const ciganoChartData = MONTHS.map((name, i) => {
+              const found = (monthlyByCompany as any[]).find((m: any) => Number(m.month) === i + 1 && m.company === "mundo_cigano");
+              return { name, value: found ? Number(chartMode === "value" ? found.totalAmount : found.totalSales) : 0 };
+            });
+
+            const formatValue = (v: number) => chartMode === "value" ? formatCurrency(v) : String(v);
+            const formatTick = (v: number) => chartMode === "value" ? (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)) : String(v);
+
+            const chartTooltipStyle = {
+              borderRadius: "12px",
+              border: "1px solid var(--border)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+              background: "var(--card)",
+              color: "var(--foreground)",
+              fontSize: "12px",
+              fontWeight: "bold" as const,
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* Gráfico Total */}
+                <div className="rounded-3xl p-6 shadow-xl border border-[var(--border)] bg-[var(--card)]">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[var(--primary)]" />
+                      <h3 className="font-bold text-base" style={{ color: "var(--foreground)" }}>
+                        {chartMode === "value" ? "Faturamento Total" : "Quantidade de Vendas"} — {chartYear}
+                      </h3>
+                    </div>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-[var(--secondary)] text-[var(--primary)]">
+                      {chartMode === "value" ? formatCurrency(totalChartData.reduce((s, d) => s + d.value, 0)) : `${totalChartData.reduce((s, d) => s + d.value, 0)} vendas`}
+                    </span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={totalChartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={formatTick} />
+                      <Tooltip formatter={(value: number) => [formatValue(value), chartMode === "value" ? "Faturamento" : "Vendas"]} contentStyle={chartTooltipStyle} />
+                      <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.5} fill="url(#totalGradient)" dot={{ r: 4, fill: "var(--primary)", strokeWidth: 2, stroke: "var(--card)" }} activeDot={{ r: 6 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Gráficos por Empresa */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Mundo Da Magia */}
+                  <div className="rounded-3xl p-6 shadow-xl border-2 transition-all hover:shadow-2xl" style={{ background: "var(--card)", borderColor: magiaInfo.border }}>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: magiaInfo.bg }}>
+                          <Building2 className="w-4 h-4" style={{ color: magiaInfo.color }} />
+                        </div>
+                        <h3 className="font-bold text-sm" style={{ color: magiaInfo.color }}>{magiaInfo.short}</h3>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: magiaInfo.bg, color: magiaInfo.color }}>
+                        {chartMode === "value" ? formatCurrency(magiaChartData.reduce((s, d) => s + d.value, 0)) : `${magiaChartData.reduce((s, d) => s + d.value, 0)} vendas`}
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={magiaChartData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={formatTick} />
+                        <Tooltip formatter={(value: number) => [formatValue(value), magiaInfo.short]} contentStyle={chartTooltipStyle} />
+                        <Bar dataKey="value" fill={magiaInfo.color} radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Mundo Cigano */}
+                  <div className="rounded-3xl p-6 shadow-xl border-2 transition-all hover:shadow-2xl" style={{ background: "var(--card)", borderColor: ciganoInfo.border }}>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: ciganoInfo.bg }}>
+                          <Building2 className="w-4 h-4" style={{ color: ciganoInfo.color }} />
+                        </div>
+                        <h3 className="font-bold text-sm" style={{ color: ciganoInfo.color }}>{ciganoInfo.short}</h3>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: ciganoInfo.bg, color: ciganoInfo.color }}>
+                        {chartMode === "value" ? formatCurrency(ciganoChartData.reduce((s, d) => s + d.value, 0)) : `${ciganoChartData.reduce((s, d) => s + d.value, 0)} vendas`}
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={ciganoChartData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={formatTick} />
+                        <Tooltip formatter={(value: number) => [formatValue(value), ciganoInfo.short]} contentStyle={chartTooltipStyle} />
+                        <Bar dataKey="value" fill={ciganoInfo.color} radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Agendamentos de Relatórios */}
         <div className="space-y-4">
