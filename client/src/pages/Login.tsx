@@ -33,7 +33,7 @@ export default function Login() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "", rememberMe: false },
+    defaultValues: { username: "", password: "", rememberMe: true },
   });
 
   const loginMutation = trpc.ownAuth.login.useMutation({

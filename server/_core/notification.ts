@@ -28,7 +28,6 @@ export async function notifyOwner(
 
   // Sem o proxy do Manus configurado → fallback silencioso (não quebra o sistema)
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    console.log(`[Notification] Serviço não configurado (Railway). Notificação ignorada: "${title}"`);
     return false;
   }
 
