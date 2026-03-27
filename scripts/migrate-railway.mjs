@@ -16,7 +16,7 @@ if (!connStr) {
 
 const pool = new Pool({
   connectionString: connStr,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: true },
   connectionTimeoutMillis: 15000,
 });
 

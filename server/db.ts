@@ -17,7 +17,7 @@ export async function getDb() {
     max: 20,
     idleTimeoutMillis: 60000,
     connectionTimeoutMillis: 10000,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : undefined,
   });
   _db = drizzle(_pool);
   return _db;
