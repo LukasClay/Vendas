@@ -240,7 +240,7 @@ export default function AdminDashboard() {
                     <li key={seller.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--secondary)] text-[var(--primary)]">{index + 1}</span>
-                        <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{seller.name}</p>
+                        <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{seller.sellerDisplayName || seller.sellerName || seller.name}</p>
                       </div>
                       <p className="text-sm text-[var(--muted-foreground)]">{formatCurrency(seller.totalAmount)}</p>
                     </li>
