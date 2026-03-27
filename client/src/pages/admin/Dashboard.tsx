@@ -5,7 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { DollarSign, ShoppingBag, Users, TrendingUp, Crown, Star, AlertTriangle, Clock, CheckCircle2, ClipboardList } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
-import { FadeIn, StaggerList, StaggerItem, AnimatedCard } from "@/components/Animations";
+import { FadeIn, StaggerList, StaggerItem, AnimatedCard, AnimatedNumber, SkeletonCard, SkeletonPulse } from "@/components/Animations";
 import { useTheme } from "@/contexts/ThemeContext";
 import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
 import { Building2 } from "lucide-react";
@@ -78,9 +78,8 @@ export default function AdminDashboard() {
   const onTrackWorks = pendingWorks.filter(w => !w.isOverdue && !w.isUrgent);
 
   // Cores do gráfico que funcionam em ambos os temas
-  const chartBarColor = isDark ? "var(--primary)" : "var(--primary)";
-  const chartGridColor = isDark ? "var(--border)" : "var(--border)";
-  const chartTickColor = isDark ? "var(--muted-foreground)" : "var(--muted-foreground)";
+  const chartGridColor = "var(--border)";
+  const chartTickColor = "var(--muted-foreground)";
 
   return (
     <DashboardLayout>
@@ -144,29 +143,40 @@ export default function AdminDashboard() {
           </div>
         </FadeIn>
 
-        {/* KPI Cards */}
-        <StaggerList className="grid grid-cols-2 gap-3">
-          {[
-            { icon: DollarSign, label: "Total Vendido", value: isLoading ? "..." : formatCurrency(summary?.totalAmount ?? 0), color: "var(--primary)", bg: "var(--secondary)" },
-            { icon: ShoppingBag, label: "Nº de Vendas", value: isLoading ? "..." : String(summary?.totalSales ?? 0), color: isDark ? "oklch(0.65 0.18 160)" : "oklch(0.55 0.15 160)", bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 160)" },
-            { icon: Users, label: "Melhores Clientes", value: isLoading ? "..." : String(topClients.length), color: isDark ? "oklch(0.60 0.18 250)" : "oklch(0.50 0.18 250)", bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 250)" },
-            { icon: TrendingUp, label: "Melhores Vendedores", value: isLoading ? "..." : String(topSellers.length), color: isDark ? "oklch(0.65 0.20 30)" : "oklch(0.55 0.20 30)", bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 30)" },
-          ].map((card, i) => (
-            <StaggerItem key={i}>
-              <AnimatedCard className="rounded-2xl p-4 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: card.bg }}>
-                    <card.icon className="w-4 h-4" style={{ color: card.color }} />
+        {/* KPI Cards com Skeleton Loading e Animated Numbers */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+          </div>
+        ) : (
+          <StaggerList className="grid grid-cols-2 gap-3">
+            {[
+              { icon: DollarSign, label: "Total Vendido", value: Number(summary?.totalAmount ?? 0), prefix: "R$ ", color: "var(--primary)", bg: "var(--secondary)" },
+              { icon: ShoppingBag, label: "Nº de Vendas", value: Number(summary?.totalSales ?? 0), prefix: "", color: isDark ? "oklch(0.65 0.18 160)" : "oklch(0.55 0.15 160)", bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 160)" },
+              { icon: Users, label: "Melhores Clientes", value: topClients.length, prefix: "", color: isDark ? "oklch(0.60 0.18 250)" : "oklch(0.50 0.18 250)", bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 250)" },
+              { icon: TrendingUp, label: "Melhores Vendedores", value: topSellers.length, prefix: "", color: isDark ? "oklch(0.65 0.20 30)" : "oklch(0.55 0.20 30)", bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 30)" },
+            ].map((card, i) => (
+              <StaggerItem key={i}>
+                <AnimatedCard className="rounded-2xl p-4 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <motion.div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: card.bg }}
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <card.icon className="w-4 h-4 transition-colors duration-200" style={{ color: card.color }} />
+                    </motion.div>
+                    <span className="text-xs font-medium leading-tight" style={{ color: "var(--muted-foreground)" }}>{card.label}</span>
                   </div>
-                  <span className="text-xs font-medium leading-tight" style={{ color: "var(--muted-foreground)" }}>{card.label}</span>
-                </div>
-                <p className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
-                  {card.value}
-                </p>
-              </AnimatedCard>
-            </StaggerItem>
-          ))}
-        </StaggerList>
+                  <p className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+                    <AnimatedNumber value={card.value} prefix={card.prefix} duration={1} />
+                  </p>
+                </AnimatedCard>
+              </StaggerItem>
+            ))}
+          </StaggerList>
+        )}
 
         {/* Cards por Empresa */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -175,11 +185,16 @@ export default function AdminDashboard() {
             { info: ciganoInfo, data: ciganoData, key: "mundo_cigano" },
           ].map(({ info, data, key }) => (
             <FadeIn key={key} delay={0.15}>
-              <div className="rounded-2xl p-4 shadow-xl border" style={{ background: "var(--card)", borderColor: info.border }}>
+              <AnimatedCard className="rounded-2xl p-4 shadow-xl border" style={{ background: "var(--card)", borderColor: info.border }}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: info.bg }}>
+                  <motion.div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: info.bg }}
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <Building2 className="w-4 h-4" style={{ color: info.color }} />
-                  </div>
+                  </motion.div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>Empresa</p>
                     <p className="text-sm font-bold" style={{ color: info.color }}>{info.short}</p>
@@ -189,17 +204,21 @@ export default function AdminDashboard() {
                   <div className="p-3 rounded-xl" style={{ background: info.bg }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendido</p>
                     <p className="text-lg font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
-                      {isLoading ? "..." : formatCurrency(data?.totalAmount ?? 0)}
+                      {isLoading ? <SkeletonPulse width="5em" height="1.4em" /> : (
+                        <AnimatedNumber value={Number(data?.totalAmount ?? 0)} prefix="R$ " duration={1} />
+                      )}
                     </p>
                   </div>
                   <div className="p-3 rounded-xl" style={{ background: info.bg }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
                     <p className="text-lg font-bold" style={{ color: info.color, fontFamily: "'Playfair Display', serif" }}>
-                      {isLoading ? "..." : String(data?.totalSales ?? 0)}
+                      {isLoading ? <SkeletonPulse width="3em" height="1.4em" /> : (
+                        <AnimatedNumber value={Number(data?.totalSales ?? 0)} duration={0.8} />
+                      )}
                     </p>
                   </div>
                 </div>
-              </div>
+              </AnimatedCard>
             </FadeIn>
           ))}
         </div>
@@ -207,7 +226,7 @@ export default function AdminDashboard() {
         {/* Gráfico + Ranking */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <FadeIn delay={0.2} className="xl:col-span-2">
-            <div className="rounded-2xl p-4 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-4 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold flex items-center gap-2" style={{ color: "var(--foreground)" }}>
                   <TrendingUp className="w-4 h-4" style={{ color: "var(--primary)" }} />
@@ -216,11 +235,15 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>Faturamento</p>
-                    <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>{formatCurrency(weekTotal)}</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--primary)" }}>
+                      <AnimatedNumber value={weekTotal} prefix="R$ " duration={1} />
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>Vendas</p>
-                    <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{weekSales}</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                      <AnimatedNumber value={weekSales} duration={0.8} />
+                    </p>
                   </div>
                 </div>
               </div>
@@ -253,12 +276,12 @@ export default function AdminDashboard() {
                   <Area type="monotone" dataKey="total" stroke="var(--primary)" strokeWidth={2.5} fill="url(#colorTotal)" dot={{ r: 4, fill: "var(--primary)", strokeWidth: 2, stroke: "var(--card)" }} activeDot={{ r: 6 }} />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
+            </AnimatedCard>
           </FadeIn>
 
           {/* Top Vendedores */}
           <FadeIn delay={0.3}>
-            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
                 <Crown className="w-4 h-4" style={{ color: "var(--primary)" }} />
                 Top Vendedores
@@ -284,14 +307,14 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               )}
-            </div>
+            </AnimatedCard>
           </FadeIn>
         </div>
 
         {/* Alertas de Trabalhos */}
         <StaggerList className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <StaggerItem>
-            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
                 <AlertTriangle className="w-4 h-4" style={{ color: "var(--primary)" }} />
                 Trabalhos Para Escrever
@@ -317,11 +340,11 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               )}
-            </div>
+            </AnimatedCard>
           </StaggerItem>
 
           <StaggerItem>
-            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
                 <Clock className="w-4 h-4" style={{ color: "var(--primary)" }} />
                 Trabalhos Pendentes
@@ -353,7 +376,7 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               )}
-            </div>
+            </AnimatedCard>
           </StaggerItem>
         </StaggerList>
 
@@ -361,7 +384,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Top Clientes */}
           <FadeIn delay={0.4}>
-            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
                 <Star className="w-4 h-4" style={{ color: "var(--primary)" }} />
                 Melhores Clientes
@@ -400,12 +423,12 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
-            </div>
+            </AnimatedCard>
           </FadeIn>
 
           {/* Vendas Recentes */}
           <FadeIn delay={0.5}>
-            <div className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <AnimatedCard className="rounded-2xl p-6 shadow-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
               <h2 className="font-bold mb-4" style={{ color: "var(--foreground)" }}>Vendas Recentes</h2>
               {recentSales.length === 0 ? (
                 <p className="text-sm text-center py-8" style={{ color: "var(--muted-foreground)" }}>Nenhuma venda ainda</p>
@@ -436,7 +459,7 @@ export default function AdminDashboard() {
                   })}
                 </div>
               )}
-            </div>
+            </AnimatedCard>
           </FadeIn>
         </div>
       </div>

@@ -8,16 +8,16 @@ const COMPANIES = {
   mundo_da_magia: {
     name: "Mundo Da Magia LTDA",
     short: "Mundo Da Magia",
-    color: "#d97706",       // amber-600
-    bg: "rgba(217, 119, 6, 0.1)",
-    border: "rgba(217, 119, 6, 0.3)",
+    color: "#7c3aed",       // roxo Nubank
+    bg: "rgba(124, 58, 237, 0.1)",
+    border: "rgba(124, 58, 237, 0.3)",
   },
   mundo_cigano: {
     name: "Mundo Cigano LTDA",
     short: "Mundo Cigano",
-    color: "#7c3aed",       // violet-600
-    bg: "rgba(124, 58, 237, 0.1)",
-    border: "rgba(124, 58, 237, 0.3)",
+    color: "#d97706",       // âmbar/laranja Inter
+    bg: "rgba(217, 119, 6, 0.1)",
+    border: "rgba(217, 119, 6, 0.3)",
   },
 } as const;
 

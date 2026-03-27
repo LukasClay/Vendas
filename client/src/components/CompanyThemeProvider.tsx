@@ -5,56 +5,57 @@ import { trpc } from "@/lib/trpc";
  * CompanyThemeProvider
  * 
  * Injeta CSS variables dinâmicas no :root baseado na empresa ativa.
- * Mundo Da Magia = dourado/âmbar (padrão, não muda nada)
- * Mundo Cigano = roxo/lilás (sobrescreve --primary e derivados)
+ * Mundo Da Magia = Roxo (#7C3AED) — estilo Nubank
+ * Mundo Cigano = Âmbar/Laranja (#D97706) — estilo Inter
  * 
  * Só é renderizado dentro do painel admin.
+ * Consultora e Vendedor NÃO usam este provider (mantêm âmbar fixo).
  */
 
-// Cores da Mundo Cigano (roxo/lilás) para sobrescrever o tema dourado padrão
-const CIGANO_LIGHT = {
-  "--primary": "oklch(0.55 0.20 285)",
+// Mundo Da Magia — Roxo Nubank (#7C3AED)
+const MAGIA_LIGHT = {
+  "--primary": "oklch(0.55 0.25 285)",        // #7C3AED roxo
   "--primary-foreground": "oklch(1 0 0)",
-  "--ring": "oklch(0.55 0.20 285)",
-  "--chart-1": "oklch(0.55 0.20 285)",
-  "--sidebar-primary": "oklch(0.55 0.20 285)",
-  "--sidebar-ring": "oklch(0.55 0.20 285)",
-  "--secondary": "oklch(0.94 0.02 285)",
+  "--ring": "oklch(0.55 0.25 285)",
+  "--chart-1": "oklch(0.55 0.25 285)",
+  "--sidebar-primary": "oklch(0.55 0.25 285)",
+  "--sidebar-ring": "oklch(0.55 0.25 285)",
+  "--secondary": "oklch(0.95 0.02 285)",
   "--accent": "oklch(0.94 0.03 285)",
 };
 
-const CIGANO_DARK = {
-  "--primary": "oklch(0.68 0.20 285)",
+const MAGIA_DARK = {
+  "--primary": "oklch(0.68 0.22 285)",         // roxo mais claro no dark
   "--primary-foreground": "oklch(0.15 0.02 260)",
-  "--ring": "oklch(0.68 0.20 285)",
-  "--chart-1": "oklch(0.68 0.20 285)",
-  "--sidebar-primary": "oklch(0.68 0.20 285)",
-  "--sidebar-ring": "oklch(0.68 0.20 285)",
+  "--ring": "oklch(0.68 0.22 285)",
+  "--chart-1": "oklch(0.68 0.22 285)",
+  "--sidebar-primary": "oklch(0.68 0.22 285)",
+  "--sidebar-ring": "oklch(0.68 0.22 285)",
   "--secondary": "oklch(0.22 0.025 285)",
   "--accent": "oklch(0.24 0.025 285)",
 };
 
-// Cores originais da Mundo Da Magia (dourado) para restaurar
-const MAGIA_LIGHT = {
-  "--primary": "oklch(0.60 0.13 65)",
+// Mundo Cigano — Âmbar/Laranja Inter (#D97706)
+const CIGANO_LIGHT = {
+  "--primary": "oklch(0.60 0.16 70)",          // #D97706 âmbar/laranja
   "--primary-foreground": "oklch(1 0 0)",
-  "--ring": "oklch(0.60 0.13 65)",
-  "--chart-1": "oklch(0.60 0.13 65)",
-  "--sidebar-primary": "oklch(0.60 0.13 65)",
-  "--sidebar-ring": "oklch(0.60 0.13 65)",
-  "--secondary": "oklch(0.94 0.012 65)",
-  "--accent": "oklch(0.94 0.02 65)",
+  "--ring": "oklch(0.60 0.16 70)",
+  "--chart-1": "oklch(0.60 0.16 70)",
+  "--sidebar-primary": "oklch(0.60 0.16 70)",
+  "--sidebar-ring": "oklch(0.60 0.16 70)",
+  "--secondary": "oklch(0.95 0.015 70)",
+  "--accent": "oklch(0.94 0.02 70)",
 };
 
-const MAGIA_DARK = {
-  "--primary": "oklch(0.68 0.14 65)",
+const CIGANO_DARK = {
+  "--primary": "oklch(0.70 0.16 70)",          // âmbar mais claro no dark
   "--primary-foreground": "oklch(0.15 0.02 260)",
-  "--ring": "oklch(0.68 0.14 65)",
-  "--chart-1": "oklch(0.68 0.14 65)",
-  "--sidebar-primary": "oklch(0.68 0.14 65)",
-  "--sidebar-ring": "oklch(0.68 0.14 65)",
-  "--secondary": "oklch(0.22 0.015 265)",
-  "--accent": "oklch(0.24 0.015 265)",
+  "--ring": "oklch(0.70 0.16 70)",
+  "--chart-1": "oklch(0.70 0.16 70)",
+  "--sidebar-primary": "oklch(0.70 0.16 70)",
+  "--sidebar-ring": "oklch(0.70 0.16 70)",
+  "--secondary": "oklch(0.22 0.015 65)",
+  "--accent": "oklch(0.24 0.015 65)",
 };
 
 function applyCompanyTheme(company: string, isDark: boolean) {
@@ -63,14 +64,22 @@ function applyCompanyTheme(company: string, isDark: boolean) {
     ? (isDark ? CIGANO_DARK : CIGANO_LIGHT)
     : (isDark ? MAGIA_DARK : MAGIA_LIGHT);
 
+  // Transição suave ao trocar empresa
+  root.style.transition = "color 0.3s ease, background-color 0.3s ease";
+
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
   }
+
+  // Remover transition após aplicar para não afetar outras mudanças
+  setTimeout(() => {
+    root.style.transition = "";
+  }, 400);
 }
 
 function clearCompanyTheme() {
   const root = document.documentElement;
-  const allKeys = Object.keys(CIGANO_LIGHT);
+  const allKeys = Object.keys(MAGIA_LIGHT);
   for (const key of allKeys) {
     root.style.removeProperty(key);
   }

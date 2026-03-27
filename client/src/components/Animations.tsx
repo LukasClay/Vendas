@@ -1,5 +1,6 @@
 import { motion, type Variants } from "framer-motion";
 import React, { type ReactNode } from "react";
+import CountUp from "react-countup";
 
 // ========== Page Transition ==========
 export function PageTransition({ children }: { children: ReactNode }) {
@@ -94,7 +95,7 @@ export function StaggerItem({
   );
 }
 
-// ========== Animated Card (hover effect) ==========
+// ========== Animated Card with Lift Effect ==========
 export function AnimatedCard({
   children,
   className = "",
@@ -108,7 +109,11 @@ export function AnimatedCard({
 }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -2 }}
+      whileHover={{
+        y: -2,
+        boxShadow: "0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -5px rgba(0,0,0,0.05)",
+        transition: { duration: 0.2, ease: "easeOut" },
+      }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={className}
@@ -141,43 +146,41 @@ export function ScaleIn({
   );
 }
 
-// ========== Animated Counter (números que contam) ==========
+// ========== Animated Counter (números que contam de 0 até valor) ==========
 export function AnimatedNumber({
   value,
   prefix = "",
   suffix = "",
   className = "",
-  duration = 1,
+  duration = 1.2,
+  decimals,
 }: {
   value: number;
   prefix?: string;
   suffix?: string;
   className?: string;
   duration?: number;
+  decimals?: number;
 }) {
+  const isMonetary = prefix.includes("R$") || prefix.includes("$");
+  const decimalPlaces = decimals ?? (isMonetary ? 2 : 0);
+
   return (
-    <motion.span
-      className={className}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <motion.span
-        key={value}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20, duration }}
-      >
-        {prefix}
-        {typeof value === "number" && !isNaN(value)
-          ? value.toLocaleString("pt-BR", {
-              minimumFractionDigits: prefix.includes("R$") ? 2 : 0,
-              maximumFractionDigits: 2,
-            })
-          : value}
-        {suffix}
-      </motion.span>
-    </motion.span>
+    <span className={className}>
+      {prefix && !isMonetary && prefix}
+      <CountUp
+        end={value}
+        duration={duration}
+        decimals={decimalPlaces}
+        decimal=","
+        separator="."
+        prefix={isMonetary ? prefix : ""}
+        suffix={suffix}
+        preserveValue
+        useEasing
+      />
+      {!isMonetary && suffix}
+    </span>
   );
 }
 
@@ -242,5 +245,36 @@ export function PulseStar({ className = "" }: { className?: string }) {
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
     </motion.div>
+  );
+}
+
+// ========== Skeleton Loading (substitui "Carregando..." e "...") ==========
+export function SkeletonPulse({
+  className = "",
+  width,
+  height = "1.2em",
+}: {
+  className?: string;
+  width?: string;
+  height?: string;
+}) {
+  return (
+    <span
+      className={`inline-block animate-pulse rounded-md bg-[var(--secondary)] ${className}`}
+      style={{ width: width ?? "100%", height, verticalAlign: "middle" }}
+    />
+  );
+}
+
+// ========== Skeleton Card (para cards inteiros) ==========
+export function SkeletonCard({ className = "" }: { className?: string }) {
+  return (
+    <div className={`rounded-2xl p-4 shadow-xl border border-[var(--border)] bg-[var(--card)] animate-pulse ${className}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-lg bg-[var(--secondary)]" />
+        <div className="h-3 w-20 rounded bg-[var(--secondary)]" />
+      </div>
+      <div className="h-6 w-24 rounded bg-[var(--secondary)]" />
+    </div>
   );
 }
