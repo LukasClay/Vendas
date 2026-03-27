@@ -332,7 +332,10 @@ export async function getSales(filters: SaleFilters = {}) {
   if (filters.startDate) conditions.push(sql`${sales.saleDate} >= ${filters.startDate.toISOString().split('T')[0]}`);
   if (filters.endDate) conditions.push(sql`${sales.saleDate} <= ${filters.endDate.toISOString().split('T')[0]}`);
   if (filters.sellerId) conditions.push(eq(sales.sellerId, filters.sellerId));
-  if (filters.productName) conditions.push(like(sales.productName, `%${filters.productName}%`));
+  if (filters.productName) {
+    const escaped = filters.productName.replace(/[%_\\]/g, '\\$&');
+    conditions.push(sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`);
+  }
 
   const query = db.select({
     sale: sales,
@@ -434,19 +437,19 @@ export async function cleanupExpiredTrash(daysOld = 30) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysOld);
 
-  // Primeiro libera slots de consulta das vendas que vão ser excluídas
+  // Libera slots de consulta de todas as vendas expiradas numa única query
+  await db.execute(
+    sql`UPDATE consultation_slots SET sold = false, "saleId" = NULL, status = 'pendente'
+        WHERE "saleId" IN (SELECT id FROM sales WHERE "deletedAt" IS NOT NULL AND "deletedAt" < ${cutoff.toISOString()})`
+  );
+
+  // Seleciona IDs antes de deletar para retornar contagem
   const expiredSales = await db.select({ id: sales.id })
     .from(sales)
     .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
 
-  for (const s of expiredSales) {
-    await db.update(consultationSlots)
-      .set({ sold: false, saleId: null, status: "pendente" })
-      .where(eq(consultationSlots.saleId, s.id));
-  }
-
   // Delete permanente
-  const result = await db.delete(sales)
+  await db.delete(sales)
     .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
 
   return expiredSales.length;

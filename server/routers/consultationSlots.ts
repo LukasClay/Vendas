@@ -324,6 +324,7 @@ export const consultationSlotsRouter = router({
             status: "pendente",
             cancelledBy: null,
             cancelledAt: null,
+            cancelReason: null,
           })
           .where(eq(consultationSlots.id, input.id))
       );

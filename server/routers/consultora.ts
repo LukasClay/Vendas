@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { sales, users, consultationSlots } from "../../drizzle/schema";
-import { and, asc, count, desc, eq, isNull, like, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
 
@@ -47,10 +47,11 @@ export const consultoraRouter = router({
 
       const conditions = [eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
+        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
         conditions.push(
           or(
-            like(sales.productName, `%${input.search}%`),
-            like(sales.clientName, `%${input.search}%`)
+            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
           )!
         );
       }
@@ -103,10 +104,11 @@ export const consultoraRouter = router({
 
       const conditions = [eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
+        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
         conditions.push(
           or(
-            like(sales.productName, `%${input.search}%`),
-            like(sales.clientName, `%${input.search}%`)
+            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
           )!
         );
       }
@@ -158,10 +160,11 @@ export const consultoraRouter = router({
 
       const conditions = [eq(sales.workStatus, "feito"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
       if (input?.search) {
+        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
         conditions.push(
           or(
-            like(sales.productName, `%${input.search}%`),
-            like(sales.clientName, `%${input.search}%`)
+            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
           )!
         );
       }
@@ -229,7 +232,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.update(sales)
-        .set({ workStatus: "pendente", completedAt: undefined })
+        .set({ workStatus: "pendente", completedAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "feito")));
       return { success: true };
     }),
@@ -241,7 +244,7 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.update(sales)
-        .set({ workStatus: "para_escrever", writtenAt: undefined })
+        .set({ workStatus: "para_escrever", writtenAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
       return { success: true };
     }),

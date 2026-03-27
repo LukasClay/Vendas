@@ -101,7 +101,7 @@ export const salesRouter = router({
         sellerName,
         clientId: clientId ?? undefined,
         clientName: input.clientName,
-        // Passar strings diretamente para evitar conversão de timezone pelo MySQL
+        // Passar strings diretamente para evitar conversão de timezone pelo PostgreSQL
         clientBirthDate: (input.clientBirthDate ?? null) as any,
         clientPhone: input.clientPhone ?? null,
         productId: input.productId ?? undefined,
