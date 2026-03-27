@@ -11,7 +11,7 @@ if (!connStr) {
 
 const pool = new Pool({
   connectionString: connStr,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: true },
   connectionTimeoutMillis: 15000,
 });
 
@@ -19,8 +19,16 @@ async function run() {
   const client = await pool.connect();
   try {
     // ─── 1. Criar/atualizar admin ───────────────────────────────────
-    const username = 'LucasCattani';
-    const password = 'Binario00123@';
+    const username = process.env.ADMIN_USERNAME;
+    const password = process.env.ADMIN_PASSWORD;
+    if (!username || !password) {
+      console.error('ADMIN_USERNAME e ADMIN_PASSWORD devem ser definidos como variáveis de ambiente.');
+      process.exit(1);
+    }
+    if (password.length < 8) {
+      console.error('ADMIN_PASSWORD deve ter no mínimo 8 caracteres.');
+      process.exit(1);
+    }
     const hash = await bcrypt.hash(password, 12);
 
     console.log(`[AdminSetup] Criando administrador: ${username}...`);

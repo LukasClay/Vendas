@@ -51,7 +51,8 @@ async function startServer() {
       await db.execute(sql`SELECT 1`);
       return res.json({ status: "ok", timestamp: new Date().toISOString() });
     } catch (err) {
-      return res.status(503).json({ status: "error", message: String(err) });
+      console.error("[HealthCheck] Falha:", err);
+      return res.status(503).json({ status: "error", message: "Database connection failed" });
     }
   });
 

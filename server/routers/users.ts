@@ -1,12 +1,7 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { deleteUser, getAllUsers, getUserById, updateUser } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
-  return next({ ctx });
-});
 
 export const usersRouter = router({
   listAll: adminProcedure.query(async () => {
