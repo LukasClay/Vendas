@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
@@ -24,6 +24,7 @@ interface RateLimitEntry {
 const loginAttempts = new Map<string, RateLimitEntry>();
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 min
+const RATE_LIMIT_MAP_MAX_SIZE = 10_000; // Teto de segurança contra DoS
 
 // Limpeza periódica para não acumular entradas expiradas em memória
 setInterval(() => {
@@ -43,6 +44,10 @@ function checkRateLimit(ip: string, username: string): void {
   const entry = loginAttempts.get(key);
 
   if (!entry || now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+    // Proteção contra esgotamento de memória por flood de IPs distintos
+    if (loginAttempts.size >= RATE_LIMIT_MAP_MAX_SIZE) {
+      loginAttempts.clear();
+    }
     loginAttempts.set(key, { count: 1, firstAttempt: now });
     return;
   }
@@ -63,12 +68,6 @@ function clearRateLimit(ip: string, username: string): void {
   loginAttempts.delete(`${ip}:${username.toLowerCase()}`);
 }
 // ──────────────────────────────────────────────────────────────────────────
-
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin")
-    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
-  return next({ ctx });
-});
 
 export const ownAuthRouter = router({
   // Login com username e senha (sem email)
@@ -91,21 +90,23 @@ export const ownAuthRouter = router({
       // Busca por username OU email (compatibilidade com contas antigas) - Usando SQL direto para busca case-insensitive
       const result = await withRetry(() =>
         db.select().from(users).where(
-          or(
-            sql`LOWER(${users.username}) = LOWER(${input.username})`,
-            sql`LOWER(${users.email}) = LOWER(${input.username})`
+          and(
+            or(
+              sql`LOWER(${users.username}) = LOWER(${input.username})`,
+              sql`LOWER(${users.email}) = LOWER(${input.username})`
+            ),
+            isNull(users.deletedAt)
           )
         ).limit(1)
       );
       const user = result[0];
 
       if (!user) {
-        console.error(`[Login] Usuário não encontrado: ${input.username}`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       if (!user.passwordHash) {
-        console.error(`[Login] Usuário sem senha definida (passwordHash null): ${input.username}`);
+        console.warn(`[Login] Conta sem senha configurada (id=${user.id})`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
@@ -115,11 +116,8 @@ export const ownAuthRouter = router({
 
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
-        console.error(`[Login] Senha incorreta para o usuário: ${input.username}`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
-
-      console.log(`[Login] Login bem-sucedido para: ${input.username} (Role: ${user.role})`);
 
       // Login bem-sucedido: limpar contador
       clearRateLimit(ip, input.username);
@@ -167,7 +165,7 @@ export const ownAuthRouter = router({
     .input(z.object({
       name: z.string().min(1, "Nome obrigatório"),
       username: z.string().min(3, "Usuário deve ter no mínimo 3 caracteres").regex(/^[a-zA-Z0-9_]+$/, "Usuário só pode conter letras, números e _"),
-      password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+      password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
       phone: z.string().optional(),
       role: z.enum(["user", "consultora", "admin"]).default("user"),
     }))
@@ -261,7 +259,7 @@ export const ownAuthRouter = router({
   resetPassword: adminProcedure
     .input(z.object({
       userId: z.number(),
-      newPassword: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+      newPassword: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -281,7 +279,10 @@ export const ownAuthRouter = router({
   // Admin exclui funcionário (Soft Delete Seguro — preserva histórico de vendas)
   deleteUser: adminProcedure
     .input(z.object({ userId: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (input.userId === ctx.user.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode excluir sua própria conta." });
+      }
       await deleteUser(input.userId);
       return { success: true };
     }),

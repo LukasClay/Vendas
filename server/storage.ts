@@ -78,39 +78,43 @@ function getS3Config() {
   return { endpoint, bucket, accessKey, secretKey, publicUrl, region };
 }
 
+// Singleton do S3Client para reutilizar conexões TCP
+let _s3Client: any = null;
+let _PutObjectCommand: any = null;
+
+async function getS3Client() {
+  if (_s3Client) return { client: _s3Client, PutObjectCommand: _PutObjectCommand };
+  try {
+    const s3module = await import("@aws-sdk/client-s3");
+    const config = getS3Config()!;
+    _s3Client = new s3module.S3Client({
+      endpoint: config.endpoint,
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKey,
+        secretAccessKey: config.secretKey,
+      },
+    });
+    _PutObjectCommand = s3module.PutObjectCommand;
+    return { client: _s3Client, PutObjectCommand: _PutObjectCommand };
+  } catch {
+    throw new Error(
+      "Para usar S3 no Railway, instale o SDK: npm install @aws-sdk/client-s3"
+    );
+  }
+}
+
 /**
- * Upload S3-compatível usando fetch + assinatura simples.
- * Para produção real, recomenda-se usar @aws-sdk/client-s3.
- * Esta implementação usa presigned URLs ou PUT direto dependendo do provider.
+ * Upload S3-compatível usando @aws-sdk/client-s3 com singleton.
  */
 async function s3Put(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType: string
 ): Promise<{ key: string; url: string }> {
-  // Importação dinâmica do SDK S3 — só carrega se necessário
-  let S3Client: any, PutObjectCommand: any;
-  try {
-    const s3module = await import("@aws-sdk/client-s3");
-    S3Client = s3module.S3Client;
-    PutObjectCommand = s3module.PutObjectCommand;
-  } catch {
-    throw new Error(
-      "Para usar S3 no Railway, instale o SDK: npm install @aws-sdk/client-s3"
-    );
-  }
-
+  const { client, PutObjectCommand } = await getS3Client();
   const config = getS3Config()!;
   const key = normalizeKey(relKey);
-
-  const client = new S3Client({
-    endpoint: config.endpoint,
-    region: config.region,
-    credentials: {
-      accessKeyId: config.accessKey,
-      secretAccessKey: config.secretKey,
-    },
-  });
 
   const body = typeof data === "string" ? Buffer.from(data) : data;
 

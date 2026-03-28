@@ -14,6 +14,16 @@ import { sendEmail, isEmailConfigured } from "../email";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
 
+/** Escapa HTML para prevenir XSS em templates de email */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -203,7 +213,7 @@ async function generateReportHtml(frequency: string): Promise<{ html: string; su
         <thead><tr><th>Vendedor</th><th>Vendas</th><th>Total</th></tr></thead>
         <tbody>
           ${topSellers.map(([name, data]) => `
-            <tr><td>${name}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
+            <tr><td>${escapeHtml(name)}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
           `).join("")}
         </tbody>
       </table>
@@ -215,7 +225,7 @@ async function generateReportHtml(frequency: string): Promise<{ html: string; su
         <thead><tr><th>Trabalho</th><th>Vendas</th><th>Total</th></tr></thead>
         <tbody>
           ${topProducts.map(([name, data]) => `
-            <tr><td>${name}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
+            <tr><td>${escapeHtml(name)}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
           `).join("")}
         </tbody>
       </table>
@@ -229,7 +239,7 @@ async function generateReportHtml(frequency: string): Promise<{ html: string; su
         <thead><tr><th>Cliente</th><th>Trabalho</th><th>Valor</th></tr></thead>
         <tbody>
           ${periodSales.slice(0, 15).map((s: any) => `
-            <tr><td>${s.clientName}</td><td>${s.productName}</td><td>${formatCurrency(Number(s.amount || 0))}</td></tr>
+            <tr><td>${escapeHtml(s.clientName)}</td><td>${escapeHtml(s.productName)}</td><td>${formatCurrency(Number(s.amount || 0))}</td></tr>
           `).join("")}
           ${periodSales.length > 15 ? `<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">... e mais ${periodSales.length - 15} vendas</td></tr>` : ""}
         </tbody>

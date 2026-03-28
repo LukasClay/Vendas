@@ -1,17 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry, getDeletedSales, restoreSale, permanentDeleteSale, cleanupExpiredTrash } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import { consultationSlots, sales, products } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
-
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores." });
-  return next({ ctx });
-});
 
 export const salesRouter = router({
   // Vendedor cria uma nova venda
@@ -37,8 +32,15 @@ export const salesRouter = router({
       let saleDate = input.saleDate;
       if (ctx.user.role !== "admin") {
         const now = new Date();
-        const br = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-        saleDate = `${br.getFullYear()}-${String(br.getMonth() + 1).padStart(2, "0")}-${String(br.getDate()).padStart(2, "0")}`;
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Sao_Paulo",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour12: false,
+        }).formatToParts(now);
+        const get = (type: string) => parts.find(p => p.type === type)?.value ?? "0";
+        saleDate = `${get("year")}-${get("month")}-${get("day")}`;
       }
 
       let attachmentUrl: string | null = null;
@@ -101,7 +103,7 @@ export const salesRouter = router({
         sellerName,
         clientId: clientId ?? undefined,
         clientName: input.clientName,
-        // Passar strings diretamente para evitar conversão de timezone pelo MySQL
+        // Passar strings diretamente para evitar conversão de timezone pelo PostgreSQL
         clientBirthDate: (input.clientBirthDate ?? null) as any,
         clientPhone: input.clientPhone ?? null,
         productId: input.productId ?? undefined,
