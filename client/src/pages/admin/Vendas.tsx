@@ -359,7 +359,8 @@ export default function AdminVendas() {
           )}
         </AnimatePresence>
 
-        <div className="rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden">
+        {/* Desktop Table */}
+        <div className="hidden md:block rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -455,6 +456,97 @@ export default function AdminVendas() {
                </span>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+            </div>
+          ) : salesData.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-20 opacity-20">
+              <FileText className="w-12 h-12 text-[var(--muted-foreground)]" />
+              <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Nenhuma venda encontrada</p>
+            </div>
+          ) : (
+            <>
+              {salesData.map((item: any) => {
+                const sale = item.sale ?? item;
+                return (
+                  <motion.div key={sale.id} className="rounded-2xl p-4 border border-[var(--border)] bg-[var(--card)] shadow-lg">
+                    <div className="space-y-3">
+                      {/* Valor em destaque */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Valor</p>
+                          <p className="text-2xl font-bold text-green-600 dark:text-green-400" style={{ fontFamily: "'Playfair Display', serif" }}>
+                            {formatCurrency(sale.amount)}
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button onClick={() => setEditSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 transition-all active:scale-95">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteConfirmId(sale.id)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-500 transition-all active:scale-95">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Separador */}
+                      <div className="h-px bg-[var(--border)]" />
+
+                      {/* Informações principais */}
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Cliente</p>
+                          <button onClick={() => setHistoryClientName(sale.clientName)} className="text-sm font-bold text-[var(--primary)] hover:underline text-left">
+                            {sale.clientName}
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Vendedor</p>
+                            <p className="text-sm font-bold text-[var(--foreground)] truncate">
+                              {sale.sellerName || "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Empresa</p>
+                            <div className="flex-shrink-0">
+                              <CompanyBadge company={sale.company} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Data</p>
+                            <p className="text-sm font-bold text-[var(--foreground)]">{formatDate(sale.saleDate)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Trabalho</p>
+                            <p className="text-sm font-bold text-[var(--primary)] truncate">{sale.productName}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              <div className="rounded-2xl p-4 border border-[var(--border)] bg-[var(--secondary)]/10">
+                <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest mb-3">Total de registros: {salesData.length}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Soma: </span>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(salesData.reduce((acc: number, item: any) => acc + Number((item.sale ?? item).amount), 0))}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
