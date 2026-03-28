@@ -163,11 +163,9 @@ export default function Login() {
                 {...register("rememberMe")}
                 type="checkbox"
                 id="rememberMe"
-                className="w-5 h-5 rounded cursor-pointer"
-                style={{ accentColor: "oklch(0.60 0.13 65)" } as React.CSSProperties}
+                className="w-5 h-5 rounded cursor-pointer accent-amber-700"
               />
-              <label htmlFor="rememberMe" className="text-sm cursor-pointer select-none"
-                style={{ color: "oklch(0.35 0.02 260)" }}>
+              <label htmlFor="rememberMe" className="text-sm cursor-pointer select-none text-gray-600">
                 Lembrar de mim por 1 ano
               </label>
             </div>
