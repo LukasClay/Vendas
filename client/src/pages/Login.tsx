@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Usuário obrigatório"),
@@ -31,7 +32,7 @@ export default function Login() {
     }
   }, [user, loading, navigate]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { register, handleSubmit, formState: { errors }, control } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "", rememberMe: true },
   });
@@ -159,11 +160,17 @@ export default function Login() {
 
             {/* Lembrar de mim */}
             <div className="flex items-center gap-3">
-              <input
-                {...register("rememberMe")}
-                type="checkbox"
-                id="rememberMe"
-                className="w-5 h-5 rounded cursor-pointer accent-amber-700"
+              <Controller
+                control={control}
+                name="rememberMe"
+                render={({ field }) => (
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    id="rememberMe"
+                    className="size-5"
+                  />
+                )}
               />
               <label htmlFor="rememberMe" className="text-sm cursor-pointer select-none text-gray-600">
                 Lembrar de mim por 1 ano
