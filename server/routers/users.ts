@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deleteUser, getAllUsers, getUserById, updateUser } from "../db";
+import { createAuditLog, deleteUser, getAllUsers, getUserById, updateUser } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
 
 
@@ -22,16 +22,20 @@ export const usersRouter = router({
       role: z.enum(["user", "consultora", "admin"]).optional(),
       active: z.boolean().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       await updateUser(id, data);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Alterou Funcionário", details: JSON.stringify({ targetUserId: id, changes: data }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
   deactivate: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await deleteUser(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Desativou Funcionário", details: JSON.stringify({ targetUserId: input.id }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 });

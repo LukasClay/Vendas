@@ -176,3 +176,33 @@ export const appSettings = pgTable("app_settings", {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+// ─── User Sessions (Sessões Ativas) ─────────────────────────────────────────
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),             // FK → users.id
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  userAgent: text("userAgent"),
+  location: varchar("location", { length: 256 }),
+  lastActive: timestamp("lastActive").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = typeof userSessions.$inferInsert;
+
+// ─── Audit Logs (Histórico de Atividades) ────────────────────────────────────
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"),                       // FK → users.id (null = sistema)
+  userName: varchar("userName", { length: 256 }),   // snapshot do nome no momento
+  action: varchar("action", { length: 128 }).notNull(),
+  details: text("details"),                        // JSON com detalhes da ação
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;

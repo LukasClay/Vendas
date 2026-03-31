@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry, getDeletedSales, restoreSale, permanentDeleteSale, cleanupExpiredTrash } from "../db";
+import { createAuditLog, createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry, getDeletedSales, restoreSale, permanentDeleteSale, cleanupExpiredTrash } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { nanoid } from "nanoid";
@@ -145,6 +145,8 @@ export const salesRouter = router({
         }
       }
 
+      const sellerNameLog = ctx.user.displayName || ctx.user.name || ctx.user.username || "Usuário";
+      await createAuditLog({ userId: ctx.user.id, userName: sellerNameLog, action: "Criou Venda", details: JSON.stringify({ saleId, clientName: input.clientName, productName: input.productName, amount: input.amount }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true, saleId };
     }),
 
@@ -193,7 +195,7 @@ export const salesRouter = router({
       notes: z.string().optional(),
       sellerId: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
       const data: Record<string, unknown> = {};
       if (fields.clientName !== undefined) data.clientName = fields.clientName;
@@ -205,14 +207,19 @@ export const salesRouter = router({
       if (fields.notes !== undefined) data.notes = fields.notes;
       if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
       await updateSale(id, data as any);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Editou Venda", details: JSON.stringify({ saleId: id, changes: data }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
   // Admin exclui uma venda
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const sale = await getSaleById(input.id);
       await deleteSale(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Excluiu Venda", details: JSON.stringify({ saleId: input.id, clientName: sale?.clientName, productName: sale?.productName }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
@@ -316,15 +323,19 @@ export const salesRouter = router({
 
   restore: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await restoreSale(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Restaurou Venda", details: JSON.stringify({ saleId: input.id }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
   permanentDelete: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await permanentDeleteSale(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Deletou Venda Permanentemente", details: JSON.stringify({ saleId: input.id }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 

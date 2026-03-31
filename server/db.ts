@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { appSettings, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, users } from "../drizzle/schema";
+import { appSettings, auditLogs, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, userSessions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -668,4 +668,112 @@ export async function deleteReportSchedule(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(reportSchedules).where(eq(reportSchedules.id, id));
+}
+
+// ─── User Sessions (Sessões Ativas) ─────────────────────────────────────────
+
+export async function createUserSession(data: {
+  userId: number;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(userSessions).values({
+    userId: data.userId,
+    ipAddress: data.ipAddress ?? null,
+    userAgent: data.userAgent ?? null,
+    lastActive: new Date(),
+    expiresAt: data.expiresAt,
+  }).returning({ id: userSessions.id });
+  return result[0]?.id;
+}
+
+export async function updateUserSession(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(userSessions).set({ lastActive: new Date() }).where(eq(userSessions.id, id));
+}
+
+export async function deleteUserSession(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(userSessions).where(eq(userSessions.id, id));
+}
+
+export async function deleteUserSessionsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(userSessions).where(eq(userSessions.userId, userId));
+}
+
+export async function getUserSessions(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(userSessions)
+    .where(and(eq(userSessions.userId, userId), sql`${userSessions.expiresAt} > NOW()`))
+    .orderBy(desc(userSessions.lastActive));
+}
+
+export async function getAllUserSessions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    session: userSessions,
+    userName: sql<string>`COALESCE(${users.displayName}, ${users.name}, ${users.username})`,
+    userRole: users.role,
+  })
+    .from(userSessions)
+    .leftJoin(users, eq(userSessions.userId, users.id))
+    .where(sql`${userSessions.expiresAt} > NOW()`)
+    .orderBy(desc(userSessions.lastActive));
+}
+
+// ─── Audit Logs (Histórico de Atividades) ────────────────────────────────────
+
+export async function createAuditLog(data: {
+  userId?: number | null;
+  userName?: string | null;
+  action: string;
+  details?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(auditLogs).values({
+    userId: data.userId ?? null,
+    userName: data.userName ?? null,
+    action: data.action,
+    details: data.details ?? null,
+    ipAddress: data.ipAddress ?? null,
+    userAgent: data.userAgent ?? null,
+  });
+}
+
+export async function getAuditLogs(filters: {
+  userId?: number;
+  action?: string;
+  limit?: number;
+  offset?: number;
+} = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters.userId) conditions.push(eq(auditLogs.userId, filters.userId));
+  if (filters.action) {
+    const escaped = filters.action.replace(/[%_\\]/g, '\\$&');
+    conditions.push(sql`${auditLogs.action} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`);
+  }
+
+  const query = db.select().from(auditLogs)
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(filters.limit ?? 100)
+    .offset(filters.offset ?? 0);
+
+  if (conditions.length > 0) {
+    return (query as any).where(and(...conditions));
+  }
+  return query;
 }

@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { getDb, withRetry, deleteUser } from "../db";
+import { createAuditLog, getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
@@ -143,6 +143,10 @@ export const ownAuthRouter = router({
         maxAge: expiresInMs,
       });
 
+      // Audit log de login
+      const loginName = user.name || user.username || `Usuário #${user.id}`;
+      await createAuditLog({ userId: user.id, userName: loginName, action: "Login", details: JSON.stringify({ role: user.role, rememberMe: input.rememberMe }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
+
       return { success: true, role: user.role };
     }),
 
@@ -169,7 +173,7 @@ export const ownAuthRouter = router({
       phone: z.string().optional(),
       role: z.enum(["user", "consultora", "admin"]).default("user"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
 
@@ -196,6 +200,9 @@ export const ownAuthRouter = router({
         passwordHash,
         lastSignedIn: new Date(),
       });
+
+      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName: adminName, action: "Criou Funcionário", details: JSON.stringify({ name: input.name, username: input.username, role: input.role }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
 
       return { success: true };
     }),
@@ -284,6 +291,8 @@ export const ownAuthRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode excluir sua própria conta." });
       }
       await deleteUser(input.userId);
+      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName: adminName, action: "Excluiu Funcionário", details: JSON.stringify({ deletedUserId: input.userId }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 });

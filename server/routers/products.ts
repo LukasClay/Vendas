@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createProduct, deleteProduct, findActiveProductByName, findDeletedProductByName, getAllProducts, getProductById, restoreProduct, updateProduct } from "../db";
+import { createAuditLog, createProduct, deleteProduct, findActiveProductByName, findDeletedProductByName, getAllProducts, getProductById, restoreProduct, updateProduct } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 
 export const productsRouter = router({
@@ -18,8 +18,11 @@ export const productsRouter = router({
 
   restore: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const product = await getProductById(input.id);
       await restoreProduct(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Restaurou Trabalho", details: JSON.stringify({ productId: input.id, name: product?.name }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
@@ -29,7 +32,7 @@ export const productsRouter = router({
       description: z.string().optional(),
       allowedCategories: z.array(z.enum(["individual", "promocao", "coletivo"])).min(1, "Selecione pelo menos 1 tipo").default(["individual", "promocao", "coletivo"]),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       // Verifica se já existe um produto ativo com o mesmo nome (case-insensitive)
       const existingActive = await findActiveProductByName(input.name.trim());
       if (existingActive) {
@@ -50,6 +53,8 @@ export const productsRouter = router({
         active: true,
         allowedCategories: input.allowedCategories,
       });
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Criou Trabalho", details: JSON.stringify({ name: input.name, categories: input.allowedCategories }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
@@ -61,7 +66,7 @@ export const productsRouter = router({
       active: z.boolean().optional(),
       allowedCategories: z.array(z.enum(["individual", "promocao", "coletivo"])).min(1, "Selecione pelo menos 1 tipo").optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       // Bloqueia edição de produtos do sistema
       const product = await getProductById(input.id);
       if (product?.isSystem) {
@@ -72,12 +77,14 @@ export const productsRouter = router({
       }
       const { id, ...data } = input;
       await updateProduct(id, data);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Alterou Trabalho", details: JSON.stringify({ productId: id, changes: data }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       // Bloqueia exclusão de produtos do sistema
       const product = await getProductById(input.id);
       if (product?.isSystem) {
@@ -87,6 +94,8 @@ export const productsRouter = router({
         });
       }
       await deleteProduct(input.id);
+      const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({ userId: ctx.user.id, userName, action: "Excluiu Trabalho", details: JSON.stringify({ productId: input.id, name: product?.name }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
     }),
 });
