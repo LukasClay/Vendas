@@ -16,14 +16,12 @@ export const productsRouter = router({
     .input(z.object({
       name: z.string().min(1, "Nome é obrigatório"),
       description: z.string().optional(),
-      allowedCategories: z.array(z.enum(["individual", "promocao", "coletivo"])).min(1, "Selecione pelo menos 1 tipo").default(["individual", "promocao", "coletivo"]),
     }))
     .mutation(async ({ input }) => {
       await createProduct({
         name: input.name,
         description: input.description ?? null,
         active: true,
-        allowedCategories: input.allowedCategories,
       });
       return { success: true };
     }),
@@ -34,7 +32,6 @@ export const productsRouter = router({
       name: z.string().min(1).optional(),
       description: z.string().optional(),
       active: z.boolean().optional(),
-      allowedCategories: z.array(z.enum(["individual", "promocao", "coletivo"])).min(1, "Selecione pelo menos 1 tipo").optional(),
     }))
     .mutation(async ({ input }) => {
       // Bloqueia edição de produtos do sistema

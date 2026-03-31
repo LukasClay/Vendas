@@ -9,7 +9,6 @@ import {
   date,
   numeric,
   integer,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -54,7 +53,6 @@ export const products = pgTable("products", {
   description: text("description"),
   active: boolean("active").default(true).notNull(),
   isSystem: boolean("isSystem").default(false).notNull(),  // true = produto do sistema, não pode ser excluído/editado
-  allowedCategories: jsonb("allowedCategories").$type<string[]>().default(["individual", "promocao", "coletivo"]).notNull(),
   deletedAt: timestamp("deletedAt"),  // soft delete: preenchido quando excluído
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
