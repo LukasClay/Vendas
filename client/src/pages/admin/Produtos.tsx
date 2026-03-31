@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight, RotateCcw, Search } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function AdminProdutos() {
@@ -16,16 +16,25 @@ export default function AdminProdutos() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"active" | "inactive" | "trash">("active");
+  const [searchQuery, setSearchQuery] = useState("");
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  // Normaliza texto removendo acentos para busca mais intuitiva
+  const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   // Filtrar produtos do sistema (ex: Consulta Cartas)
   const displayProducts = allProducts.filter(p => !(p as any).isSystem);
 
+  // Aplicar busca
+  const searchedProducts = searchQuery.trim()
+    ? displayProducts.filter(p => normalize(p.name).includes(normalize(searchQuery)))
+    : displayProducts;
+
   // Separar por estado
-  const activeProducts = displayProducts.filter(p => p.active && !p.deletedAt);
-  const inactiveProducts = displayProducts.filter(p => !p.active && !p.deletedAt);
-  const deletedProducts = displayProducts.filter(p => p.deletedAt);
+  const activeProducts = searchedProducts.filter(p => p.active && !p.deletedAt);
+  const inactiveProducts = searchedProducts.filter(p => !p.active && !p.deletedAt);
+  const deletedProducts = searchedProducts.filter(p => p.deletedAt);
 
   const createProduct = trpc.products.create.useMutation({
     onSuccess: (data) => {
@@ -235,6 +244,27 @@ export default function AdminProdutos() {
             </form>
           </div>
         )}
+
+        {/* Barra de busca */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Buscar trabalho..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
+            style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:opacity-70"
+              style={{ color: "var(--muted-foreground)" }}>
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
         {/* Tabs */}
         <div className="flex items-center gap-1 p-1 rounded-xl mb-5" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>

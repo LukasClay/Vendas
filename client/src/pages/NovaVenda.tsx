@@ -100,10 +100,13 @@ export default function NovaVenda() {
     return acc;
   }, {});
 
+  // Normaliza texto removendo acentos para busca mais intuitiva
+  const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
   // Lista filtrada de produtos para o combobox
   const safeProducts = products ?? [];
   const filteredProducts = productQuery.trim()
-    ? safeProducts.filter(p => p.name.toLowerCase().includes(productQuery.toLowerCase()))
+    ? safeProducts.filter(p => normalize(p.name).includes(normalize(productQuery)))
     : safeProducts;
 
   const [file, setFile] = useState<File | null>(null);
@@ -525,7 +528,16 @@ export default function NovaVenda() {
                             borderBottom: isDark ? "1px solid var(--border)" : "1px solid #ddd5c4",
                           }}
                         >
-                          {p.name}
+                          {productQuery.trim() ? (() => {
+                            const normName = normalize(p.name);
+                            const normQuery = normalize(productQuery);
+                            const idx = normName.indexOf(normQuery);
+                            if (idx === -1) return p.name;
+                            const before = p.name.slice(0, idx);
+                            const match = p.name.slice(idx, idx + productQuery.length);
+                            const after = p.name.slice(idx + productQuery.length);
+                            return <>{before}<strong style={{ color: "var(--primary)" }}>{match}</strong>{after}</>;
+                          })() : p.name}
                         </button>
                       ))
                     )}
