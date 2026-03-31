@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { z, eq } from "zod";
-import { createAuditLog, deleteUserSession, getAllUserSessions, getAuditLogs, getDb, users } from "../db";
-import { sql } from "drizzle-orm";
-
+import { z } from "zod";
+import { eq, sql } from "drizzle-orm";
+import { createAuditLog, deleteUserSession, getAllUserSessions, getAuditLogs, getDb } from "../db";
+import { users } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
