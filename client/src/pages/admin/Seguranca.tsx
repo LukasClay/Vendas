@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Shield, Monitor, Clock, Search, Loader2, History, LogOut,
   User, Smartphone, Globe, Filter, ChevronLeft, ChevronRight,
-  ChevronDown,
+  ChevronDown, RefreshCw,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
@@ -75,7 +75,7 @@ function SessionsTab() {
   const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
 
-  const { data: sessions = [], isLoading } = trpc.security.getActiveSessions.useQuery(
+  const { data: sessions = [], isLoading, isFetching, refetch } = trpc.security.getActiveSessions.useQuery(
     undefined,
     { staleTime: 30_000 }
   );
@@ -109,11 +109,23 @@ function SessionsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Monitor className="w-5 h-5" style={{ color: "var(--primary)" }} />
-        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>
-          {sessions.length} sessão(ões) ativa(s)
-        </span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Monitor className="w-5 h-5" style={{ color: "var(--primary)" }} />
+          <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>
+            {sessions.length} sessão(ões) ativa(s)
+          </span>
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-50"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+          title="Recarregar sessões"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          {isFetching ? "Carregando..." : "Recarregar"}
+        </button>
       </div>
 
       {sessions.length === 0 ? (
@@ -146,9 +158,23 @@ function SessionsTab() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>
-                          {session.userName || "Usuário desconhecido"}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm truncate" style={{ color: "var(--foreground)" }}>
+                            {session.userName || "Usuário desconhecido"}
+                          </p>
+                          {(() => {
+                            const diffMin = Math.floor((Date.now() - new Date(session.lastActive).getTime()) / 60000);
+                            if (diffMin < 5) return (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#22c55e20", color: "#22c55e" }}>● Online</span>
+                            );
+                            if (diffMin < 30) return (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#f59e0b20", color: "#f59e0b" }}>● Recente</span>
+                            );
+                            return (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.06)", color: "var(--muted-foreground)" }}>● Inativo</span>
+                            );
+                          })()}
+                        </div>
                         <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
                           {ROLE_LABELS[session.userRole ?? "user"] ?? "Vendedor"} · {browser} · {device}
                         </p>
