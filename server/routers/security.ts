@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
-import { createAuditLog, deleteUserSession, getAllUserSessions, getAuditLogs, getDb } from "../db";
+import { createAuditLog, deleteUserSession, deleteUserSessionsByUser, getAllUserSessions, getAuditLogs, getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
@@ -52,14 +52,13 @@ export const securityRouter = router({
       });
     }),
 
-  // Desconecta uma sessão (requer senha mestre)
+  // Desconecta uma sessão individual (requer senha mestre)
   disconnectSession: adminProcedure
     .input(z.object({
       sessionId: z.number(),
       masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Valida senha mestre
       if (!verifyMasterPassword(input.masterPassword)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -67,7 +66,6 @@ export const securityRouter = router({
         });
       }
 
-      // Busca a sessão para obter userId e invalidar JWTs
       const allSessions = await getAllUserSessions();
       const targetSession = allSessions.find(s => s.session.id === input.sessionId);
       if (targetSession?.session.userId) {
@@ -79,10 +77,8 @@ export const securityRouter = router({
         }
       }
 
-
       await deleteUserSession(input.sessionId);
 
-      // Registra no audit log com targetUserId
       const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
         userId: ctx.user.id,
@@ -92,6 +88,44 @@ export const securityRouter = router({
           sessionId: input.sessionId,
           targetUserId: targetSession?.session.userId || null 
         }),
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
+      return { success: true };
+    }),
+
+  // Desconecta TODAS as sessões de um usuário (requer senha mestre)
+  disconnectUser: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!verifyMasterPassword(input.masterPassword)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Senha mestre incorreta.",
+        });
+      }
+
+      // Incrementa sessionVersion para invalidar todos os JWTs do usuário
+      const db = await getDb();
+      if (db) {
+        await db.update(users)
+          .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+          .where(eq(users.id, input.userId));
+      }
+
+      // Remove todas as sessões do usuário
+      await deleteUserSessionsByUser(input.userId);
+
+      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({
+        userId: ctx.user.id,
+        userName: adminName,
+        action: "Desconectou Usuário",
+        details: JSON.stringify({ targetUserId: input.userId }),
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
       });
