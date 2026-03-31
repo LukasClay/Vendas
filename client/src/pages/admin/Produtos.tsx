@@ -2,24 +2,39 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Check, X, Loader2, ToggleLeft, ToggleRight, RotateCcw } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function AdminProdutos() {
   const utils = trpc.useUtils();
-  const { data: products = [], isLoading } = trpc.products.listAll.useQuery();
+  const { data: allProducts = [], isLoading } = trpc.products.listAllWithDeleted.useQuery();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] as string[] });
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "inactive" | "trash">("active");
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  // Filtrar produtos do sistema (ex: Consulta Cartas)
+  const displayProducts = allProducts.filter(p => !(p as any).isSystem);
+
+  // Separar por estado
+  const activeProducts = displayProducts.filter(p => p.active && !p.deletedAt);
+  const inactiveProducts = displayProducts.filter(p => !p.active && !p.deletedAt);
+  const deletedProducts = displayProducts.filter(p => p.deletedAt);
+
   const createProduct = trpc.products.create.useMutation({
-    onSuccess: () => {
-      toast.success("Trabalho adicionado com sucesso!");
+    onSuccess: (data) => {
+      if ((data as any).restored) {
+        toast.success("Trabalho restaurado com sucesso!");
+      } else {
+        toast.success("Trabalho adicionado com sucesso!");
+      }
+      utils.products.listAllWithDeleted.invalidate();
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setShowForm(false);
@@ -31,6 +46,7 @@ export default function AdminProdutos() {
   const updateProduct = trpc.products.update.useMutation({
     onSuccess: () => {
       toast.success("Trabalho atualizado!");
+      utils.products.listAllWithDeleted.invalidate();
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setEditingId(null);
@@ -43,9 +59,21 @@ export default function AdminProdutos() {
   const deleteProduct = trpc.products.delete.useMutation({
     onSuccess: () => {
       toast.success("Trabalho removido.");
+      utils.products.listAllWithDeleted.invalidate();
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setDeletingId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const restoreProduct = trpc.products.restore.useMutation({
+    onSuccess: () => {
+      toast.success("Trabalho restaurado!");
+      utils.products.listAllWithDeleted.invalidate();
+      utils.products.listAll.invalidate();
+      utils.products.list.invalidate();
+      setRestoringId(null);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -65,6 +93,7 @@ export default function AdminProdutos() {
     setEditingId(product.id);
     setForm({ name: product.name, description: product.description ?? "", allowedCategories: product.allowedCategories ?? ["individual", "promocao", "coletivo"] });
     setShowForm(true);
+    setActiveTab("active");
   };
 
   const cancelForm = () => {
@@ -73,8 +102,13 @@ export default function AdminProdutos() {
     setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
   };
 
-  // Oculta produtos do sistema (ex: Consulta Cartas) — são gerenciados automaticamente
-  const displayProducts = products.filter(p => !(p as any).isSystem);
+  const currentProducts = activeTab === "active" ? activeProducts : activeTab === "inactive" ? inactiveProducts : deletedProducts;
+
+  const emptyMessages: Record<string, { title: string; subtitle: string }> = {
+    active: { title: "Nenhum trabalho ativo", subtitle: "Clique em \"Novo Trabalho\" para adicionar." },
+    inactive: { title: "Nenhum trabalho inativo", subtitle: "Trabalhos desativados aparecerão aqui." },
+    trash: { title: "Lixeira vazia", subtitle: "Trabalhos excluídos aparecerão aqui." },
+  };
 
   return (
     <DashboardLayout>
@@ -90,7 +124,7 @@ export default function AdminProdutos() {
             </p>
           </div>
           <button
-            onClick={() => { setEditingId(null); setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] }); setShowForm(true); }}
+            onClick={() => { setEditingId(null); setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] }); setShowForm(true); setActiveTab("active"); }}
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-95 shadow-md"
             style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             <Plus className="w-4 h-4" />
@@ -202,14 +236,73 @@ export default function AdminProdutos() {
           </div>
         )}
 
+        {/* Tabs */}
+        <div className="flex items-center gap-1 p-1 rounded-xl mb-5" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "active"
+                ? "shadow-sm"
+                : "hover:opacity-80"
+            }`}
+            style={activeTab === "active"
+              ? { background: "var(--card)", color: "var(--foreground)" }
+              : { color: "var(--muted-foreground)" }
+            }>
+            <span className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Ativos
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.55 0.15 160 / 0.1)", color: "oklch(0.55 0.15 160)" }}>{activeProducts.length}</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("inactive")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "inactive"
+                ? "shadow-sm"
+                : "hover:opacity-80"
+            }`}
+            style={activeTab === "inactive"
+              ? { background: "var(--card)", color: "var(--foreground)" }
+              : { color: "var(--muted-foreground)" }
+            }>
+            <span className="flex items-center gap-2">
+              <ToggleLeft className="w-4 h-4" />
+              Inativos
+              {inactiveProducts.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.60 0.18 65 / 0.1)", color: "oklch(0.55 0.18 65)" }}>{inactiveProducts.length}</span>
+              )}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("trash")}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "trash"
+                ? "shadow-sm"
+                : "hover:opacity-80"
+            }`}
+            style={activeTab === "trash"
+              ? { background: "var(--card)", color: "var(--foreground)" }
+              : { color: "var(--muted-foreground)" }
+            }>
+            <span className="flex items-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              Lixeira
+              {deletedProducts.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.58 0.22 25 / 0.1)", color: "oklch(0.58 0.22 25)" }}>{deletedProducts.length}</span>
+              )}
+            </span>
+          </button>
+        </div>
+
         {/* Lista de trabalhos */}
         <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
             <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>
-              Trabalhos Cadastrados
+              {activeTab === "active" ? "Trabalhos Ativos" : activeTab === "inactive" ? "Trabalhos Inativos" : "Trabalhos Excluídos"}
             </h2>
             <span className="text-sm px-3 py-1 rounded-full" style={{ background: "var(--secondary)", color: "var(--primary)" }}>
-              {displayProducts.filter(p => p.active).length} ativos
+              {currentProducts.length} {currentProducts.length === 1 ? "trabalho" : "trabalhos"}
             </span>
           </div>
 
@@ -217,95 +310,192 @@ export default function AdminProdutos() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.60 0.13 65)" }} />
             </div>
-          ) : displayProducts.length === 0 ? (
+          ) : currentProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
                 style={{ background: "var(--secondary)" }}>
                 <Package className="w-8 h-8" style={{ color: "var(--muted-foreground)" }} />
               </div>
               <p className="text-base font-medium mb-1" style={{ color: "var(--foreground)" }}>
-                Nenhum trabalho cadastrado
+                {emptyMessages[activeTab].title}
               </p>
               <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Clique em "Novo Trabalho" para adicionar.
+                {emptyMessages[activeTab].subtitle}
               </p>
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-              {displayProducts.map(product => (
+              {currentProducts.map(product => (
                 <div key={product.id} className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-colors"
-                  style={{ opacity: product.active ? 1 : 0.5 }}
+                  style={{ opacity: activeTab === "active" ? 1 : 0.7 }}
                     onMouseEnter={e => (e.currentTarget.style.background = isDark ? "var(--secondary)" : "oklch(0.98 0.006 65)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: product.active ? "var(--secondary)" : "var(--muted)" }}>
-                    <Package className="w-5 h-5" style={{ color: product.active ? "var(--primary)" : "var(--muted-foreground)" }} />
+                    style={{ background: activeTab === "active" ? "var(--secondary)" : "var(--muted)" }}>
+                    <Package className="w-5 h-5" style={{ color: activeTab === "active" ? "var(--primary)" : "var(--muted-foreground)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>{product.name}</p>
                     {product.description && (
                       <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>{product.description}</p>
                     )}
-                    {!product.active && (
-                      <span className="text-xs" style={{ color: "var(--destructive)" }}>Inativo</span>
+                    {activeTab === "inactive" && (
+                      <span className="text-xs font-bold" style={{ color: "oklch(0.55 0.18 65)" }}>Inativo</span>
+                    )}
+                    {activeTab === "trash" && (
+                      <span className="text-xs font-bold" style={{ color: "oklch(0.58 0.22 25)" }}>Excluído</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    {togglingId === product.id ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-bold" style={{ color: product.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
-                          {product.active ? "Desativar?" : "Ativar?"}
-                        </span>
+                    {/* Aba Ativos: toggle + editar + excluir */}
+                    {activeTab === "active" && (
+                      <>
+                        {togglingId === product.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold" style={{ color: "oklch(0.55 0.18 65)" }}>
+                              Desativar?
+                            </span>
+                            <button
+                              onClick={() => { updateProduct.mutate({ id: product.id, active: false }); setTogglingId(null); }}
+                              className="p-2 rounded-lg text-white"
+                              style={{ background: "oklch(0.55 0.18 65)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setTogglingId(null)}
+                              className="p-2 rounded-lg"
+                              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setTogglingId(product.id)}
+                            className="p-2 rounded-lg transition-colors"
+                            title="Desativar"
+                            style={{ color: "oklch(0.55 0.15 160)" }}>
+                            <ToggleRight className="w-5 h-5" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => { updateProduct.mutate({ id: product.id, active: !product.active }); setTogglingId(null); }}
-                          className="p-2 rounded-lg text-white"
-                          style={{ background: product.active ? "oklch(0.58 0.22 25)" : "oklch(0.55 0.15 160)" }}>
-                          <Check className="w-4 h-4" />
+                          onClick={() => startEdit(product)}
+                          className="p-2 rounded-lg transition-colors hover:bg-blue-50"
+                          style={{ color: "oklch(0.50 0.18 250)" }}>
+                          <Pencil className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setTogglingId(null)}
-                          className="p-2 rounded-lg"
-                          style={{ background: "var(--muted)", color: "var(--foreground)" }}>
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setTogglingId(product.id)}
-                        className="p-2 rounded-lg transition-colors"
-                        title={product.active ? "Desativar" : "Ativar"}
-                        style={{ color: product.active ? "oklch(0.55 0.15 160)" : "oklch(0.60 0.01 260)" }}>
-                        {product.active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                      </button>
+                        {deletingId === product.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => deleteProduct.mutate({ id: product.id })}
+                              className="p-2 rounded-lg text-white text-xs font-medium"
+                              style={{ background: "oklch(0.58 0.22 25)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(null)}
+                              className="p-2 rounded-lg text-xs font-medium"
+                              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingId(product.id)}
+                            className="p-2 rounded-lg transition-colors hover:bg-red-50"
+                            style={{ color: "oklch(0.58 0.22 25)" }}>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
                     )}
-                    <button
-                      onClick={() => startEdit(product)}
-                      className="p-2 rounded-lg transition-colors hover:bg-blue-50"
-                      style={{ color: "oklch(0.50 0.18 250)" }}>
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    {deletingId === product.id ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => deleteProduct.mutate({ id: product.id })}
-                          className="p-2 rounded-lg text-white text-xs font-medium"
-                          style={{ background: "oklch(0.58 0.22 25)" }}>
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingId(null)}
-                          className="p-2 rounded-lg text-xs font-medium"
-                          style={{ background: "var(--muted)", color: "var(--foreground)" }}>
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setDeletingId(product.id)}
-                        className="p-2 rounded-lg transition-colors hover:bg-red-50"
-                        style={{ color: "oklch(0.58 0.22 25)" }}>
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {/* Aba Inativos: reativar + excluir */}
+                    {activeTab === "inactive" && (
+                      <>
+                        {togglingId === product.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold" style={{ color: "oklch(0.55 0.15 160)" }}>
+                              Ativar?
+                            </span>
+                            <button
+                              onClick={() => { updateProduct.mutate({ id: product.id, active: true }); setTogglingId(null); }}
+                              className="p-2 rounded-lg text-white"
+                              style={{ background: "oklch(0.55 0.15 160)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setTogglingId(null)}
+                              className="p-2 rounded-lg"
+                              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setTogglingId(product.id)}
+                            className="p-2 rounded-lg transition-colors"
+                            title="Reativar"
+                            style={{ color: "oklch(0.55 0.15 160)" }}>
+                            <ToggleLeft className="w-5 h-5" />
+                          </button>
+                        )}
+                        {deletingId === product.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => deleteProduct.mutate({ id: product.id })}
+                              className="p-2 rounded-lg text-white text-xs font-medium"
+                              style={{ background: "oklch(0.58 0.22 25)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(null)}
+                              className="p-2 rounded-lg text-xs font-medium"
+                              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingId(product.id)}
+                            className="p-2 rounded-lg transition-colors hover:bg-red-50"
+                            style={{ color: "oklch(0.58 0.22 25)" }}>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Aba Lixeira: restaurar */}
+                    {activeTab === "trash" && (
+                      <>
+                        {restoringId === product.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold" style={{ color: "oklch(0.55 0.15 160)" }}>
+                              Restaurar?
+                            </span>
+                            <button
+                              onClick={() => { restoreProduct.mutate({ id: product.id }); setRestoringId(null); }}
+                              className="p-2 rounded-lg text-white"
+                              style={{ background: "oklch(0.55 0.15 160)" }}>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setRestoringId(null)}
+                              className="p-2 rounded-lg"
+                              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setRestoringId(product.id)}
+                            className="p-2 rounded-lg transition-colors"
+                            title="Restaurar"
+                            style={{ color: "oklch(0.55 0.15 160)" }}>
+                            <RotateCcw className="w-5 h-5" />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

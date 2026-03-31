@@ -173,10 +173,14 @@ export async function deleteUser(id: number) {
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export async function getAllProducts(includeInactive = false) {
+export async function getAllProducts(includeInactive = false, includeDeleted = false) {
   const db = await getDb();
   if (!db) return [];
   try {
+    if (includeDeleted) {
+      // Retorna TODOS os produtos (ativos, inativos e excluídos) — para aba Lixeira no ADM
+      return await db.select().from(products).orderBy(asc(products.name));
+    }
     // Sempre filtra produtos com soft delete (deletedAt IS NULL)
     if (includeInactive) return await db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
     return await db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
@@ -186,10 +190,40 @@ export async function getAllProducts(includeInactive = false) {
   }
 }
 
+export async function findDeletedProductByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(products).where(
+    and(
+      sql`LOWER(${products.name}) = LOWER(${name})`,
+      isNotNull(products.deletedAt)
+    )
+  ).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function restoreProduct(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(products).set({ active: true, deletedAt: null }).where(eq(products.id, id));
+}
+
 export async function getProductById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function findActiveProductByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(products).where(
+    and(
+      sql`LOWER(${products.name}) = LOWER(${name})`,
+      isNull(products.deletedAt)
+    )
+  ).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
