@@ -507,7 +507,11 @@ export default function NovaVenda() {
                           type="button"
                           onMouseDown={e => e.preventDefault()} // evita blur antes do click
                           onClick={() => {
-                            setForm(f => ({ ...f, productName: p.name, productId: p.id }));
+                            const allowed = (p as any).allowedCategories ?? ["individual", "promocao", "coletivo"];
+                            setForm(f => {
+                              const newCategory = allowed.includes(f.productCategory) ? f.productCategory : allowed[0];
+                              return { ...f, productName: p.name, productId: p.id, productCategory: newCategory };
+                            });
                             setProductQuery("");
                             setProductDropdownOpen(false);
                             productInputRef.current?.blur();
@@ -530,17 +534,22 @@ export default function NovaVenda() {
               </div>
 
               {/* Tipo (categoria da venda) — oculto para Consulta Cartas */}
-              {!isConsultaCartas && (
+              {!isConsultaCartas && (() => {
+                const selectedProduct = safeProducts.find(p => p.id === form.productId);
+                const allowed: string[] = (selectedProduct as any)?.allowedCategories ?? ["individual", "promocao", "coletivo"];
+                const allOptions = [
+                  { value: "individual", label: "Individual", icon: "" },
+                  { value: "promocao", label: "Promoção", icon: "⭐ " },
+                  { value: "coletivo", label: "Coletivo", icon: "👥 " },
+                ] as const;
+                const visibleOptions = allOptions.filter(opt => allowed.includes(opt.value));
+                return (
               <div>
                 <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Tipo {requiredStar}
                 </label>
                 <div className="flex gap-2 flex-wrap">
-                  {([
-                    { value: "individual", label: "Individual", icon: "" },
-                    { value: "promocao", label: "Promoção", icon: "⭐ " },
-                    { value: "coletivo", label: "Coletivo", icon: "👥 " },
-                  ] as const).map(opt => (
+                  {visibleOptions.map(opt => (
                     <button
                       key={opt.value}
                       type="button"
@@ -557,7 +566,8 @@ export default function NovaVenda() {
                   ))}
                 </div>
               </div>
-              )}
+                );
+              })()}
 
               {/* Data da Venda */}
               <div>

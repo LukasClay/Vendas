@@ -11,7 +11,7 @@ export default function AdminProdutos() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", description: "" });
+  const [form, setForm] = useState({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] as string[] });
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const { resolvedTheme } = useTheme();
@@ -23,7 +23,7 @@ export default function AdminProdutos() {
       utils.products.listAll.invalidate();
       utils.products.list.invalidate();
       setShowForm(false);
-      setForm({ name: "", description: "" });
+      setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
     },
     onError: (err) => toast.error(err.message),
   });
@@ -35,7 +35,7 @@ export default function AdminProdutos() {
       utils.products.list.invalidate();
       setEditingId(null);
       setShowForm(false);
-      setForm({ name: "", description: "" });
+      setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
     },
     onError: (err) => toast.error(err.message),
   });
@@ -53,23 +53,24 @@ export default function AdminProdutos() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Nome é obrigatório."); return; }
+    if (form.allowedCategories.length === 0) { toast.error("Selecione pelo menos 1 tipo permitido."); return; }
     if (editingId) {
-      updateProduct.mutate({ id: editingId, name: form.name.trim(), description: form.description || undefined });
+      updateProduct.mutate({ id: editingId, name: form.name.trim(), description: form.description || undefined, allowedCategories: form.allowedCategories as ("individual" | "promocao" | "coletivo")[] });
     } else {
-      createProduct.mutate({ name: form.name.trim(), description: form.description || undefined });
+      createProduct.mutate({ name: form.name.trim(), description: form.description || undefined, allowedCategories: form.allowedCategories as ("individual" | "promocao" | "coletivo")[] });
     }
   };
 
   const startEdit = (product: any) => {
     setEditingId(product.id);
-    setForm({ name: product.name, description: product.description ?? "" });
+    setForm({ name: product.name, description: product.description ?? "", allowedCategories: product.allowedCategories ?? ["individual", "promocao", "coletivo"] });
     setShowForm(true);
   };
 
   const cancelForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm({ name: "", description: "" });
+    setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
   };
 
   // Oculta produtos do sistema (ex: Consulta Cartas) — são gerenciados automaticamente
@@ -89,7 +90,7 @@ export default function AdminProdutos() {
             </p>
           </div>
           <button
-            onClick={() => { setEditingId(null); setForm({ name: "", description: "" }); setShowForm(true); }}
+            onClick={() => { setEditingId(null); setForm({ name: "", description: "", allowedCategories: ["individual", "promocao", "coletivo"] }); setShowForm(true); }}
             className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-95 shadow-md"
             style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))", fontSize: "16px" }}>
             <Plus className="w-4 h-4" />
@@ -131,6 +132,45 @@ export default function AdminProdutos() {
                   className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2 resize-none"
                   style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
+                  Tipos Permitidos <span style={{ color: "var(--destructive)" }}>*</span>
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    { value: "individual", label: "Individual", icon: "" },
+                    { value: "promocao", label: "Promoção", icon: "⭐ " },
+                    { value: "coletivo", label: "Coletivo", icon: "👥 " },
+                  ] as const).map(opt => {
+                    const checked = form.allowedCategories.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setForm(f => {
+                            const cats = checked
+                              ? f.allowedCategories.filter(c => c !== opt.value)
+                              : [...f.allowedCategories, opt.value];
+                            return { ...f, allowedCategories: cats };
+                          });
+                        }}
+                        className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 border-2"
+                        style={checked
+                          ? { background: opt.value === "promocao" ? "#ede8de" : opt.value === "coletivo" ? "#e0e0f8" : "#ddd5c4",
+                              color: opt.value === "promocao" ? "#7a5518" : opt.value === "coletivo" ? "#4040b0" : "#2a2a40",
+                              borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "#737390" }
+                          : { background: "var(--secondary)", color: "var(--muted-foreground)", borderColor: "var(--border)" }
+                        }>
+                        {opt.icon}{opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.allowedCategories.length === 0 && (
+                  <p className="text-xs mt-1" style={{ color: "var(--destructive)" }}>Selecione pelo menos 1 tipo.</p>
+                )}
               </div>
               <div className="flex gap-3">
                 <button
