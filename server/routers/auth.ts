@@ -146,7 +146,7 @@ export const ownAuthRouter = router({
       // Registra sessão ativa (passivo — não afeta o login se falhar)
       try {
         await createUserSession({ userId: user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent, expiresAt: new Date(Date.now() + expiresInMs) });
-      } catch { /* silencioso */ }
+      } catch (e) { console.error("[Session] Erro ao registrar sessão:", e); }
 
       // Audit log de login
       const loginName = user.name || user.username || `Usuário #${user.id}`;

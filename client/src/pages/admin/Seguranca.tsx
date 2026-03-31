@@ -1,10 +1,11 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Shield, Monitor, Clock, Search, Loader2, History, LogOut,
   User, Smartphone, Globe, Filter, ChevronLeft, ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
@@ -270,22 +271,84 @@ const ACTION_COLORS: Record<string, string> = {
   "Desconectou Sessão": "#dc2626",
 };
 
+const DETAIL_LABELS: Record<string, string> = {
+  saleId: "ID da Venda",
+  clientName: "Cliente",
+  productName: "Trabalho",
+  amount: "Valor",
+  productId: "ID do Trabalho",
+  name: "Nome",
+  username: "Usuário",
+  role: "Cargo",
+  rememberMe: "Lembrar-me",
+  changes: "Alterações",
+  categories: "Categorias",
+  targetUserId: "ID do Funcionário",
+  deletedUserId: "ID do Excluído",
+  sessionId: "ID da Sessão",
+};
+
+function formatDetailValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (key === "amount") return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  if (key === "rememberMe") return value ? "Sim" : "Não";
+  if (key === "role") {
+    const roles: Record<string, string> = { user: "Vendedor", consultora: "Consultora", admin: "Admin" };
+    return roles[String(value)] ?? String(value);
+  }
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+function LogDetailPanel({ details, isDark }: { details: string | null; isDark: boolean }) {
+  if (!details) return null;
+  let parsed: Record<string, unknown> = {};
+  try { parsed = JSON.parse(details); } catch { return <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{details}</p>; }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 p-3 rounded-lg mt-2" style={{
+      background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+    }}>
+      {Object.entries(parsed).map(([key, val]) => (
+        <div key={key} className="flex flex-col">
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
+            {DETAIL_LABELS[key] ?? key}
+          </span>
+          <span className="text-xs mt-0.5 break-all" style={{ color: "var(--foreground)" }}>
+            {formatDetailValue(key, val)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AuditLogsTab() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const [searchAction, setSearchAction] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const PAGE_SIZE = 50;
 
-  const { data: logs = [], isLoading } = trpc.security.getAuditLogs.useQuery(
-    {
-      action: searchAction || undefined,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-    },
+  // Busca TODOS os logs da página sem filtro server-side — filtro é client-side
+  const { data: allLogs = [], isLoading } = trpc.security.getAuditLogs.useQuery(
+    { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
     { staleTime: 30_000 }
   );
+
+  // Filtragem client-side (sem re-fetch)
+  const logs = useMemo(() => {
+    if (!searchTerm.trim()) return allLogs;
+    const term = searchTerm.toLowerCase();
+    return (allLogs as AuditLogEntry[]).filter((log) =>
+      log.action.toLowerCase().includes(term) ||
+      (log.userName ?? "").toLowerCase().includes(term)
+    );
+  }, [allLogs, searchTerm]);
+
+  const toggleExpand = (id: number) => setExpandedId((prev) => (prev === id ? null : id));
 
   if (isLoading) {
     return (
@@ -297,15 +360,15 @@ function AuditLogsTab() {
 
   return (
     <div className="space-y-4">
-      {/* Filtro */}
+      {/* Filtro client-side */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--muted-foreground)" }} />
           <input
             type="text"
-            value={searchAction}
-            onChange={(e) => { setSearchAction(e.target.value); setPage(0); }}
-            placeholder="Filtrar por ação..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filtrar por ação ou usuário..."
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm"
             style={{
               background: isDark ? "var(--input)" : "#f9fafb",
@@ -327,11 +390,13 @@ function AuditLogsTab() {
           borderColor: "var(--border)",
         }}>
           <History className="w-12 h-12 mx-auto mb-3" style={{ color: "var(--muted-foreground)", opacity: 0.4 }} />
-          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Nenhum registro de atividade</p>
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+            {searchTerm ? "Nenhum registro encontrado para este filtro" : "Nenhum registro de atividade"}
+          </p>
         </div>
       ) : (
         <>
-          {/* Desktop: Tabela */}
+          {/* Desktop: Tabela com linhas expansíveis */}
           <div className="hidden md:block rounded-xl border overflow-hidden" style={{
             background: isDark ? "var(--card)" : "#ffffff",
             borderColor: "var(--border)",
@@ -349,37 +414,54 @@ function AuditLogsTab() {
               <tbody>
                 {logs.map((log: AuditLogEntry) => {
                   const actionColor = ACTION_COLORS[log.action] ?? "var(--muted-foreground)";
-                  let details = "";
+                  const isExpanded = expandedId === log.id;
+                  let shortDetails = "";
                   try {
                     const parsed = JSON.parse(log.details || "{}");
-                    details = Object.entries(parsed)
-                      .map(([k, v]) => `${k}: ${v}`)
+                    shortDetails = Object.entries(parsed)
+                      .slice(0, 2)
+                      .map(([k, v]) => `${DETAIL_LABELS[k] ?? k}: ${typeof v === "object" ? "..." : v}`)
                       .join(", ");
-                  } catch { details = log.details || ""; }
+                    if (Object.keys(parsed).length > 2) shortDetails += " ...";
+                  } catch { shortDetails = log.details || ""; }
 
                   return (
-                    <tr key={log.id} className="border-t" style={{ borderColor: "var(--border)" }}>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: "var(--foreground)" }}>
+                    <tr
+                      key={log.id}
+                      className="border-t cursor-pointer transition-colors"
+                      style={{ borderColor: "var(--border)", background: isExpanded ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)") : undefined }}
+                      onClick={() => toggleExpand(log.id)}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap align-top" style={{ color: "var(--foreground)" }}>
                         {formatDateTime(log.createdAt)}
                       </td>
-                      <td className="px-4 py-3" style={{ color: "var(--foreground)" }}>
+                      <td className="px-4 py-3 align-top" style={{ color: "var(--foreground)" }}>
                         <div className="flex items-center gap-2">
                           <User className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--muted-foreground)" }} />
                           <span className="truncate max-w-[150px]">{log.userName || "Sistema"}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-top">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
                           style={{ background: `${actionColor}20`, color: actionColor }}>
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-4 py-3 max-w-[300px]">
-                        <span className="text-xs truncate block" style={{ color: "var(--muted-foreground)" }}>
-                          {details || "—"}
-                        </span>
+                      <td className="px-4 py-3 max-w-[350px] align-top">
+                        {!isExpanded ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
+                              {shortDetails || "—"}
+                            </span>
+                            {log.details && (
+                              <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                            )}
+                          </div>
+                        ) : (
+                          <LogDetailPanel details={log.details} isDark={isDark} />
+                        )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs align-top" style={{ color: "var(--muted-foreground)" }}>
                         {log.ipAddress || "—"}
                       </td>
                     </tr>
@@ -389,47 +471,50 @@ function AuditLogsTab() {
             </table>
           </div>
 
-          {/* Mobile: Cards */}
+          {/* Mobile: Cards expansíveis */}
           <div className="md:hidden space-y-3">
             <StaggerList className="space-y-3">
               {logs.map((log: AuditLogEntry) => {
                 const actionColor = ACTION_COLORS[log.action] ?? "var(--muted-foreground)";
-                let details = "";
-                try {
-                  const parsed = JSON.parse(log.details || "{}");
-                  details = Object.entries(parsed)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join(", ");
-                } catch { details = log.details || ""; }
+                const isExpanded = expandedId === log.id;
 
                 return (
                   <StaggerItem key={log.id}>
-                    <div className="p-4 rounded-xl border" style={{
-                      background: isDark ? "var(--card)" : "#ffffff",
-                      borderColor: "var(--border)",
-                    }}>
+                    <div
+                      className="p-4 rounded-xl border cursor-pointer transition-all"
+                      style={{
+                        background: isDark ? "var(--card)" : "#ffffff",
+                        borderColor: isExpanded ? "var(--primary)" : "var(--border)",
+                      }}
+                      onClick={() => toggleExpand(log.id)}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
                           style={{ background: `${actionColor}20`, color: actionColor }}>
                           {log.action}
                         </span>
-                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          {formatDateTime(log.createdAt)}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                            {formatDateTime(log.createdAt)}
+                          </span>
+                          <ChevronDown
+                            className="w-3.5 h-3.5 transition-transform"
+                            style={{
+                              color: "var(--muted-foreground)",
+                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            }}
+                          />
+                        </div>
                       </div>
                       <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                         {log.userName || "Sistema"}
                       </p>
-                      {details && (
-                        <p className="text-xs mt-1 truncate" style={{ color: "var(--muted-foreground)" }}>
-                          {details}
-                        </p>
-                      )}
                       {log.ipAddress && (
                         <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--muted-foreground)" }}>
                           <Globe className="w-3 h-3" /> {log.ipAddress}
                         </p>
                       )}
+                      {isExpanded && <LogDetailPanel details={log.details} isDark={isDark} />}
                     </div>
                   </StaggerItem>
                 );
@@ -440,7 +525,7 @@ function AuditLogsTab() {
           {/* Paginação */}
           <div className="flex items-center justify-between pt-2">
             <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              onClick={() => { setPage((p) => Math.max(0, p - 1)); setExpandedId(null); }}
               disabled={page === 0}
               className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border disabled:opacity-30"
               style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
@@ -451,8 +536,8 @@ function AuditLogsTab() {
               Página {page + 1}
             </span>
             <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={logs.length < PAGE_SIZE}
+              onClick={() => { setPage((p) => p + 1); setExpandedId(null); }}
+              disabled={allLogs.length < PAGE_SIZE}
               className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold border disabled:opacity-30"
               style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
             >
