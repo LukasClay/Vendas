@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { createAuditLog, deleteUserSession, getAllUserSessions, getAuditLogs } from "../db";
+import { z, eq } from "zod";
+import { createAuditLog, deleteUserSession, getAllUserSessions, getAuditLogs, getDb, users } from "../db";
+import { sql } from "drizzle-orm";
+
 import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
@@ -65,19 +67,36 @@ export const securityRouter = router({
         });
       }
 
+      // Busca a sessão para obter userId e invalidar JWTs
+      const allSessions = await getAllUserSessions();
+      const targetSession = allSessions.find(s => s.session.id === input.sessionId);
+      if (targetSession?.session.userId) {
+        const db = await getDb();
+        if (db) {
+          await db.update(users)
+            .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+            .where(eq(users.id, targetSession.session.userId));
+        }
+      }
+
+
       await deleteUserSession(input.sessionId);
 
-      // Registra no audit log
+      // Registra no audit log com targetUserId
       const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
         userId: ctx.user.id,
         userName: adminName,
         action: "Desconectou Sessão",
-        details: JSON.stringify({ sessionId: input.sessionId }),
+        details: JSON.stringify({ 
+          sessionId: input.sessionId,
+          targetUserId: targetSession?.session.userId || null 
+        }),
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
       });
 
       return { success: true };
     }),
+
 });
