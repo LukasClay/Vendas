@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { createAuditLog, getDb, withRetry, deleteUser } from "../db";
+import { createAuditLog, createUserSession, getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
@@ -142,6 +142,11 @@ export const ownAuthRouter = router({
         ...cookieOptions,
         maxAge: expiresInMs,
       });
+
+      // Registra sessão ativa (passivo — não afeta o login se falhar)
+      try {
+        await createUserSession({ userId: user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent, expiresAt: new Date(Date.now() + expiresInMs) });
+      } catch { /* silencioso */ }
 
       // Audit log de login
       const loginName = user.name || user.username || `Usuário #${user.id}`;
