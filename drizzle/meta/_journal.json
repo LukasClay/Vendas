@@ -15,6 +15,13 @@
       "when": 1774567598219,
       "tag": "0001_material_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1743379200000,
+      "tag": "0002_add_allowed_categories",
+      "breakpoints": true
     }
   ]
 }
