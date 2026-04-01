@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -34,6 +34,22 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
 
   const products = trpc.products.list.useQuery();
 
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [addProductForm, setAddProductForm] = useState({
+    name: "",
+    description: "",
+    allowedCategories: ["individual", "promocao", "coletivo"] as string[],
+  });
+
+  const createProduct = trpc.products.create.useMutation({
+    onSuccess: () => {
+      toast.success("Trabalho adicionado à lista!");
+      utils.products.list.invalidate();
+      setShowAddProduct(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const [editForm, setEditForm] = useState({
     clientName: sale.clientName ?? "",
     clientBirthDate: toInputDate(sale.clientBirthDate),
@@ -45,6 +61,13 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     notes: sale.notes ?? "",
     sellerId: sale.sellerId ? String(sale.sellerId) : "",
   });
+
+  const isNameMissing = !!editForm.productName && !!products.data && !products.data.find(p => p.name === editForm.productName);
+
+  const openAddProduct = () => {
+    setAddProductForm({ name: editForm.productName, description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
+    setShowAddProduct(true);
+  };
 
   // Estado do upload de comprovante
   const [file, setFile] = useState<File | null>(null);
@@ -140,14 +163,35 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Trabalho</label>
               <select value={editForm.productName} onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
-                {editForm.productName && !products.data?.find(p => p.name === editForm.productName) && (
-                  <option value={editForm.productName}>{editForm.productName}</option>
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer"
+                style={{ ...inputStyle, borderColor: isNameMissing ? "#ef4444" : "var(--border)" }}>
+                {isNameMissing && (
+                  <option value={editForm.productName}>{editForm.productName} (não cadastrado)</option>
                 )}
                 {products.data?.map(p => (
                   <option key={p.id} value={p.name}>{p.name}</option>
                 ))}
               </select>
+              {isNameMissing && (
+                <div className="mt-2 p-3 rounded-xl border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800">
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold text-red-700 dark:text-red-400">
+                      Este trabalho não está na lista de produtos. Deseja atualizar a venda mesmo assim?
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setEditForm(f => ({ ...f, productName: products.data?.[0]?.name ?? "" }))}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                      Cancelar
+                    </button>
+                    <button type="button" onClick={openAddProduct}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
+                      Adicionar esse trabalho
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Tipo de Trabalho</label>
@@ -242,6 +286,104 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
           </button>
         </div>
       </motion.div>
+
+      {/* Sub-modal: Adicionar Novo Trabalho */}
+      {showAddProduct && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAddProduct(false); }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-[var(--border)]"
+            style={{ background: "var(--card)" }}>
+            <div className="px-6 py-5 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
+              <h2 className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: "var(--foreground)" }}>
+                Adicionar Novo Trabalho
+              </h2>
+              <button onClick={() => setShowAddProduct(false)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
+                  Nome do Trabalho <span style={{ color: "var(--destructive)" }}>*</span>
+                </label>
+                <input type="text" value={addProductForm.name}
+                  onChange={e => setAddProductForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Ex: Amarração, Limpeza, Broxamento..."
+                  className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+                  style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }}
+                  autoFocus />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--foreground)" }}>
+                  Descrição (opcional)
+                </label>
+                <textarea value={addProductForm.description}
+                  onChange={e => setAddProductForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Descrição breve do trabalho..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 resize-none"
+                  style={{ border: "1.5px solid var(--border)", background: "var(--secondary)", color: "var(--foreground)" }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
+                  Tipos Permitidos <span style={{ color: "var(--destructive)" }}>*</span>
+                </label>
+                <div className="flex gap-2">
+                  {([
+                    { value: "individual", label: "Individual", icon: "" },
+                    { value: "promocao", label: "Promoção", icon: "⭐ " },
+                    { value: "coletivo", label: "Coletivo", icon: "👥 " },
+                  ] as const).map(opt => {
+                    const checked = addProductForm.allowedCategories.includes(opt.value);
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => setAddProductForm(f => ({
+                          ...f,
+                          allowedCategories: checked
+                            ? f.allowedCategories.filter(c => c !== opt.value)
+                            : [...f.allowedCategories, opt.value],
+                        }))}
+                        className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-95 border-2"
+                        style={checked
+                          ? { background: opt.value === "promocao" ? "#ede8de" : opt.value === "coletivo" ? "#e0e0f8" : "#ddd5c4",
+                              color: opt.value === "promocao" ? "#7a5518" : opt.value === "coletivo" ? "#4040b0" : "#2a2a40",
+                              borderColor: opt.value === "promocao" ? "#c4a030" : opt.value === "coletivo" ? "#4a70c0" : "#737390" }
+                          : { background: "var(--secondary)", color: "var(--muted-foreground)", borderColor: "var(--border)" }
+                        }>
+                        {opt.icon}{opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-5 border-t" style={{ borderColor: "var(--border)" }}>
+              <button onClick={() => setShowAddProduct(false)}
+                className="px-5 py-3 rounded-xl font-bold transition-all bg-[var(--secondary)] text-[var(--foreground)] active:scale-95">
+                <X className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (!addProductForm.name.trim()) { toast.error("Nome é obrigatório."); return; }
+                  if (addProductForm.allowedCategories.length === 0) { toast.error("Selecione pelo menos 1 tipo."); return; }
+                  createProduct.mutate({
+                    name: addProductForm.name.trim(),
+                    description: addProductForm.description || undefined,
+                    allowedCategories: addProductForm.allowedCategories as ("individual" | "promocao" | "coletivo")[],
+                  });
+                }}
+                disabled={createProduct.isPending}
+                className="flex-1 py-3 rounded-xl font-bold text-white transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+                {createProduct.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Adicionar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
