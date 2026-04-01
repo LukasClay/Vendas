@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
@@ -63,6 +63,25 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
   });
 
   const isNameMissing = !!editForm.productName && !!products.data && !products.data.find(p => p.name === editForm.productName);
+
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const comboboxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
+        setShowProductDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!products.data) return [];
+    const q = editForm.productName.toLowerCase();
+    return products.data.filter(p => p.name.toLowerCase().includes(q));
+  }, [products.data, editForm.productName]);
 
   const openAddProduct = () => {
     setAddProductForm({ name: editForm.productName, description: "", allowedCategories: ["individual", "promocao", "coletivo"] });
@@ -160,18 +179,30 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               <input type="tel" value={editForm.clientPhone} onChange={e => setEditForm(f => ({ ...f, clientPhone: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
-            <div>
+            <div ref={comboboxRef} className="relative">
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Trabalho</label>
-              <select value={editForm.productName} onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer"
-                style={{ ...inputStyle, borderColor: isNameMissing ? "#ef4444" : "var(--border)" }}>
-                {isNameMissing && (
-                  <option value={editForm.productName}>{editForm.productName} (não cadastrado)</option>
-                )}
-                {products.data?.map(p => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
-                ))}
-              </select>
+              <input
+                type="text"
+                value={editForm.productName}
+                onChange={e => { setEditForm(f => ({ ...f, productName: e.target.value })); setShowProductDropdown(true); }}
+                onFocus={() => setShowProductDropdown(true)}
+                placeholder="Digite ou selecione um trabalho..."
+                className="w-full px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                style={{ ...inputStyle, borderColor: isNameMissing ? "#ef4444" : "var(--border)" }}
+              />
+              {showProductDropdown && filteredProducts.length > 0 && (
+                <ul className="absolute z-10 w-full mt-1 rounded-xl shadow-lg border border-[var(--border)] overflow-hidden max-h-48 overflow-y-auto"
+                  style={{ background: "var(--card)" }}>
+                  {filteredProducts.map(p => (
+                    <li key={p.id}
+                      onMouseDown={() => { setEditForm(f => ({ ...f, productName: p.name })); setShowProductDropdown(false); }}
+                      className="px-4 py-2.5 text-sm cursor-pointer hover:bg-[var(--secondary)] transition-colors"
+                      style={{ color: "var(--foreground)" }}>
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {isNameMissing && (
                 <div className="mt-2 p-3 rounded-xl border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800">
                   <div className="flex items-start gap-2 mb-2">
@@ -181,7 +212,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setEditForm(f => ({ ...f, productName: products.data?.[0]?.name ?? "" }))}
+                    <button type="button" onClick={() => setEditForm(f => ({ ...f, productName: sale.productName ?? "" }))}
                       className="flex-1 py-1.5 rounded-lg text-xs font-bold border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
                       Cancelar
                     </button>
