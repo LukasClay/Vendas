@@ -417,7 +417,7 @@ function AuditLogsTab() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const PAGE_SIZE = 50;
 
-  const { data: allLogs = [], isLoading } = trpc.security.getAuditLogs.useQuery(
+  const { data: allLogs = [], isLoading, isFetching, refetch } = trpc.security.getAuditLogs.useQuery(
     { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
     { staleTime: 30_000 }
   );
@@ -459,6 +459,16 @@ function AuditLogsTab() {
           <Filter className="w-3.5 h-3.5" />
           <span>{logs.length} registros</span>
         </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-50"
+          style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+          title="Recarregar"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          {isFetching ? "Carregando..." : "Recarregar"}
+        </button>
       </div>
 
       {logs.length === 0 ? (
