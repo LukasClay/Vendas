@@ -200,6 +200,8 @@ export default function NovaVenda() {
     if (!form.clientPhone.replace(/\D/g, "")) { toast.error("Telefone é obrigatório."); return; }
     if (!form.productName) { toast.error("Selecione o trabalho espiritual."); return; }
     if (!form.amountFormatted) { toast.error("Informe o valor do trabalho."); return; }
+    if (!form.notes.trim()) { toast.error("Observações são obrigatórias."); return; }
+    if (!file) { toast.error("Comprovante é obrigatório."); return; }
 
     let attachmentBase64: string | undefined;
     let attachmentMime: string | undefined;
@@ -680,7 +682,7 @@ export default function NovaVenda() {
               {/* Observações */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
-                  Observações <span className="font-normal text-xs" style={{ color: dynSubColor }}>(opcional)</span>
+                  Observações {requiredStar}
                 </label>
                 <textarea
                   value={form.notes}
@@ -699,8 +701,7 @@ export default function NovaVenda() {
             <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: "#c17f24" }}>3</span>
-              Comprovante
-              <span className="text-xs font-normal ml-1" style={{ color: dynSubColor }}>(opcional)</span>
+              Comprovante {requiredStar}
             </h2>
 
             {file ? (
