@@ -499,8 +499,8 @@ export default function AdminVendas() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(sale.amount)}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)]">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)] whitespace-nowrap">
                             {sale.sellerName || "—"}
                           </span>
                         </td>
