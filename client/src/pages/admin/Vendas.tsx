@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -371,13 +371,14 @@ export default function AdminVendas() {
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Valor</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Vendedor</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Empresa</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Comprovante</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-20 text-center">
+                    <td colSpan={8} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
                         <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Carregando vendas...</p>
@@ -386,7 +387,7 @@ export default function AdminVendas() {
                   </tr>
                 ) : salesData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-20 text-center">
+                    <td colSpan={8} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center gap-3 opacity-20">
                         <FileText className="w-12 h-12 text-[var(--muted-foreground)]" />
                         <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Nenhuma venda encontrada</p>
@@ -430,11 +431,42 @@ export default function AdminVendas() {
                         <td className="px-6 py-4">
                           <CompanyBadge company={sale.company} />
                         </td>
+                        <td className="px-6 py-4">
+                          {sale.attachmentUrl ? (
+                            <a
+                              href={sale.attachmentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors border"
+                              style={{
+                                background: "oklch(0.94 0.02 65)",
+                                color: "oklch(0.50 0.10 65)",
+                                borderColor: "oklch(0.88 0.04 65)",
+                              }}
+                            >
+                              <Paperclip className="w-3 h-3" />
+                              Ver
+                            </a>
+                          ) : (
+                            <span className="text-xs text-[var(--muted-foreground)]">—</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button onClick={() => setEditSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 border border-[var(--border)]">
                               <Pencil className="w-4 h-4" />
                             </button>
+                            {sale.attachmentUrl && (
+                              <a
+                                href={sale.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-95 border border-[var(--border)]"
+                                title="Ver comprovante"
+                              >
+                                <Paperclip className="w-4 h-4" />
+                              </a>
+                            )}
                             <button onClick={() => setDeleteConfirmId(sale.id)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95 border border-[var(--border)]">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -488,6 +520,17 @@ export default function AdminVendas() {
                           <button onClick={() => setEditSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 transition-all active:scale-95">
                             <Pencil className="w-4 h-4" />
                           </button>
+                          {sale.attachmentUrl && (
+                            <a
+                              href={sale.attachmentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-all active:scale-95"
+                              title="Ver comprovante"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
                           <button onClick={() => setDeleteConfirmId(sale.id)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-500 transition-all active:scale-95">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -501,9 +544,23 @@ export default function AdminVendas() {
                       <div className="space-y-2">
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Cliente</p>
-                          <button onClick={() => setHistoryClientName(sale.clientName)} className="text-sm font-bold text-[var(--primary)] hover:underline text-left">
-                            {sale.clientName}
-                          </button>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button onClick={() => setHistoryClientName(sale.clientName)} className="text-sm font-bold text-[var(--primary)] hover:underline text-left">
+                              {sale.clientName}
+                            </button>
+                            {sale.attachmentUrl && (
+                              <a
+                                href={sale.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold transition-colors"
+                                style={{ background: "oklch(0.94 0.02 65)", color: "oklch(0.50 0.10 65)" }}
+                              >
+                                <Paperclip className="w-3 h-3" />
+                                Comprovante
+                              </a>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
