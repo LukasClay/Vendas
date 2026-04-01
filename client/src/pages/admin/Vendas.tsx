@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState, useMemo } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -43,6 +43,20 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     sellerId: sale.sellerId ? String(sale.sellerId) : "",
   });
 
+  // Estado do upload de comprovante
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (f: File | null) => {
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { toast.error("Arquivo muito grande. Máximo 5MB."); return; }
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(f.type)) {
+      toast.error("Formato inválido. Use JPG, PNG, WEBP ou PDF.");
+      return;
+    }
+    setFile(f);
+  };
+
   const updateSale = trpc.sales.update.useMutation({
     onSuccess: () => {
       toast.success("Venda atualizada com sucesso!");
@@ -52,7 +66,22 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     onError: (err) => toast.error(err.message),
   });
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
+    let attachmentBase64: string | undefined;
+    let attachmentMime: string | undefined;
+    let attachmentName: string | undefined;
+
+    if (file) {
+      attachmentBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      attachmentMime = file.type;
+      attachmentName = file.name;
+    }
+
     updateSale.mutate({
       id: sale.id,
       clientName: editForm.clientName || undefined,
@@ -63,6 +92,9 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       amount: editForm.amount ? Number(editForm.amount) : undefined,
       notes: editForm.notes || undefined,
       sellerId: editForm.sellerId ? Number(editForm.sellerId) : undefined,
+      attachmentBase64,
+      attachmentMime,
+      attachmentName,
     });
   };
 
@@ -131,6 +163,50 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                 rows={3} placeholder="Observações opcionais..."
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all resize-none" style={inputStyle} />
+            </div>
+
+            {/* ── Comprovante ── */}
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Comprovante</label>
+
+              {/* Comprovante atual (se existir e nenhum novo foi selecionado) */}
+              {sale.attachmentUrl && !file && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] mb-2">
+                  <Paperclip className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span className="text-xs text-[var(--muted-foreground)] flex-1 truncate">Comprovante atual</span>
+                  <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-bold hover:underline shrink-0" style={{ color: "var(--primary)" }}>
+                    Ver
+                  </a>
+                </div>
+              )}
+
+              {/* Novo arquivo selecionado */}
+              {file ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10">
+                  <FileText className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span className="text-xs font-medium text-[var(--foreground)] flex-1 truncate">{file.name}</span>
+                  <span className="text-xs text-[var(--muted-foreground)] shrink-0">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                  <button type="button" onClick={() => setFile(null)}
+                    className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-sm text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                  <Upload className="w-4 h-4" />
+                  {sale.attachmentUrl ? "Trocar comprovante" : "Adicionar comprovante"}
+                </button>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
+              />
             </div>
           </div>
         </div>

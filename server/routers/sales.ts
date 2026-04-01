@@ -194,6 +194,10 @@ export const salesRouter = router({
       amount: z.number().positive().optional(),
       notes: z.string().optional(),
       sellerId: z.number().optional(),
+      // Troca de comprovante
+      attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
+      attachmentMime: z.string().optional(),
+      attachmentName: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
@@ -206,6 +210,21 @@ export const salesRouter = router({
       if (fields.amount !== undefined) data.amount = String(fields.amount);
       if (fields.notes !== undefined) data.notes = fields.notes;
       if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
+
+      // Upload de novo comprovante se fornecido
+      if (fields.attachmentBase64 && fields.attachmentMime) {
+        const buffer = Buffer.from(fields.attachmentBase64, "base64");
+        if (buffer.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Arquivo muito grande. Máximo 5MB." });
+        }
+        const ext = fields.attachmentMime.includes("pdf") ? "pdf" : "jpg";
+        const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
+        const uploaded = await storagePut(key, buffer, fields.attachmentMime);
+        data.attachmentUrl = uploaded.url;
+        data.attachmentKey = key;
+        data.attachmentMime = fields.attachmentMime;
+      }
+
       await updateSale(id, data as any);
       const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({ userId: ctx.user.id, userName, action: "Editou Venda", details: JSON.stringify({ saleId: id, changes: data }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
