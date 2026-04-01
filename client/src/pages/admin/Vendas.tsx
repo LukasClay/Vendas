@@ -32,11 +32,14 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const products = trpc.products.list.useQuery();
+
   const [editForm, setEditForm] = useState({
     clientName: sale.clientName ?? "",
     clientBirthDate: toInputDate(sale.clientBirthDate),
     clientPhone: sale.clientPhone ?? "",
     productName: sale.productName ?? "",
+    productCategory: (sale.productCategory ?? "individual") as "individual" | "promocao" | "coletivo",
     saleDate: toInputDate(sale.saleDate),
     amount: sale.amount ? String(Number(sale.amount)) : "",
     notes: sale.notes ?? "",
@@ -88,6 +91,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       clientBirthDate: editForm.clientBirthDate || undefined,
       clientPhone: editForm.clientPhone || undefined,
       productName: editForm.productName || undefined,
+      productCategory: editForm.productCategory,
       saleDate: editForm.saleDate || undefined,
       amount: editForm.amount ? Number(editForm.amount) : undefined,
       notes: editForm.notes || undefined,
@@ -133,10 +137,26 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               <input type="tel" value={editForm.clientPhone} onChange={e => setEditForm(f => ({ ...f, clientPhone: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Trabalho</label>
-              <input type="text" value={editForm.productName} onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
+              <select value={editForm.productName} onChange={e => setEditForm(f => ({ ...f, productName: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
+                {editForm.productName && !products.data?.find(p => p.name === editForm.productName) && (
+                  <option value={editForm.productName}>{editForm.productName}</option>
+                )}
+                {products.data?.map(p => (
+                  <option key={p.id} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Tipo de Trabalho</label>
+              <select value={editForm.productCategory} onChange={e => setEditForm(f => ({ ...f, productCategory: e.target.value as "individual" | "promocao" | "coletivo" }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
+                <option value="individual">Individual</option>
+                <option value="promocao">Promoção ⭐</option>
+                <option value="coletivo">Coletivo 👥</option>
+              </select>
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Data da venda</label>

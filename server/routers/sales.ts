@@ -190,6 +190,7 @@ export const salesRouter = router({
       clientBirthDate: z.string().optional(),
       clientPhone: z.string().optional(),
       productName: z.string().min(1).optional(),
+      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
       saleDate: z.string().optional(),
       amount: z.number().positive().optional(),
       notes: z.string().optional(),
@@ -206,6 +207,7 @@ export const salesRouter = router({
       if (fields.clientBirthDate !== undefined) data.clientBirthDate = fields.clientBirthDate ?? null;
       if (fields.clientPhone !== undefined) data.clientPhone = fields.clientPhone;
       if (fields.productName !== undefined) data.productName = fields.productName;
+      if (fields.productCategory !== undefined) data.productCategory = fields.productCategory;
       if (fields.saleDate !== undefined) data.saleDate = fields.saleDate;
       if (fields.amount !== undefined) data.amount = String(fields.amount);
       if (fields.notes !== undefined) data.notes = fields.notes;
