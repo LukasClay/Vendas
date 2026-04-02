@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ImagePlus } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
-import { TYPES_WITH_PHOTOS } from "../../../../shared/const";
+import { TYPES_WITH_PHOTOS } from "@shared/const";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
