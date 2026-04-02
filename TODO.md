@@ -22,5 +22,17 @@
 
 ---
 
+## 📌 Regra de Versionamento (para qualquer IA ou dev que alterar o código)
+
+Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versão atual em `client/src/pages/admin/Configuracoes.tsx` e atualize de acordo:
+
+| Tipo de mudança | Incremento | Exemplo (partindo de 2.2.0) |
+|---|---|---|
+| Pequena (fix, ajuste visual, texto) | `+0.0.1` | 2.2.0 → 2.2.1 |
+| Média (nova feature, melhoria relevante) | `+0.1.0` | 2.2.0 → 2.3.0 |
+| Grande (novo sistema, refactor estrutural) | `+1.0.0` | 2.2.0 → 3.0.0 |
+
+**Versão atual: `2.2.0`**
+
 *Última IA travou aqui. BLACKBOXAI prossegue.*
 
