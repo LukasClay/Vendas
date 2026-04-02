@@ -60,6 +60,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     amount: sale.amount ? String(Number(sale.amount)) : "",
     notes: sale.notes ?? "",
     sellerId: sale.sellerId ? String(sale.sellerId) : "",
+    company: (sale.company ?? "mundo_da_magia") as "mundo_da_magia" | "mundo_cigano",
   });
 
   const isNameMissing = !!editForm.productName && !!products.data && !products.data.find(p => p.name === editForm.productName);
@@ -138,6 +139,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       amount: editForm.amount ? Number(editForm.amount) : undefined,
       notes: editForm.notes || undefined,
       sellerId: editForm.sellerId ? Number(editForm.sellerId) : undefined,
+      company: editForm.company,
       attachmentBase64,
       attachmentMime,
       attachmentName,
@@ -243,7 +245,15 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               <input type="number" step="0.01" min="0" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Empresa</label>
+              <select value={editForm.company} onChange={e => setEditForm(f => ({ ...f, company: e.target.value as "mundo_da_magia" | "mundo_cigano" }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
+                <option value="mundo_da_magia">Mundo da Magia</option>
+                <option value="mundo_cigano">Mundo Cigano</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Vendedor</label>
               <select value={editForm.sellerId} onChange={e => setEditForm(f => ({ ...f, sellerId: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
