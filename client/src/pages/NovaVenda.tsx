@@ -3,9 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ImagePlus } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
+import { TYPES_WITH_PHOTOS } from "../../../../shared/const";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -116,6 +117,16 @@ export default function NovaVenda() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // Fotos do cliente (Individual)
+  const [photo1, setPhoto1] = useState<File | null>(null);
+  const [photo1Preview, setPhoto1Preview] = useState<string | null>(null);
+  const [photo2, setPhoto2] = useState<File | null>(null);
+  const [photo2Preview, setPhoto2Preview] = useState<string | null>(null);
+  const photo1CameraRef = useRef<HTMLInputElement>(null);
+  const photo1GalleryRef = useRef<HTMLInputElement>(null);
+  const photo2CameraRef = useRef<HTMLInputElement>(null);
+  const photo2GalleryRef = useRef<HTMLInputElement>(null);
+
   const createSale = trpc.sales.create.useMutation({
     onSuccess: () => {
       setSuccess(true);
@@ -152,6 +163,25 @@ export default function NovaVenda() {
     const dropped = e.dataTransfer.files[0];
     if (dropped) handleFileChange(dropped);
   }, []);
+
+  const handlePhotoChange = (selectedFile: File | null, slot: 1 | 2) => {
+    if (!selectedFile) return;
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Foto muito grande. Máximo 5MB.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(selectedFile.type)) {
+      toast.error("Use JPG, PNG ou WEBP para fotos.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (slot === 1) { setPhoto1(selectedFile); setPhoto1Preview(result); }
+      else { setPhoto2(selectedFile); setPhoto2Preview(result); }
+    };
+    reader.readAsDataURL(selectedFile);
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "");
@@ -226,6 +256,25 @@ export default function NovaVenda() {
       return;
     }
 
+    // Converte fotos para base64 se existirem
+    const toBase64 = (f: File): Promise<string> => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = () => reject(new Error("Erro ao ler foto"));
+      reader.readAsDataURL(f);
+    });
+
+    const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(form.productCategory);
+    let photo1Base64: string | undefined;
+    let photo1Mime: string | undefined;
+    let photo2Base64: string | undefined;
+    let photo2Mime: string | undefined;
+
+    if (isPhotoType) {
+      if (photo1) { photo1Base64 = await toBase64(photo1); photo1Mime = photo1.type; }
+      if (photo2) { photo2Base64 = await toBase64(photo2); photo2Mime = photo2.type; }
+    }
+
     await createSale.mutateAsync({
       clientName: form.clientName.trim(),
       clientBirthDate: form.clientBirthDate || undefined,
@@ -240,6 +289,10 @@ export default function NovaVenda() {
       attachmentBase64,
       attachmentMime,
       attachmentName,
+      photo1Base64,
+      photo1Mime,
+      photo2Base64,
+      photo2Mime,
     });
   };
 
@@ -260,6 +313,10 @@ export default function NovaVenda() {
     setProductDropdownOpen(false);
     setFile(null);
     setFilePreview(null);
+    setPhoto1(null);
+    setPhoto1Preview(null);
+    setPhoto2(null);
+    setPhoto2Preview(null);
     setConsultationSlotId(null);
     setSuccess(false);
   };
@@ -794,6 +851,66 @@ export default function NovaVenda() {
               onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
             />
           </div>
+
+          {/* ── Card 4: Fotos do Cliente (apenas Individual) ── */}
+          {(TYPES_WITH_PHOTOS as readonly string[]).includes(form.productCategory) && (
+            <div className={cardClass} style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  style={{ background: "#c17f24" }}>4</span>
+                Fotos do Cliente <span className="text-xs font-normal ml-1" style={{ color: dynSubColor }}>(opcional)</span>
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {([1, 2] as const).map((slot) => {
+                  const preview = slot === 1 ? photo1Preview : photo2Preview;
+                  const photoFile = slot === 1 ? photo1 : photo2;
+                  const cameraRef = slot === 1 ? photo1CameraRef : photo2CameraRef;
+                  const galleryRef = slot === 1 ? photo1GalleryRef : photo2GalleryRef;
+                  const clearPhoto = () => {
+                    if (slot === 1) { setPhoto1(null); setPhoto1Preview(null); }
+                    else { setPhoto2(null); setPhoto2Preview(null); }
+                  };
+                  return (
+                    <div key={slot}>
+                      <p className="text-xs font-medium mb-2" style={{ color: dynSubColor }}>Foto {slot}</p>
+                      {preview ? (
+                        <div className="relative">
+                          <img src={preview} alt={`Foto ${slot}`}
+                            className="w-full aspect-[3/4] object-cover rounded-xl shadow-sm" />
+                          <button type="button" onClick={clearPhoto}
+                            className="absolute top-2 right-2 p-1.5 rounded-full shadow"
+                            style={{ background: "rgba(0,0,0,0.55)" }}>
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <button type="button" onClick={() => cameraRef.current?.click()}
+                            className="flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all active:scale-[0.97]"
+                            style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
+                            <Camera className="w-6 h-6" style={{ color: "#c17f24" }} />
+                            <span className="text-xs font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Câmera</span>
+                          </button>
+                          <button type="button" onClick={() => galleryRef.current?.click()}
+                            className="flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all active:scale-[0.97]"
+                            style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
+                            <ImagePlus className="w-6 h-6" style={{ color: "#c17f24" }} />
+                            <span className="text-xs font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Galeria</span>
+                          </button>
+                        </div>
+                      )}
+                      <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp"
+                        capture="environment" className="hidden"
+                        onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, slot)} />
+                      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, slot)} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Botão Registrar ── */}
           <button

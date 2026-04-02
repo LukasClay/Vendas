@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Search, Copy, Check,
   ChevronDown, ChevronUp, User, Phone, Calendar, FileText,
   ShoppingBag, X, Pencil, Hourglass, BookCheck, ClipboardList,
-  RotateCcw, Loader2, Bell, RefreshCw
+  RotateCcw, Loader2, Bell, RefreshCw, Download
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 
@@ -77,7 +77,7 @@ function UrgencyBadge({ daysRemaining, isOverdue }: { daysRemaining: number; isO
 
 // ─── Card: Para Escrever ──────────────────────────────────────────────────────
 function ToWriteCard({ item, onMarkWritten }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null; daysRemaining?: number; isOverdue?: boolean; isUrgent?: boolean };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; sellerName?: string | null; daysRemaining?: number; isOverdue?: boolean; isUrgent?: boolean; photo1Url?: string | null; photo2Url?: string | null };
   onMarkWritten: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -174,6 +174,26 @@ function ToWriteCard({ item, onMarkWritten }: {
                 <CopyBtn text={item.notes} field="notes" />
               </div>
             )}
+            {/* Fotos do cliente */}
+            {(item.photo1Url || item.photo2Url) && (
+              <div className="p-3 rounded-xl" style={{ background: "#f2ede3" }}>
+                <p className="text-xs mb-2" style={{ color: "#737390" }}>Fotos do Cliente</p>
+                <div className="flex gap-3">
+                  {[item.photo1Url, item.photo2Url].filter(Boolean).map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url!} alt={`Foto ${i + 1}`}
+                        className="w-20 h-28 object-cover rounded-xl shadow-sm" />
+                      <a href={url!} download
+                        className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
+                        style={{ background: "rgba(0,0,0,0.6)" }}
+                        onClick={e => e.stopPropagation()}>
+                        <Download className="w-3.5 h-3.5 text-white" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Copiar tudo */}
             <button onClick={() => {
               const all = [`Nome: ${item.clientName}`, `Nascimento: ${formatBirthDate(item.clientBirthDate)}`, item.clientPhone ? `Telefone: ${item.clientPhone}` : null, item.notes ? `Obs: ${item.notes}` : null].filter(Boolean).join("\n");
@@ -260,7 +280,7 @@ function ToWriteCard({ item, onMarkWritten }: {
 
 // ─── Card: Pendente ───────────────────────────────────────────────────────────
 function PendingCard({ item, onMarkDone }: {
-  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null };
+  item: { id: number; clientName: string; clientBirthDate: Date | string | null; clientPhone: string | null; productName: string; productCategory?: string | null; saleDate: Date | string | null; notes: string | null; daysRemaining: number; isOverdue: boolean; isUrgent: boolean; sellerName?: string | null; photo1Url?: string | null; photo2Url?: string | null };
   onMarkDone: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -351,6 +371,26 @@ function PendingCard({ item, onMarkDone }: {
                   </div>
                 </div>
                 <CopyBtn text={item.notes} field="notes" />
+              </div>
+            )}
+            {/* Fotos do cliente */}
+            {(item.photo1Url || item.photo2Url) && (
+              <div className="p-3 rounded-xl" style={{ background: "#f2ede3" }}>
+                <p className="text-xs mb-2" style={{ color: "#737390" }}>Fotos do Cliente</p>
+                <div className="flex gap-3">
+                  {[item.photo1Url, item.photo2Url].filter(Boolean).map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url!} alt={`Foto ${i + 1}`}
+                        className="w-20 h-28 object-cover rounded-xl shadow-sm" />
+                      <a href={url!} download
+                        className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
+                        style={{ background: "rgba(0,0,0,0.6)" }}
+                        onClick={e => e.stopPropagation()}>
+                        <Download className="w-3.5 h-3.5 text-white" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             <button onClick={() => {

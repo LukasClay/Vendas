@@ -303,6 +303,29 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
               />
             </div>
+
+            {/* ── Fotos do Cliente ── */}
+            {(sale.photo1Url || sale.photo2Url) && (
+              <AnimatePresence>
+                <motion.div
+                  className="sm:col-span-2"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                    Fotos do Cliente
+                  </label>
+                  <div className="flex gap-3 flex-wrap">
+                    {[sale.photo1Url, sale.photo2Url].filter(Boolean).map((url: string, i: number) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                        className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                        <img src={url} alt={`Foto ${i + 1}`} className="w-24 h-32 object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
         </div>
 

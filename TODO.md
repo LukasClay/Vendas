@@ -32,7 +32,7 @@ Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versã
 | Média (nova feature, melhoria relevante) | `+0.1.0` | 2.2.0 → 2.3.0 |
 | Grande (novo sistema, refactor estrutural) | `+1.0.0` | 2.2.0 → 3.0.0 |
 
-**Versão atual: `2.2.0`**
+**Versão atual: `2.3.0`**
 
 *Última IA travou aqui. BLACKBOXAI prossegue.*
 
