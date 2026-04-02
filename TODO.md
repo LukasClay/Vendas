@@ -1,12 +1,12 @@
 # TODO - Fixar Desconexão Real de Usuário no ADM Segurança
 
 ## ✅ Plano Aprovado pelo Usuário
-- [ ] 1. Criar este TODO.md com passos detalhados
+- [x] 1. Criar este TODO.md com passos detalhados
 - [x] 2. Editar `server/routers/security.ts` : Adicionar increment sessionVersion do userId da sessão ANTES de deletar user_sessions
 
-- [ ] 3. Testar via UI: servidor deve estar rodando, fazer login em outra aba, desconectar via ADM → logout automático
-- [ ] 4. Verificar audit log tem userId na details
-- [ ] 5. `attempt_completion` com comando para testar (ex: refresh página)
+- [x] 3. Testar via UI: servidor deve estar rodando, fazer login em outra aba, desconectar via ADM → logout automático
+- [x] 4. Verificar audit log tem userId na details
+- [x] 5. `attempt_completion` com comando para testar (ex: refresh página)
 
 ## Detalhes da Edição
 **Arquivo:** `server/routers/security.ts` - mutation `disconnectSession`
