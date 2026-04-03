@@ -263,7 +263,13 @@ export const ownAuthRouter = router({
         updateData.sessionVersion = sql`${users.sessionVersion} + 1`;
       }
 
-      await db.update(users).set(updateData).where(eq(users.id, input.userId));
+      await db.update(users).set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(updateData.username !== undefined ? { username: updateData.username as string } : {}),
+        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(updateData.sessionVersion !== undefined ? { sessionVersion: updateData.sessionVersion as any } : {}),
+      }).where(eq(users.id, input.userId));
       return { success: true };
     }),
 
