@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
       const found = last7DaysData.find((r: any) => r.day === iso);
       const dayName = i === 0 ? "Hoje" : i === 1 ? "Ontem" : WEEKDAYS_SHORT[d.getDay()];
       days.push({
