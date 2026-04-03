@@ -252,8 +252,8 @@ export const ownAuthRouter = router({
             let attempts = 0;
 
             while (!isUnique && attempts < 5) {
-              // Gera sufixo aleatório de 3 caracteres (letras minúsculas e números)
-              const suffix = Math.random().toString(36).substring(2, 5);
+              // Gera sufixo aleatório de 2 caracteres (letras minúsculas e números)
+              const suffix = Math.random().toString(36).substring(2, 4);
               newUsername = `${baseUsername}_${suffix}`;
 
               // Verifica se já existe alguém com esse username gerado
@@ -270,7 +270,7 @@ export const ownAuthRouter = router({
               updateData.username = newUsername;
             } else {
               // Fallback de segurança caso as 5 tentativas falhem (improvável)
-              updateData.username = `${baseUsername}_${Date.now().toString(36).slice(-3)}`;
+              updateData.username = `${baseUsername}_${Date.now().toString(36).slice(-2)}`;
             }
           }
         }
