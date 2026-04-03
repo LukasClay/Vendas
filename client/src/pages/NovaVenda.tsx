@@ -1,9 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ImagePlus } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ChevronDown, ImagePlus } from "lucide-react";
+import { COUNTRIES, applyPhoneMask, type CountryPhone } from "@/lib/phoneCountries";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
 import { TYPES_WITH_PHOTOS } from "@shared/const";
@@ -61,6 +62,33 @@ export default function NovaVenda() {
   const isAdmin = user?.role === "admin";
   const isDark = isAdmin && resolvedTheme === "dark";
   const { data: products = [], isLoading: loadingProducts } = trpc.products.list.useQuery();
+
+  // Estado do seletor de DDI/país
+  const [selectedCountry, setSelectedCountry] = useState<CountryPhone>(COUNTRIES[0]); // Brasil
+  const [ddiSearch, setDdiSearch] = useState("");
+  const [showDdiDropdown, setShowDdiDropdown] = useState(false);
+  const ddiRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ddiRef.current && !ddiRef.current.contains(e.target as Node)) {
+        setShowDdiDropdown(false);
+        setDdiSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filteredCountries = useMemo(() => {
+    if (!ddiSearch) return COUNTRIES;
+    const q = ddiSearch.toLowerCase().replace(/^\+/, "");
+    return COUNTRIES.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.ddi.includes(q) ||
+      c.code.toLowerCase().includes(q)
+    );
+  }, [ddiSearch]);
 
   // Estado do campo de data de nascimento como texto mascarado
   const [birthDateMasked, setBirthDateMasked] = useState("");
@@ -192,11 +220,22 @@ export default function NovaVenda() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, "");
-    if (v.length <= 11) {
-      v = v.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
-    }
-    setForm(f => ({ ...f, clientPhone: v }));
+    const digits = e.target.value.replace(/\D/g, "").slice(0, selectedCountry.maxDigits);
+    setForm(f => ({ ...f, clientPhone: applyPhoneMask(digits, selectedCountry.mask) }));
+  };
+
+  const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const raw = e.clipboardData.getData("text");
+    if (!raw.trim().startsWith("+")) return; // sem DDI → onChange trata normalmente
+    e.preventDefault();
+    const allDigits = raw.replace(/\D/g, "");
+    // Detecta o país pelo DDI (testa do mais longo para o mais curto para evitar ambiguidade)
+    const sorted = [...COUNTRIES].sort((a, b) => b.ddi.length - a.ddi.length);
+    const detected = sorted.find(c => allDigits.startsWith(c.ddi));
+    const country = detected ?? selectedCountry;
+    if (detected) setSelectedCountry(detected);
+    const local = allDigits.slice(country.ddi.length).slice(0, country.maxDigits);
+    setForm(f => ({ ...f, clientPhone: applyPhoneMask(local, country.mask) }));
   };
 
   // Handler da máscara de data de nascimento
@@ -278,7 +317,11 @@ export default function NovaVenda() {
     await createSale.mutateAsync({
       clientName: form.clientName.trim(),
       clientBirthDate: form.clientBirthDate || undefined,
-      clientPhone: form.clientPhone.replace(/\D/g, "") || undefined,
+      clientPhone: form.clientPhone
+        ? (selectedCountry.ddi === "55"
+            ? form.clientPhone.replace(/\D/g, "")
+            : `+${selectedCountry.ddi}${form.clientPhone.replace(/\D/g, "")}`)
+        : undefined,
       productName: form.productName,
       productId: form.productId ?? undefined,
       productCategory: form.productCategory,
@@ -465,17 +508,76 @@ export default function NovaVenda() {
                 <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Telefone {requiredStar}
                 </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={form.clientPhone}
-                  onChange={handlePhoneChange}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                  className={inputClass}
-                  style={dynInputStyle}
-                  required
-                />
+                <div className="flex gap-2">
+                  {/* Seletor de DDI */}
+                  <div ref={ddiRef} className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => { setShowDdiDropdown(d => !d); setDdiSearch(""); }}
+                      className={`flex items-center gap-1 px-3 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${isMobile ? "py-4" : "py-3"}`}
+                      style={{ ...dynInputStyle, width: "auto" }}
+                    >
+                      <span className="text-base leading-none">{selectedCountry.flag}</span>
+                      <span className="text-xs font-mono font-semibold">+{selectedCountry.ddi}</span>
+                      <ChevronDown className="w-3 h-3 opacity-60" />
+                    </button>
+
+                    {showDdiDropdown && (
+                      <div className="absolute z-30 left-0 top-full mt-1 w-64 rounded-xl shadow-xl border border-[var(--border)] overflow-hidden"
+                        style={{ background: "var(--card)" }}>
+                        <div className="p-2 border-b border-[var(--border)]">
+                          <input
+                            type="text"
+                            value={ddiSearch}
+                            onChange={e => setDdiSearch(e.target.value)}
+                            placeholder="País ou código (+55, Brazil...)"
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] outline-none focus:ring-2 focus:ring-amber-400/40"
+                            style={dynInputStyle}
+                            autoFocus
+                          />
+                        </div>
+                        <ul className="max-h-52 overflow-y-auto">
+                          {filteredCountries.length === 0 && (
+                            <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--muted-foreground)" }}>
+                              Nenhum país encontrado
+                            </li>
+                          )}
+                          {filteredCountries.map(country => (
+                            <li
+                              key={country.code}
+                              onMouseDown={() => {
+                                setSelectedCountry(country);
+                                setShowDdiDropdown(false);
+                                setDdiSearch("");
+                                setForm(f => ({ ...f, clientPhone: "" }));
+                              }}
+                              className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-[var(--secondary)] transition-colors"
+                              style={{ color: "var(--foreground)", background: selectedCountry.code === country.code ? "var(--secondary)" : undefined }}
+                            >
+                              <span className="text-base w-6 text-center">{country.flag}</span>
+                              <span className="flex-1 truncate">{country.name}</span>
+                              <span className="text-xs font-mono shrink-0" style={{ color: "var(--muted-foreground)" }}>+{country.ddi}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input do número local */}
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={form.clientPhone}
+                    onChange={handlePhoneChange}
+                    onPaste={handlePhonePaste}
+                    placeholder={selectedCountry.mask.replace(/#/g, "0")}
+                    maxLength={selectedCountry.mask.length}
+                    className={`flex-1 ${inputClass}`}
+                    style={dynInputStyle}
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
