@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { consultationSlots, sales, products } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
+import { TYPES_WITH_PHOTOS } from "../../shared/const";
 
 export const salesRouter = router({
   // Vendedor cria uma nova venda
@@ -26,6 +27,11 @@ export const salesRouter = router({
       attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
       attachmentMime: z.string().optional(),
       attachmentName: z.string().optional(),
+      // Fotos do cliente (apenas Individual)
+      photo1Base64: z.string().max(8000000, "Foto 1 muito grande (Máximo ~5MB)").optional(),
+      photo1Mime: z.string().optional(),
+      photo2Base64: z.string().max(8000000, "Foto 2 muito grande (Máximo ~5MB)").optional(),
+      photo2Mime: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // A1: vendedor/consultora não pode escolher a data — servidor força hoje (fuso Brasil)
@@ -59,6 +65,39 @@ export const salesRouter = router({
         attachmentUrl = uploaded.url;
         attachmentKey = key;
         attachmentMime = input.attachmentMime;
+      }
+
+      // Upload fotos do cliente para S3 (apenas para tipos permitidos)
+      let photo1Url: string | null = null;
+      let photo1Key: string | null = null;
+      let photo2Url: string | null = null;
+      let photo2Key: string | null = null;
+
+      const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(input.productCategory);
+
+      if (isPhotoType) {
+        if (input.photo1Base64 && input.photo1Mime) {
+          const buf = Buffer.from(input.photo1Base64, "base64");
+          if (buf.length > 5 * 1024 * 1024) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 1 muito grande. Máximo 5MB." });
+          }
+          const ext = input.photo1Mime.includes("png") ? "png" : input.photo1Mime.includes("webp") ? "webp" : "jpg";
+          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+          const r = await storagePut(key, buf, input.photo1Mime);
+          photo1Url = r.url;
+          photo1Key = key;
+        }
+        if (input.photo2Base64 && input.photo2Mime) {
+          const buf = Buffer.from(input.photo2Base64, "base64");
+          if (buf.length > 5 * 1024 * 1024) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 2 muito grande. Máximo 5MB." });
+          }
+          const ext = input.photo2Mime.includes("png") ? "png" : input.photo2Mime.includes("webp") ? "webp" : "jpg";
+          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+          const r = await storagePut(key, buf, input.photo2Mime);
+          photo2Url = r.url;
+          photo2Key = key;
+        }
       }
 
       // Upsert client
@@ -115,6 +154,10 @@ export const salesRouter = router({
         attachmentUrl,
         attachmentKey,
         attachmentMime,
+        photo1Url,
+        photo1Key,
+        photo2Url,
+        photo2Key,
       });
 
       // MARCA O SLOT COMO VENDIDO DE FORMA ATÔMICA E SEGURA

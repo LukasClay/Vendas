@@ -61,6 +61,8 @@ export const consultoraRouter = router({
         notes: sales.notes,
         createdAt: sales.createdAt,
         sellerName: sales.sellerName,
+        photo1Url: sales.photo1Url,
+        photo2Url: sales.photo2Url,
       }).from(sales) as any)
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt))
@@ -80,6 +82,8 @@ export const consultoraRouter = router({
           notes: s.notes,
           createdAt: s.createdAt,
           sellerName: s.sellerName,
+          photo1Url: s.photo1Url ?? null,
+          photo2Url: s.photo2Url ?? null,
           daysRemaining: urgency.daysRemaining,
           deadline: urgency.deadline,
           isOverdue: urgency.isOverdue,
@@ -118,6 +122,8 @@ export const consultoraRouter = router({
         notes: sales.notes,
         writtenAt: sales.writtenAt,
         sellerName: sales.sellerName,
+        photo1Url: sales.photo1Url,
+        photo2Url: sales.photo2Url,
       }).from(sales) as any)
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate))
@@ -136,6 +142,8 @@ export const consultoraRouter = router({
             notes: s.notes,
             writtenAt: s.writtenAt,
             sellerName: s.sellerName,
+            photo1Url: s.photo1Url ?? null,
+            photo2Url: s.photo2Url ?? null,
             daysRemaining: urgency.daysRemaining,
             deadline: urgency.deadline,
             isOverdue: urgency.isOverdue,

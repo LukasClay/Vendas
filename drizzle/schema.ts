@@ -91,10 +91,15 @@ export const sales = pgTable("sales", {
   saleDate: date("saleDate").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   notes: text("notes"),
-  // Attachment
+  // Attachment (comprovante)
   attachmentUrl: text("attachmentUrl"),
   attachmentKey: varchar("attachmentKey", { length: 512 }),
   attachmentMime: varchar("attachmentMime", { length: 64 }),
+  // Fotos do cliente (apenas para vendas do tipo Individual)
+  photo1Url: text("photo1Url"),
+  photo1Key: varchar("photo1Key", { length: 512 }),
+  photo2Url: text("photo2Url"),
+  photo2Key: varchar("photo2Key", { length: 512 }),
   // Empresa que "carimbou" esta venda no momento do registro
   company: companyEnum("company").default("mundo_da_magia"),
   // Workflow de 3 etapas da consultora

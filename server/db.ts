@@ -307,6 +307,25 @@ export async function ensureSystemProducts() {
   }
 }
 
+export async function ensurePhotoColumns() {
+  const db = await getDb();
+  if (!db) return;
+  const columns = [
+    { name: "photo1Url", def: "text" },
+    { name: "photo1Key", def: "varchar(512)" },
+    { name: "photo2Url", def: "text" },
+    { name: "photo2Key", def: "varchar(512)" },
+  ];
+  for (const col of columns) {
+    try {
+      await db.execute(sql`ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS ${sql.raw(`"${col.name}" ${col.def}`)}`);
+    } catch (e: any) {
+      console.warn(`[PhotoColumns] Aviso ao adicionar ${col.name}:`, e.message);
+    }
+  }
+  console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
+}
+
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 export async function upsertClient(data: InsertClient) {

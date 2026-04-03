@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle, Eye, User, Phone, Tag, Banknote, Building2, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -25,6 +25,123 @@ const inputStyle = {
   color: "var(--foreground)",
   fontSize: "14px",
 };
+
+// ─── Modal de detalhes (readonly) ─────────────────────────────────────────────
+function ViewSaleModal({ sale, onClose, onEdit }: { sale: any; onClose: () => void; onEdit: () => void }) {
+  const statusLabel: Record<string, string> = {
+    para_escrever: "Para Escrever",
+    pendente: "Pendente",
+    feito: "Feito",
+  };
+  const statusColor: Record<string, string> = {
+    para_escrever: "bg-amber-100 text-amber-700 border-amber-200",
+    pendente: "bg-blue-100 text-blue-700 border-blue-200",
+    feito: "bg-green-100 text-green-700 border-green-200",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        className="w-full sm:max-w-lg bg-[var(--card)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Detalhes da Venda #{sale.id}</p>
+            <p className="text-lg font-bold text-[var(--foreground)] mt-0.5">{sale.clientName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+          {/* Status */}
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColor[sale.workStatus] ?? "bg-[var(--secondary)] text-[var(--muted-foreground)] border-[var(--border)]"}`}>
+              {statusLabel[sale.workStatus] ?? sale.workStatus}
+            </span>
+            <span className="text-xs text-[var(--muted-foreground)]">{formatDate(sale.saleDate)}</span>
+          </div>
+
+          {/* Dados da cliente */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--secondary)]/30 divide-y divide-[var(--border)]">
+            {[
+              { icon: <User className="w-4 h-4" />, label: "Cliente", value: sale.clientName },
+              { icon: <Calendar className="w-4 h-4" />, label: "Nascimento", value: sale.clientBirthDate ? formatDate(sale.clientBirthDate) : "—" },
+              { icon: <Phone className="w-4 h-4" />, label: "Telefone", value: sale.clientPhone || "—" },
+              { icon: <Tag className="w-4 h-4" />, label: "Trabalho", value: `${sale.productName} · ${sale.productCategory ?? "individual"}` },
+              { icon: <Banknote className="w-4 h-4" />, label: "Valor", value: formatCurrency(sale.amount) },
+              { icon: <User className="w-4 h-4" />, label: "Vendedor", value: sale.sellerName || "—" },
+              { icon: <Building2 className="w-4 h-4" />, label: "Empresa", value: sale.company === "mundo_cigano" ? "Mundo Cigano" : "Mundo da Magia" },
+            ].map(({ icon, label, value }) => (
+              <div key={label} className="flex items-center gap-3 px-4 py-3">
+                <span className="text-[var(--muted-foreground)] shrink-0">{icon}</span>
+                <span className="text-xs text-[var(--muted-foreground)] w-20 shrink-0">{label}</span>
+                <span className="text-sm font-semibold text-[var(--foreground)] flex-1">{value}</span>
+              </div>
+            ))}
+            {sale.notes && (
+              <div className="flex items-start gap-3 px-4 py-3">
+                <ClipboardList className="w-4 h-4 text-[var(--muted-foreground)] shrink-0 mt-0.5" />
+                <span className="text-xs text-[var(--muted-foreground)] w-20 shrink-0">Observações</span>
+                <span className="text-sm text-[var(--foreground)] flex-1">{sale.notes}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Comprovante */}
+          {sale.attachmentUrl && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Comprovante</p>
+              <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition-colors">
+                <Paperclip className="w-4 h-4 text-amber-500" />
+                Ver Comprovante
+                <ExternalLink className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
+              </a>
+            </div>
+          )}
+
+          {/* Fotos do cliente */}
+          {(sale.photo1Url || sale.photo2Url) && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Fotos do Cliente</p>
+              <div className="flex gap-3 flex-wrap">
+                {[sale.photo1Url, sale.photo2Url].filter(Boolean).map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                    <img src={url} alt={`Foto ${i + 1}`} className="w-28 h-36 object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-5 border-t border-[var(--border)]">
+          <button onClick={onClose}
+            className="flex-1 py-3 rounded-2xl font-bold bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-xs transition-all">
+            Fechar
+          </button>
+          <button onClick={() => { onClose(); onEdit(); }}
+            className="flex-[2] py-3 rounded-2xl font-bold text-white bg-[var(--primary)] active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg transition-all">
+            <Pencil className="w-4 h-4" />
+            Editar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 // ─── Modal de edição ──────────────────────────────────────────────────────────
 function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; onClose: () => void }) {
@@ -313,6 +430,29 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
               />
             </div>
+
+            {/* ── Fotos do Cliente ── */}
+            {(sale.photo1Url || sale.photo2Url) && (
+              <AnimatePresence>
+                <motion.div
+                  className="sm:col-span-2"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                    Fotos do Cliente
+                  </label>
+                  <div className="flex gap-3 flex-wrap">
+                    {[sale.photo1Url, sale.photo2Url].filter(Boolean).map((url: string, i: number) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                        className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                        <img src={url} alt={`Foto ${i + 1}`} className="w-24 h-32 object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
         </div>
 
@@ -538,6 +678,7 @@ export default function AdminVendas() {
     } catch { toast.error("Erro ao exportar PDF."); }
     finally { setExportLoading(false); }
   }
+  const [viewSale, setViewSale] = useState<any | null>(null);
   const [editSale, setEditSale] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -732,6 +873,9 @@ export default function AdminVendas() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => setViewSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all active:scale-95 border border-[var(--border)]" title="Ver detalhes">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button onClick={() => setEditSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 border border-[var(--border)]">
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -796,6 +940,9 @@ export default function AdminVendas() {
                           </p>
                         </div>
                         <div className="flex gap-1.5">
+                          <button onClick={() => setViewSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-emerald-500 transition-all active:scale-95" title="Ver detalhes">
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <button onClick={() => setEditSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 transition-all active:scale-95">
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -887,6 +1034,9 @@ export default function AdminVendas() {
       </div>
 
       <AnimatePresence>
+        <AnimatePresence>
+          {viewSale && <ViewSaleModal sale={viewSale} onClose={() => setViewSale(null)} onEdit={() => setEditSale(viewSale)} />}
+        </AnimatePresence>
         {editSale && <EditSaleModal sale={editSale} sellers={sellers} onClose={() => setEditSale(null)} />}
 
         {historyClientName && (

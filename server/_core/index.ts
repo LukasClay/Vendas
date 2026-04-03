@@ -9,7 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
-import { ensureSystemProducts, getDb } from "../db";
+import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
 import { sql } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -82,6 +82,7 @@ async function startServer() {
 
   // Garante que produtos do sistema existam no banco antes de aceitar requests
   await ensureSystemProducts();
+  await ensurePhotoColumns();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
