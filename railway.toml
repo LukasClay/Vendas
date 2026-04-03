@@ -4,12 +4,18 @@ watchPatterns = [
   "server/**",
   "shared/**",
   "drizzle/**",
+  "scripts/**",
+  "patches/**",
   "package.json",
   "package-lock.json",
+  "pnpm-lock.yaml",
   "tsconfig*.json",
   "vite.config.*",
+  "vitest.config.*",
+  "drizzle.config.*",
   "tailwind.config.*",
   "postcss.config.*",
+  "components.json",
   "index.html",
   ".env*"
 ]
