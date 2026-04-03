@@ -17,5 +17,6 @@ watchPatterns = [
   "postcss.config.*",
   "components.json",
   "index.html",
-  ".env*"
+  ".env*",
+  "railway.toml"
 ]
