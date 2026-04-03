@@ -22,6 +22,43 @@
 
 ---
 
+## 📜 Guia do Projeto: Regras, Restrições e Padrões
+
+> Esta seção é permanente e tem prioridade sobre qualquer outra instrução. Qualquer desenvolvedor ou IA que atuar neste projeto deve lê-la antes de qualquer alteração.
+
+### 1. Regras de Ouro (O que NÃO fazer)
+
+- **Painéis Consultora e Vendedor são intocáveis:** Nenhuma alteração visual ou funcional deve ser aplicada a esses painéis sem autorização explícita do dono do projeto. Se for necessário modificar arquivos compartilhados, as mudanças devem ser isoladas (via condicionais de `role`) para não afetar a aparência ou as funcionalidades atuais desses painéis.
+- **Foco atual no ADM:** O foco de desenvolvimento e melhorias visuais é exclusivamente o painel ADM. Qualquer mudança que afete os painéis da Consultora ou do Vendedor deve ser previamente consultada.
+- **Não presuma, pergunte:** Antes de remover funcionalidades que parecem "desnecessárias" ou aplicar mudanças cosméticas do ADM nos outros painéis, pergunte ao dono do projeto. Avalie cuidadosamente as dependências antes de qualquer remoção.
+- **Toda ação importante exige aprovação:** Commits, pushes, merges e qualquer operação irreversível só devem ser executados após confirmação explícita do usuário. Nunca aja por antecipação.
+
+### 2. Padrões de Interface e UX
+
+- **Painel ADM (Desktop First, Mobile Ready):** O ADM é usado 99% do tempo em desktop — deve ser otimizado para telas grandes (layout amplo, tabelas completas, colunas lado a lado). A responsividade mobile deve ser mantida para uso emergencial.
+- **Performance Mobile (Consultora e Vendedor):** Vendedoras e consultoras acessam pelo celular próprio, frequentemente com internet móvel limitada (3G/4G fraco). Qualquer regressão de performance nessas telas impacta diretamente o trabalho delas. Ver seção ⚡ Regras de Performance.
+- **Notificações e Alertas:** O botão de notificação (PushNotificationButton) e a aba "Alertas" aparecem **apenas** nos painéis ADM e Consultora. O painel do Vendedor é estritamente focado em "Nova Venda" e "Minhas Vendas".
+- **Identidade Visual:** O nome oficial é **"Mundo Da Magia LTDA"** (tela de login, cabeçalho e todo o sistema). Tipografia *Playfair Display* para títulos, paleta elegante com suporte a múltiplos temas por empresa no ADM.
+- **Efeitos Visuais:** Animações (framer-motion) são permitidas **apenas no ADM**. Nos painéis de Vendedora e Consultora use CSS simples ou nada — cada KB e cada ms de render importam.
+
+### 3. Regras de Negócio e Arquitetura
+
+- **Paridade ADM e Consultora:** Toda funcionalidade implementada para a Consultora deve ter um equivalente acessível no ADM.
+- **Lixeira de Vendas (Soft Delete):** Venda excluída vai para a Lixeira por 30 dias — não aparece em dashboards nem relatórios, mas pode ser restaurada. Exclusão permanente automática após 30 dias.
+- **Desativação de Funcionários:** Ao desativar, o `username` recebe sufixo `_old` (ex: `joao_old`), liberando o username original. O nome com sufixo aparece nas vendas históricas para rastreabilidade.
+- **Categoria da Venda, não do Produto:** A `productCategory` (Individual/Promoção/Coletivo) é definida no momento da venda e salva como snapshot em `sales.productCategory`. A tabela `products` não tem campo de categoria.
+- **Otimização de Banco e Queries:** Mantenha `staleTime` no React Query, nunca use `refetchInterval` agressivo, estabilize inputs de queries com `useMemo` e evite re-renders desnecessários.
+- **Migrations:** não usar `drizzle-kit push` em produção — usa `ensureXxxColumns()` no startup (`server/db.ts`) com `ALTER TABLE IF NOT EXISTS`. Padrão já estabelecido para `isSystem`, `photoColumns` e demais.
+
+### 4. Mindset de Desenvolvimento
+
+- Aja como Tech Lead sênior: pense nas consequências de cada linha antes de escrever.
+- Se uma refatoração for necessária para uma nova feature, garanta que o comportamento anterior seja estritamente mantido.
+- Entregue código limpo, componentizado e tipado (TypeScript, sem erros de compilação).
+- Para alterações grandes: faça um plano, explique o impacto e **peça aprovação antes de implementar**.
+
+---
+
 ## 📌 Regra de Versionamento (para qualquer IA ou dev que alterar o código)
 
 Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versão atual em `client/src/pages/admin/Configuracoes.tsx` e atualize de acordo:
