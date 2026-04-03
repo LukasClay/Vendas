@@ -16,7 +16,6 @@ watchPatterns = [
   "tailwind.config.*",
   "postcss.config.*",
   "components.json",
-  "index.html",
   ".env*",
   "railway.toml"
 ]
