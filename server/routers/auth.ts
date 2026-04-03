@@ -240,22 +240,37 @@ export const ownAuthRouter = router({
       if (input.role !== undefined) updateData.role = input.role;
       if (input.active !== undefined) updateData.active = input.active;
 
-      // Ao desativar: renomeia username para username_old (libera o username original)
+      // Ao desativar: renomeia username para username_XXXX (libera o username original)
       if (input.active === false) {
         const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
         if (user.length > 0 && user[0].username) {
           const baseUsername = user[0].username;
-          // Não renomeia se já tem sufixo _old
-          if (!baseUsername.endsWith("_old") && !/_old\d+$/.test(baseUsername)) {
-            // Verifica quantos _old já existem para esse username
-            const oldUsers = await db.select({ username: users.username }).from(users)
-              .where(
-                sql`(${users.username} = ${baseUsername + "_old"} OR ${users.username} LIKE ${baseUsername + "_old%"})`
-              );
-            if (oldUsers.length === 0) {
-              updateData.username = `${baseUsername}_old`;
+          // Se já for um username de desativado (contém _), não renomeia novamente
+          if (!baseUsername.includes("_")) {
+            let newUsername = "";
+            let isUnique = false;
+            let attempts = 0;
+
+            while (!isUnique && attempts < 5) {
+              // Gera sufixo aleatório de 4 caracteres (letras minúsculas e números)
+              const suffix = Math.random().toString(36).substring(2, 6);
+              newUsername = `${baseUsername}_${suffix}`;
+
+              // Verifica se já existe alguém com esse username gerado
+              const existing = await db.select({ id: users.id }).from(users)
+                .where(eq(users.username, newUsername)).limit(1);
+
+              if (existing.length === 0) {
+                isUnique = true;
+              }
+              attempts++;
+            }
+
+            if (isUnique) {
+              updateData.username = newUsername;
             } else {
-              updateData.username = `${baseUsername}_old${oldUsers.length + 1}`;
+              // Fallback de segurança caso as 5 tentativas falhem (improvável)
+              updateData.username = `${baseUsername}_${Date.now().toString(36).slice(-4)}`;
             }
           }
         }
