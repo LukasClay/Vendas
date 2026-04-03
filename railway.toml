@@ -1,0 +1,15 @@
+[deploy]
+watchPatterns = [
+  "client/**",
+  "server/**",
+  "shared/**",
+  "drizzle/**",
+  "package.json",
+  "package-lock.json",
+  "tsconfig*.json",
+  "vite.config.*",
+  "tailwind.config.*",
+  "postcss.config.*",
+  "index.html",
+  ".env*"
+]
