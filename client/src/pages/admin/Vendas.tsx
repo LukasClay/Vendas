@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle } from "lucide-react";
+import { FileText, ExternalLink, Filter, X, Pencil, Trash2, Check, History, Calendar, Loader2, Download, Search, FileSpreadsheet, Paperclip, Upload, AlertTriangle, Eye, User, Phone, Tag, Banknote, Building2, ClipboardList, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -26,13 +26,130 @@ const inputStyle = {
   fontSize: "14px",
 };
 
+// ─── Modal de detalhes (readonly) ─────────────────────────────────────────────
+function ViewSaleModal({ sale, onClose, onEdit }: { sale: any; onClose: () => void; onEdit: () => void }) {
+  const statusLabel: Record<string, string> = {
+    para_escrever: "Para Escrever",
+    pendente: "Pendente",
+    feito: "Feito",
+  };
+  const statusColor: Record<string, string> = {
+    para_escrever: "bg-amber-100 text-amber-700 border-amber-200",
+    pendente: "bg-blue-100 text-blue-700 border-blue-200",
+    feito: "bg-green-100 text-green-700 border-green-200",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        className="w-full sm:max-w-lg bg-[var(--card)] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Detalhes da Venda #{sale.id}</p>
+            <p className="text-lg font-bold text-[var(--foreground)] mt-0.5">{sale.clientName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+          {/* Status */}
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColor[sale.workStatus] ?? "bg-[var(--secondary)] text-[var(--muted-foreground)] border-[var(--border)]"}`}>
+              {statusLabel[sale.workStatus] ?? sale.workStatus}
+            </span>
+            <span className="text-xs text-[var(--muted-foreground)]">{formatDate(sale.saleDate)}</span>
+          </div>
+
+          {/* Dados da cliente */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--secondary)]/30 divide-y divide-[var(--border)]">
+            {[
+              { icon: <User className="w-4 h-4" />, label: "Cliente", value: sale.clientName },
+              { icon: <Calendar className="w-4 h-4" />, label: "Nascimento", value: sale.clientBirthDate ? formatDate(sale.clientBirthDate) : "—" },
+              { icon: <Phone className="w-4 h-4" />, label: "Telefone", value: sale.clientPhone || "—" },
+              { icon: <Tag className="w-4 h-4" />, label: "Trabalho", value: `${sale.productName} · ${sale.productCategory ?? "individual"}` },
+              { icon: <Banknote className="w-4 h-4" />, label: "Valor", value: formatCurrency(sale.amount) },
+              { icon: <User className="w-4 h-4" />, label: "Vendedor", value: sale.sellerName || "—" },
+              { icon: <Building2 className="w-4 h-4" />, label: "Empresa", value: sale.company === "mundo_cigano" ? "Mundo Cigano" : "Mundo da Magia" },
+            ].map(({ icon, label, value }) => (
+              <div key={label} className="flex items-center gap-3 px-4 py-3">
+                <span className="text-[var(--muted-foreground)] shrink-0">{icon}</span>
+                <span className="text-xs text-[var(--muted-foreground)] w-20 shrink-0">{label}</span>
+                <span className="text-sm font-semibold text-[var(--foreground)] flex-1">{value}</span>
+              </div>
+            ))}
+            {sale.notes && (
+              <div className="flex items-start gap-3 px-4 py-3">
+                <ClipboardList className="w-4 h-4 text-[var(--muted-foreground)] shrink-0 mt-0.5" />
+                <span className="text-xs text-[var(--muted-foreground)] w-20 shrink-0">Observações</span>
+                <span className="text-sm text-[var(--foreground)] flex-1">{sale.notes}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Comprovante */}
+          {sale.attachmentUrl && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Comprovante</p>
+              <a href={sale.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition-colors">
+                <Paperclip className="w-4 h-4 text-amber-500" />
+                Ver Comprovante
+                <ExternalLink className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
+              </a>
+            </div>
+          )}
+
+          {/* Fotos do cliente */}
+          {(sale.photo1Url || sale.photo2Url) && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Fotos do Cliente</p>
+              <div className="flex gap-3 flex-wrap">
+                {[sale.photo1Url, sale.photo2Url].filter(Boolean).map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                    <img src={url} alt={`Foto ${i + 1}`} className="w-28 h-36 object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-5 border-t border-[var(--border)]">
+          <button onClick={onClose}
+            className="flex-1 py-3 rounded-2xl font-bold bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-xs transition-all">
+            Fechar
+          </button>
+          <button onClick={() => { onClose(); onEdit(); }}
+            className="flex-[2] py-3 rounded-2xl font-bold text-white bg-[var(--primary)] active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg transition-all">
+            <Pencil className="w-4 h-4" />
+            Editar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Modal de edição ──────────────────────────────────────────────────────────
 function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; onClose: () => void }) {
   const utils = trpc.useUtils();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const products = trpc.products.list.useQuery();
+  const products = trpc.products.listAll.useQuery();
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [addProductForm, setAddProductForm] = useState({
@@ -44,7 +161,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
   const createProduct = trpc.products.create.useMutation({
     onSuccess: () => {
       toast.success("Trabalho adicionado à lista!");
-      utils.products.list.invalidate();
+      utils.products.listAll.invalidate();
       setShowAddProduct(false);
     },
     onError: (err) => toast.error(err.message),
@@ -60,9 +177,13 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     amount: sale.amount ? String(Number(sale.amount)) : "",
     notes: sale.notes ?? "",
     sellerId: sale.sellerId ? String(sale.sellerId) : "",
+    company: (sale.company ?? "mundo_da_magia") as "mundo_da_magia" | "mundo_cigano",
+    workStatus: (sale.workStatus ?? "para_escrever") as "para_escrever" | "pendente" | "feito",
   });
 
-  const isNameMissing = !!editForm.productName && !!products.data && !products.data.find(p => p.name === editForm.productName);
+  const matchedProduct = products.data?.find(p => p.name === editForm.productName);
+  const isNameMissing = !!editForm.productName && !!products.data && !matchedProduct;
+  const isProductInactive = !!matchedProduct && !matchedProduct.active;
 
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
@@ -88,9 +209,53 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
     setShowAddProduct(true);
   };
 
+  // Reagendamento de consulta (só para "Consulta Cartas")
+  const isConsultaCartas = editForm.productName === "Consulta Cartas";
+  const availableSlots = trpc.consultationSlots.listAvailable.useQuery(undefined, { enabled: isConsultaCartas });
+  const [newSlotId, setNewSlotId] = useState<number | null>(null);
+  const rescheduleMutation = trpc.consultationSlots.reschedule.useMutation({
+    onSuccess: () => {
+      toast.success("Consulta reagendada com sucesso!");
+      utils.consultationSlots.listAvailable.invalidate();
+      utils.consultationSlots.listAll.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  // Agrupa slots disponíveis por data
+  const slotsByDate = useMemo(() => {
+    if (!availableSlots.data) return {};
+    const grouped: Record<string, typeof availableSlots.data> = {};
+    for (const slot of availableSlots.data) {
+      const key = slot.consultationDate;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(slot);
+    }
+    return grouped;
+  }, [availableSlots.data]);
+
   // Estado do upload de comprovante
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estado do upload/remoção de fotos do cliente
+  const [photoFile1, setPhotoFile1] = useState<File | null>(null);
+  const [photoFile2, setPhotoFile2] = useState<File | null>(null);
+  const [removePhoto1, setRemovePhoto1] = useState(false);
+  const [removePhoto2, setRemovePhoto2] = useState(false);
+  const photoInputRef1 = useRef<HTMLInputElement>(null);
+  const photoInputRef2 = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (f: File | null, which: 1 | 2) => {
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { toast.error("Foto muito grande. Máximo 5MB."); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
+      return;
+    }
+    if (which === 1) { setPhotoFile1(f); setRemovePhoto1(false); }
+    else { setPhotoFile2(f); setRemovePhoto2(false); }
+  };
 
   const handleFileChange = (f: File | null) => {
     if (!f) return;
@@ -103,7 +268,15 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
   };
 
   const updateSale = trpc.sales.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Se há reagendamento pendente, executa após salvar a venda
+      if (newSlotId) {
+        try {
+          await rescheduleMutation.mutateAsync({ saleId: sale.id, newSlotId });
+        } catch {
+          // Erro já tratado pelo onError do rescheduleMutation
+        }
+      }
       toast.success("Venda atualizada com sucesso!");
       utils.sales.list.invalidate();
       onClose();
@@ -127,6 +300,29 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       attachmentName = file.name;
     }
 
+    // Converter fotos em base64 se selecionadas
+    const readFileAsBase64 = (f: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+        reader.readAsDataURL(f);
+      });
+
+    let photo1Base64: string | undefined;
+    let photo1Mime: string | undefined;
+    let photo2Base64: string | undefined;
+    let photo2Mime: string | undefined;
+
+    if (photoFile1) {
+      photo1Base64 = await readFileAsBase64(photoFile1);
+      photo1Mime = photoFile1.type;
+    }
+    if (photoFile2) {
+      photo2Base64 = await readFileAsBase64(photoFile2);
+      photo2Mime = photoFile2.type;
+    }
+
     updateSale.mutate({
       id: sale.id,
       clientName: editForm.clientName || undefined,
@@ -138,9 +334,17 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
       amount: editForm.amount ? Number(editForm.amount) : undefined,
       notes: editForm.notes || undefined,
       sellerId: editForm.sellerId ? Number(editForm.sellerId) : undefined,
+      company: editForm.company,
+      workStatus: editForm.workStatus !== sale.workStatus ? editForm.workStatus : undefined,
       attachmentBase64,
       attachmentMime,
       attachmentName,
+      photo1Base64,
+      photo1Mime,
+      removePhoto1: removePhoto1 || undefined,
+      photo2Base64,
+      photo2Mime,
+      removePhoto2: removePhoto2 || undefined,
     });
   };
 
@@ -196,12 +400,19 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                   {filteredProducts.map(p => (
                     <li key={p.id}
                       onMouseDown={() => { setEditForm(f => ({ ...f, productName: p.name })); setShowProductDropdown(false); }}
-                      className="px-4 py-2.5 text-sm cursor-pointer hover:bg-[var(--secondary)] transition-colors"
-                      style={{ color: "var(--foreground)" }}>
+                      className="px-4 py-2.5 text-sm cursor-pointer hover:bg-[var(--secondary)] transition-colors flex items-center gap-2"
+                      style={{ color: p.active ? "var(--foreground)" : "var(--muted-foreground)" }}>
                       {p.name}
+                      {!p.active && <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold">Inativado</span>}
                     </li>
                   ))}
                 </ul>
+              )}
+              {isProductInactive && (
+                <div className="mt-2 flex items-center gap-2 p-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">Este trabalho está inativado</p>
+                </div>
               )}
               {isNameMissing && (
                 <div className="mt-2 p-3 rounded-xl border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800">
@@ -243,7 +454,15 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               <input type="number" step="0.01" min="0" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all" style={inputStyle} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Empresa</label>
+              <select value={editForm.company} onChange={e => setEditForm(f => ({ ...f, company: e.target.value as "mundo_da_magia" | "mundo_cigano" }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
+                <option value="mundo_da_magia">Mundo da Magia</option>
+                <option value="mundo_cigano">Mundo Cigano</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Vendedor</label>
               <select value={editForm.sellerId} onChange={e => setEditForm(f => ({ ...f, sellerId: e.target.value }))}
                 className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
@@ -251,6 +470,15 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 {sellers.map(s => (
                   <option key={s.id} value={s.id}>{s.displayName || s.name || s.email}</option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">Status do Trabalho</label>
+              <select value={editForm.workStatus} onChange={e => setEditForm(f => ({ ...f, workStatus: e.target.value as "para_escrever" | "pendente" | "feito" }))}
+                className="w-full px-4 py-3 rounded-xl outline-none border border-[var(--border)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer" style={inputStyle}>
+                <option value="para_escrever">Para Escrever</option>
+                <option value="pendente">Pendente</option>
+                <option value="feito">Feito</option>
               </select>
             </div>
             <div className="sm:col-span-2">
@@ -303,6 +531,141 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                 onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
               />
             </div>
+
+            {/* ── Fotos do Cliente (ADM pode adicionar a qualquer categoria) ── */}
+            <div className="sm:col-span-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                  Fotos do Cliente
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                  {/* Foto 1 */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[var(--muted-foreground)]">Foto 1</span>
+                    {photoFile1 ? (
+                      <div className="relative">
+                        <img src={URL.createObjectURL(photoFile1)} alt="Nova foto 1" className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700" />
+                        <button type="button" onClick={() => setPhotoFile1(null)}
+                          className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : !removePhoto1 && sale.photo1Url ? (
+                      <div className="relative">
+                        <a href={sale.photo1Url} target="_blank" rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                          <img src={sale.photo1Url} alt="Foto 1" className="w-24 h-32 object-cover" />
+                        </a>
+                        <div className="flex gap-1 mt-1">
+                          <button type="button" onClick={() => photoInputRef1.current?.click()}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                            Trocar
+                          </button>
+                          <button type="button" onClick={() => setRemovePhoto1(true)}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500">
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => { setRemovePhoto1(false); photoInputRef1.current?.click(); }}
+                        className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-[9px]">{removePhoto1 ? "Restaurar" : "Adicionar"}</span>
+                      </button>
+                    )}
+                    <input ref={photoInputRef1} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                      onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, 1)} />
+                  </div>
+
+                  {/* Foto 2 */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[var(--muted-foreground)]">Foto 2</span>
+                    {photoFile2 ? (
+                      <div className="relative">
+                        <img src={URL.createObjectURL(photoFile2)} alt="Nova foto 2" className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700" />
+                        <button type="button" onClick={() => setPhotoFile2(null)}
+                          className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : !removePhoto2 && sale.photo2Url ? (
+                      <div className="relative">
+                        <a href={sale.photo2Url} target="_blank" rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm">
+                          <img src={sale.photo2Url} alt="Foto 2" className="w-24 h-32 object-cover" />
+                        </a>
+                        <div className="flex gap-1 mt-1">
+                          <button type="button" onClick={() => photoInputRef2.current?.click()}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                            Trocar
+                          </button>
+                          <button type="button" onClick={() => setRemovePhoto2(true)}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500">
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => { setRemovePhoto2(false); photoInputRef2.current?.click(); }}
+                        className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-[9px]">{removePhoto2 ? "Restaurar" : "Adicionar"}</span>
+                      </button>
+                    )}
+                    <input ref={photoInputRef2} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                      onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, 2)} />
+                  </div>
+                </div>
+              </div>
+
+            {/* ── Reagendamento de Consulta ── */}
+            {isConsultaCartas && (
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                  Reagendar Consulta
+                </label>
+                {newSlotId ? (
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/10">
+                    <Calendar className="w-4 h-4 shrink-0 text-green-500" />
+                    <span className="text-xs font-medium text-[var(--foreground)] flex-1">
+                      Novo horário: {(() => {
+                        const slot = availableSlots.data?.find(s => s.id === newSlotId);
+                        if (!slot) return "...";
+                        const d = slot.consultationDate;
+                        return `${d.slice(8,10)}/${d.slice(5,7)}/${d.slice(0,4)} às ${slot.consultationTime}`;
+                      })()}
+                    </span>
+                    <button type="button" onClick={() => setNewSlotId(null)}
+                      className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--secondary)] p-2 space-y-2">
+                    {Object.keys(slotsByDate).length === 0 ? (
+                      <p className="text-xs text-[var(--muted-foreground)] text-center py-2">Nenhum horário disponível</p>
+                    ) : (
+                      Object.entries(slotsByDate).map(([date, slots]) => (
+                        <div key={date}>
+                          <p className="text-[10px] font-bold text-[var(--muted-foreground)] mb-1">
+                            {date.slice(8,10)}/{date.slice(5,7)}/{date.slice(0,4)}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {slots.map(slot => (
+                              <button key={slot.id} type="button" onClick={() => setNewSlotId(slot.id)}
+                                className="px-2 py-1 text-[10px] rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all">
+                                {slot.consultationTime}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                <p className="text-[9px] text-[var(--muted-foreground)] mt-1">Selecione um novo horário para reagendar. Deixe vazio para manter o atual.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -310,7 +673,7 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
           <button onClick={onClose} className="flex-1 py-4 rounded-2xl font-bold transition-all bg-[var(--secondary)] text-[var(--foreground)] active:scale-95 uppercase tracking-widest text-xs">
             Cancelar
           </button>
-          <button onClick={handleUpdate} disabled={updateSale.isPending}
+          <button onClick={handleUpdate} disabled={updateSale.isPending || rescheduleMutation.isPending}
             className="flex-[2] py-4 rounded-2xl font-bold text-white transition-all bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2">
             {updateSale.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             Salvar
@@ -528,6 +891,7 @@ export default function AdminVendas() {
     } catch { toast.error("Erro ao exportar PDF."); }
     finally { setExportLoading(false); }
   }
+  const [viewSale, setViewSale] = useState<any | null>(null);
   const [editSale, setEditSale] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -722,6 +1086,9 @@ export default function AdminVendas() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => setViewSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all active:scale-95 border border-[var(--border)]" title="Ver detalhes">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button onClick={() => setEditSale(sale)} className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 border border-[var(--border)]">
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -786,6 +1153,9 @@ export default function AdminVendas() {
                           </p>
                         </div>
                         <div className="flex gap-1.5">
+                          <button onClick={() => setViewSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-emerald-500 transition-all active:scale-95" title="Ver detalhes">
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <button onClick={() => setEditSale(sale)} className="p-2 rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 transition-all active:scale-95">
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -877,6 +1247,9 @@ export default function AdminVendas() {
       </div>
 
       <AnimatePresence>
+        <AnimatePresence>
+          {viewSale && <ViewSaleModal sale={viewSale} onClose={() => setViewSale(null)} onEdit={() => setEditSale(viewSale)} />}
+        </AnimatePresence>
         {editSale && <EditSaleModal sale={editSale} sellers={sellers} onClose={() => setEditSale(null)} />}
 
         {historyClientName && (

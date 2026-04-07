@@ -58,7 +58,9 @@ const CIGANO_DARK = {
   "--accent": "oklch(0.24 0.015 65)",
 };
 
-function applyCompanyTheme(company: string, isDark: boolean) {
+type CompanySlug = "mundo_cigano" | "mundo_da_magia";
+
+function applyCompanyTheme(company: CompanySlug, isDark: boolean) {
   const root = document.documentElement;
   const vars = company === "mundo_cigano"
     ? (isDark ? CIGANO_DARK : CIGANO_LIGHT)
@@ -93,14 +95,17 @@ export default function CompanyThemeProvider() {
   useEffect(() => {
     if (!activeCompany) return;
 
+    // Normaliza para tipo seguro (API retorna string)
+    const company: CompanySlug = activeCompany === "mundo_cigano" ? "mundo_cigano" : "mundo_da_magia";
+
     // Detectar tema atual
     const isDark = document.documentElement.classList.contains("dark");
-    applyCompanyTheme(activeCompany, isDark);
+    applyCompanyTheme(company, isDark);
 
     // Observer para reagir a mudanças de tema (light/dark toggle)
     const observer = new MutationObserver(() => {
       const nowDark = document.documentElement.classList.contains("dark");
-      applyCompanyTheme(activeCompany, nowDark);
+      applyCompanyTheme(company, nowDark);
     });
 
     observer.observe(document.documentElement, {

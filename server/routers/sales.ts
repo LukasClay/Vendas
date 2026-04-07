@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { consultationSlots, sales, products } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
+import { TYPES_WITH_PHOTOS } from "../../shared/const";
 
 export const salesRouter = router({
   // Vendedor cria uma nova venda
@@ -26,6 +27,11 @@ export const salesRouter = router({
       attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
       attachmentMime: z.string().optional(),
       attachmentName: z.string().optional(),
+      // Fotos do cliente (apenas Individual)
+      photo1Base64: z.string().max(8000000, "Foto 1 muito grande (Máximo ~5MB)").optional(),
+      photo1Mime: z.string().optional(),
+      photo2Base64: z.string().max(8000000, "Foto 2 muito grande (Máximo ~5MB)").optional(),
+      photo2Mime: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // A1: vendedor/consultora não pode escolher a data — servidor força hoje (fuso Brasil)
@@ -59,6 +65,39 @@ export const salesRouter = router({
         attachmentUrl = uploaded.url;
         attachmentKey = key;
         attachmentMime = input.attachmentMime;
+      }
+
+      // Upload fotos do cliente para S3 (apenas para tipos permitidos)
+      let photo1Url: string | null = null;
+      let photo1Key: string | null = null;
+      let photo2Url: string | null = null;
+      let photo2Key: string | null = null;
+
+      const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(input.productCategory);
+
+      if (isPhotoType) {
+        if (input.photo1Base64 && input.photo1Mime) {
+          const buf = Buffer.from(input.photo1Base64, "base64");
+          if (buf.length > 5 * 1024 * 1024) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 1 muito grande. Máximo 5MB." });
+          }
+          const ext = input.photo1Mime.includes("png") ? "png" : input.photo1Mime.includes("webp") ? "webp" : "jpg";
+          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+          const r = await storagePut(key, buf, input.photo1Mime);
+          photo1Url = r.url;
+          photo1Key = key;
+        }
+        if (input.photo2Base64 && input.photo2Mime) {
+          const buf = Buffer.from(input.photo2Base64, "base64");
+          if (buf.length > 5 * 1024 * 1024) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 2 muito grande. Máximo 5MB." });
+          }
+          const ext = input.photo2Mime.includes("png") ? "png" : input.photo2Mime.includes("webp") ? "webp" : "jpg";
+          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+          const r = await storagePut(key, buf, input.photo2Mime);
+          photo2Url = r.url;
+          photo2Key = key;
+        }
       }
 
       // Upsert client
@@ -115,6 +154,10 @@ export const salesRouter = router({
         attachmentUrl,
         attachmentKey,
         attachmentMime,
+        photo1Url,
+        photo1Key,
+        photo2Url,
+        photo2Key,
       });
 
       // MARCA O SLOT COMO VENDIDO DE FORMA ATÔMICA E SEGURA
@@ -195,10 +238,20 @@ export const salesRouter = router({
       amount: z.number().positive().optional(),
       notes: z.string().optional(),
       sellerId: z.number().optional(),
+      company: z.enum(["mundo_da_magia", "mundo_cigano"]).optional(),
       // Troca de comprovante
       attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
       attachmentMime: z.string().optional(),
       attachmentName: z.string().optional(),
+      // Alteração do status do trabalho
+      workStatus: z.enum(["para_escrever", "pendente", "feito"]).optional(),
+      // Troca/remoção de fotos do cliente
+      photo1Base64: z.string().max(8000000, "Foto 1 muito grande (Máximo ~5MB)").optional(),
+      photo1Mime: z.string().optional(),
+      removePhoto1: z.boolean().optional(),
+      photo2Base64: z.string().max(8000000, "Foto 2 muito grande (Máximo ~5MB)").optional(),
+      photo2Mime: z.string().optional(),
+      removePhoto2: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
@@ -212,6 +265,22 @@ export const salesRouter = router({
       if (fields.amount !== undefined) data.amount = String(fields.amount);
       if (fields.notes !== undefined) data.notes = fields.notes;
       if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
+      if (fields.company !== undefined) data.company = fields.company;
+
+      // Atualização do status do trabalho com timestamps
+      if (fields.workStatus !== undefined) {
+        data.workStatus = fields.workStatus;
+        if (fields.workStatus === "para_escrever") {
+          data.writtenAt = null;
+          data.completedAt = null;
+        } else if (fields.workStatus === "pendente") {
+          data.writtenAt = new Date();
+          data.completedAt = null;
+        } else if (fields.workStatus === "feito") {
+          if (!data.writtenAt) data.writtenAt = new Date();
+          data.completedAt = new Date();
+        }
+      }
 
       // Upload de novo comprovante se fornecido
       if (fields.attachmentBase64 && fields.attachmentMime) {
@@ -225,6 +294,38 @@ export const salesRouter = router({
         data.attachmentUrl = uploaded.url;
         data.attachmentKey = key;
         data.attachmentMime = fields.attachmentMime;
+      }
+
+      // Upload/remoção de foto 1
+      if (fields.removePhoto1) {
+        data.photo1Url = null;
+        data.photo1Key = null;
+      } else if (fields.photo1Base64 && fields.photo1Mime) {
+        const buf = Buffer.from(fields.photo1Base64, "base64");
+        if (buf.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 1 muito grande. Máximo 5MB." });
+        }
+        const ext = fields.photo1Mime.includes("png") ? "png" : fields.photo1Mime.includes("webp") ? "webp" : "jpg";
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const r = await storagePut(key, buf, fields.photo1Mime);
+        data.photo1Url = r.url;
+        data.photo1Key = key;
+      }
+
+      // Upload/remoção de foto 2
+      if (fields.removePhoto2) {
+        data.photo2Url = null;
+        data.photo2Key = null;
+      } else if (fields.photo2Base64 && fields.photo2Mime) {
+        const buf = Buffer.from(fields.photo2Base64, "base64");
+        if (buf.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 2 muito grande. Máximo 5MB." });
+        }
+        const ext = fields.photo2Mime.includes("png") ? "png" : fields.photo2Mime.includes("webp") ? "webp" : "jpg";
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const r = await storagePut(key, buf, fields.photo2Mime);
+        data.photo2Url = r.url;
+        data.photo2Key = key;
       }
 
       await updateSale(id, data as any);

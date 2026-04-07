@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { appSettings, auditLogs, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, userSessions, users } from "../drizzle/schema";
@@ -6,6 +6,15 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
+
+/** Extrai rows de resultado de db.execute() (compatível com diferentes versões do driver) */
+function extractRows(result: unknown): Record<string, unknown>[] {
+  const r = result as Record<string, unknown>;
+  if (Array.isArray(r.rows)) return r.rows as Record<string, unknown>[];
+  if (Array.isArray(r[0])) return r[0] as Record<string, unknown>[];
+  if (Array.isArray(result)) return result as Record<string, unknown>[];
+  return [];
+}
 
 export async function getDb() {
   if (_db) return _db;
@@ -184,8 +193,8 @@ export async function getAllProducts(includeInactive = false, includeDeleted = f
     // Sempre filtra produtos com soft delete (deletedAt IS NULL)
     if (includeInactive) return await db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
     return await db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
-  } catch (e: any) {
-    console.error("[getAllProducts] Erro:", e.message);
+  } catch (e: unknown) {
+    console.error("[getAllProducts] Erro:", (e instanceof Error ? e.message : String(e)));
     return [];
   }
 }
@@ -271,9 +280,9 @@ export async function ensureSystemProducts() {
   try {
     await db.execute(sql`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isSystem" boolean NOT NULL DEFAULT false`);
     console.log("[SystemProducts] Coluna isSystem verificada/criada.");
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Se der erro (ex: versão antiga do PG sem IF NOT EXISTS), ignora
-    console.warn("[SystemProducts] Aviso ao verificar coluna isSystem:", e.message);
+    console.warn("[SystemProducts] Aviso ao verificar coluna isSystem:", (e instanceof Error ? e.message : String(e)));
   }
 
   // 2. Garante que cada produto do sistema existe
@@ -283,7 +292,7 @@ export async function ensureSystemProducts() {
       const existing = await db.execute(
         sql`SELECT id, active, "isSystem", "deletedAt" FROM products WHERE name = ${sp.name} LIMIT 1`
       );
-      const rows = Array.isArray((existing as any).rows) ? (existing as any).rows : (Array.isArray(existing) ? existing : []);
+      const rows = extractRows(existing);
 
       if (rows.length > 0) {
         const p = rows[0];
@@ -301,10 +310,29 @@ export async function ensureSystemProducts() {
         );
         console.log(`[SystemProducts] Produto "${sp.name}" criado com sucesso.`);
       }
-    } catch (e: any) {
-      console.error(`[SystemProducts] Erro ao processar "${sp.name}":`, e.message);
+    } catch (e: unknown) {
+      console.error(`[SystemProducts] Erro ao processar "${sp.name}":`, (e instanceof Error ? e.message : String(e)));
     }
   }
+}
+
+export async function ensurePhotoColumns() {
+  const db = await getDb();
+  if (!db) return;
+  const columns = [
+    { name: "photo1Url", def: "text" },
+    { name: "photo1Key", def: "varchar(512)" },
+    { name: "photo2Url", def: "text" },
+    { name: "photo2Key", def: "varchar(512)" },
+  ];
+  for (const col of columns) {
+    try {
+      await db.execute(sql`ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS ${sql.raw(`"${col.name}" ${col.def}`)}`);
+    } catch (e: unknown) {
+      console.warn(`[PhotoColumns] Aviso ao adicionar ${col.name}:`, (e instanceof Error ? e.message : String(e)));
+    }
+  }
+  console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
@@ -362,7 +390,7 @@ export async function createSale(data: InsertSale) {
 export async function getSales(filters: SaleFilters = {}) {
   const db = await getDb();
   if (!db) return [];
-  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
+  const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (filters.startDate) conditions.push(sql`${sales.saleDate} >= ${filters.startDate.toISOString().split('T')[0]}`);
   if (filters.endDate) conditions.push(sql`${sales.saleDate} <= ${filters.endDate.toISOString().split('T')[0]}`);
   if (filters.sellerId) conditions.push(eq(sales.sellerId, filters.sellerId));
@@ -495,7 +523,7 @@ export async function getReportSummary(startDate?: Date, endDate?: Date) {
   const db = await getDb();
   if (!db) return { totalAmount: 0, totalSales: 0 };
 
-  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
+  const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -515,7 +543,7 @@ export async function getReportSummaryByCompany(startDate?: Date, endDate?: Date
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [isNull(sales.deletedAt)];
+  const conditions: SQL[] = [isNull(sales.deletedAt)];
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -534,7 +562,7 @@ export async function getTopSellers(startDate?: Date, endDate?: Date, limit = 10
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
+  const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -559,7 +587,7 @@ export async function getTopClients(startDate?: Date, endDate?: Date, limit = 10
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
+  const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -581,7 +609,7 @@ export async function getTopProducts(startDate?: Date, endDate?: Date, limit = 1
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
+  const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
   if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
 
@@ -605,8 +633,8 @@ export async function getSalesByMonth(year: number) {
   const result = await db.execute(
     sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} AND "deletedAt" IS NULL GROUP BY EXTRACT(MONTH FROM "saleDate") ORDER BY EXTRACT(MONTH FROM "saleDate")`
   );
-  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
-  return (rows as any[]).map((r: any) => ({
+  const rows = extractRows(result);
+  return rows.map(r => ({
     month: Number(r.month),
     totalAmount: Number(r.totalAmount),
     totalSales: Number(r.totalSales),
@@ -620,8 +648,8 @@ export async function getSalesByMonthByCompany(year: number) {
   const result = await db.execute(
     sql`SELECT EXTRACT(MONTH FROM "saleDate")::int AS month, COALESCE(company, 'mundo_da_magia') AS company, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE EXTRACT(YEAR FROM "saleDate") = ${year} AND "deletedAt" IS NULL GROUP BY EXTRACT(MONTH FROM "saleDate"), company ORDER BY EXTRACT(MONTH FROM "saleDate")`
   );
-  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
-  return (rows as any[]).map((r: any) => ({
+  const rows = extractRows(result);
+  return rows.map(r => ({
     month: Number(r.month),
     company: String(r.company),
     totalAmount: Number(r.totalAmount),
@@ -636,8 +664,8 @@ export async function getSalesLast7Days() {
   const result = await db.execute(
     sql`SELECT "saleDate"::date AS day, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "saleDate" >= CURRENT_DATE - INTERVAL '6 days' AND "deletedAt" IS NULL GROUP BY "saleDate"::date ORDER BY "saleDate"::date`
   );
-  const rows = Array.isArray((result as any).rows) ? (result as any).rows : (Array.isArray((result as any)[0]) ? (result as any)[0] : result);
-  return (rows as any[]).map((r: any) => ({
+  const rows = extractRows(result);
+  return rows.map(r => ({
     day: String(r.day).slice(0, 10),
     totalAmount: Number(r.totalAmount),
     totalSales: Number(r.totalSales),
@@ -760,7 +788,7 @@ export async function getAuditLogs(filters: {
 } = {}) {
   const db = await getDb();
   if (!db) return [];
-  const conditions: any[] = [];
+  const conditions: SQL[] = [];
   if (filters.userId) conditions.push(eq(auditLogs.userId, filters.userId));
   if (filters.action) {
     const escaped = filters.action.replace(/[%_\\]/g, '\\$&');

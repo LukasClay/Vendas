@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -6,10 +6,11 @@ import {
   CheckCircle2, Clock, AlertTriangle, Search, Copy, Check,
   ChevronDown, ChevronUp, Phone, Calendar, FileText,
   X, Pencil, Hourglass, BookCheck, ClipboardList,
-  RotateCcw, UserCog, Loader2
+  RotateCcw, UserCog, Loader2, Settings2, ArrowRight
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -451,9 +452,343 @@ function DoneCard({ item, onUndo, sellers }: {
   );
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  para_escrever: "Para Escrever",
+  pendente: "Pendente",
+  feito: "Feito",
+};
+
+const CATEGORY_OPTIONS = [
+  { key: null, label: "Todos" },
+  { key: "individual", label: "Individuais" },
+  { key: "promocao", label: "Promoção" },
+  { key: "coletivo", label: "Coletivos" },
+] as const;
+
+function BulkActionPanel() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const utils = trpc.useUtils();
+
+  const [open, setOpen] = useState(false);
+  const [fromStatus, setFromStatus] = useState<"para_escrever" | "pendente" | "feito">("para_escrever");
+  const [category, setCategory] = useState<string | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [toStatus, setToStatus] = useState<string>("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const distinctInput = useMemo(() => ({
+    workStatus: fromStatus as "para_escrever" | "pendente" | "feito",
+    productCategory: category as "individual" | "promocao" | "coletivo" | undefined,
+  }), [fromStatus, category]);
+
+  const { data: products = [], isLoading: productsLoading } = trpc.consultora.distinctProducts.useQuery(distinctInput, { enabled: open });
+
+  // Auto-selecionar todos os produtos quando a lista carrega
+  useEffect(() => {
+    if (products.length > 0) {
+      setSelectedProducts(new Set(products.map(p => p.productName)));
+    }
+  }, [products]);
+
+  // Reset toStatus ao mudar fromStatus
+  useEffect(() => { setToStatus(""); }, [fromStatus]);
+
+  const toggleProduct = (name: string) => {
+    setSelectedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedProducts.size === products.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(products.map(p => p.productName)));
+    }
+  };
+
+  const selectedCount = products
+    .filter(p => selectedProducts.has(p.productName))
+    .reduce((sum, p) => sum + p.count, 0);
+
+  const canSubmit = selectedProducts.size > 0 && toStatus && toStatus !== fromStatus;
+
+  // Preview query - only when confirm dialog is open
+  const previewInput = useMemo(() => ({
+    fromStatus: fromStatus as "para_escrever" | "pendente" | "feito",
+    productNames: Array.from(selectedProducts),
+    productCategory: category as "individual" | "promocao" | "coletivo" | undefined,
+  }), [fromStatus, selectedProducts, category]);
+
+  const { data: preview, isLoading: previewLoading } = trpc.consultora.bulkUpdatePreview.useQuery(previewInput, {
+    enabled: confirmOpen && selectedProducts.size > 0,
+  });
+
+  const bulkUpdate = trpc.consultora.bulkUpdateStatus.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.updatedCount} trabalhos movidos para ${STATUS_LABELS[toStatus] ?? toStatus}!`);
+      utils.consultora.toWrite.invalidate();
+      utils.consultora.pending.invalidate();
+      utils.consultora.done.invalidate();
+      utils.consultora.statusCounts.invalidate();
+      utils.consultora.distinctProducts.invalidate();
+      setConfirmOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleConfirm = () => {
+    bulkUpdate.mutate({
+      fromStatus: fromStatus as "para_escrever" | "pendente" | "feito",
+      toStatus: toStatus as "para_escrever" | "pendente" | "feito",
+      productNames: Array.from(selectedProducts),
+      productCategory: category as "individual" | "promocao" | "coletivo" | undefined,
+    });
+  };
+
+  const targetOptions = (["para_escrever", "pendente", "feito"] as const).filter(s => s !== fromStatus);
+
+  return (
+    <>
+      <div className="rounded-2xl border overflow-hidden transition-all"
+        style={{
+          background: isDark ? "rgba(139, 92, 246, 0.05)" : "rgba(139, 92, 246, 0.03)",
+          borderColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.15)",
+        }}>
+        <button onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 transition-all active:scale-[0.995]"
+          style={{ color: isDark ? "#a78bfa" : "#6d28d9" }}>
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4" />
+            <span className="text-sm font-bold uppercase tracking-wider">Ações em Massa</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+              style={{ background: isDark ? "rgba(139, 92, 246, 0.15)" : "rgba(139, 92, 246, 0.1)", color: isDark ? "#c4b5fd" : "#7c3aed" }}>
+              Admin
+            </span>
+          </div>
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-4 h-4" />
+          </motion.div>
+        </button>
+
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden">
+              <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: isDark ? "rgba(139, 92, 246, 0.15)" : "rgba(139, 92, 246, 0.1)" }}>
+
+                {/* Status origem */}
+                <div className="pt-4">
+                  <label className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: "var(--muted-foreground)" }}>
+                    Status de Origem
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {(["para_escrever", "pendente", "feito"] as const).map(s => (
+                      <button key={s} onClick={() => { setFromStatus(s); setCategory(null); setSelectedProducts(new Set()); }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                        style={fromStatus === s
+                          ? { background: isDark ? "rgba(139, 92, 246, 0.3)" : "rgba(139, 92, 246, 0.15)", color: isDark ? "#c4b5fd" : "#6d28d9", border: `1.5px solid ${isDark ? "#a78bfa" : "#8b5cf6"}` }
+                          : { background: "var(--secondary)", color: "var(--muted-foreground)", border: "1.5px solid var(--border)" }
+                        }>
+                        {STATUS_LABELS[s]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Filtro categoria */}
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: "var(--muted-foreground)" }}>
+                    Filtro de Categoria
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {CATEGORY_OPTIONS.map(cat => (
+                      <button key={String(cat.key)} onClick={() => { setCategory(cat.key); setSelectedProducts(new Set()); }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                        style={category === cat.key
+                          ? { background: isDark ? "rgba(139, 92, 246, 0.3)" : "rgba(139, 92, 246, 0.15)", color: isDark ? "#c4b5fd" : "#6d28d9", border: `1.5px solid ${isDark ? "#a78bfa" : "#8b5cf6"}` }
+                          : { background: "var(--secondary)", color: "var(--muted-foreground)", border: "1.5px solid var(--border)" }
+                        }>
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Checkboxes de produtos */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
+                      Produtos
+                    </label>
+                    {products.length > 0 && (
+                      <button onClick={toggleAll}
+                        className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg transition-all active:scale-95"
+                        style={{ color: isDark ? "#a78bfa" : "#7c3aed", background: isDark ? "rgba(139, 92, 246, 0.1)" : "rgba(139, 92, 246, 0.05)" }}>
+                        {selectedProducts.size === products.length ? "Desmarcar todos" : "Selecionar todos"}
+                      </button>
+                    )}
+                  </div>
+                  {productsLoading ? (
+                    <div className="flex items-center gap-2 py-3 text-[var(--muted-foreground)]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs">Carregando...</span>
+                    </div>
+                  ) : products.length === 0 ? (
+                    <p className="text-xs py-2" style={{ color: "var(--muted-foreground)" }}>Nenhum trabalho encontrado neste status.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {products.map(p => (
+                        <label key={p.productName}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all text-sm"
+                          style={{
+                            background: selectedProducts.has(p.productName)
+                              ? (isDark ? "rgba(139, 92, 246, 0.1)" : "rgba(139, 92, 246, 0.05)")
+                              : "var(--secondary)",
+                            border: `1px solid ${selectedProducts.has(p.productName) ? (isDark ? "rgba(139, 92, 246, 0.3)" : "rgba(139, 92, 246, 0.15)") : "var(--border)"}`,
+                          }}>
+                          <input type="checkbox" checked={selectedProducts.has(p.productName)}
+                            onChange={() => toggleProduct(p.productName)}
+                            className="rounded accent-purple-600" />
+                          <span className="font-medium text-xs truncate" style={{ color: "var(--foreground)" }}>{p.productName}</span>
+                          <span className="ml-auto text-[10px] font-bold shrink-0 px-1.5 py-0.5 rounded-full"
+                            style={{ background: isDark ? "rgba(139, 92, 246, 0.15)" : "rgba(139, 92, 246, 0.1)", color: isDark ? "#c4b5fd" : "#7c3aed" }}>
+                            {p.count}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Status destino + botão */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 pt-2">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider block mb-2" style={{ color: "var(--muted-foreground)" }}>
+                      Mover Para
+                    </label>
+                    <select value={toStatus} onChange={e => setToStatus(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm font-bold outline-none"
+                      style={{ background: "var(--secondary)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}>
+                      <option value="">Selecionar destino...</option>
+                      {targetOptions.map(s => (
+                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={!canSubmit}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: canSubmit ? (isDark ? "#7c3aed" : "#6d28d9") : "var(--secondary)",
+                      color: canSubmit ? "white" : "var(--muted-foreground)",
+                    }}>
+                    <ArrowRight className="w-4 h-4" />
+                    Mover {selectedCount} trabalhos
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Modal de confirmação */}
+      <AnimatePresence>
+        {confirmOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.5)" }}
+            onClick={() => { if (!bulkUpdate.isPending) setConfirmOpen(false); }}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md rounded-2xl p-6 shadow-xl border"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}
+              onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-4" style={{ color: "var(--foreground)" }}>Confirmar Ação em Massa</h3>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)" }}>
+                  <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>
+                    {STATUS_LABELS[fromStatus]}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-[var(--muted-foreground)]" />
+                  <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ background: isDark ? "rgba(139, 92, 246, 0.15)" : "rgba(139, 92, 246, 0.1)", color: isDark ? "#c4b5fd" : "#7c3aed" }}>
+                    {STATUS_LABELS[toStatus] ?? "—"}
+                  </span>
+                </div>
+
+                {category && (
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    Categoria: <strong>{CATEGORY_OPTIONS.find(c => c.key === category)?.label}</strong>
+                  </p>
+                )}
+
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>
+                    Produtos selecionados ({selectedProducts.size}):
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from(selectedProducts).map(name => (
+                      <span key={name} className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                        style={{ background: "var(--secondary)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl text-center" style={{ background: isDark ? "rgba(239, 68, 68, 0.1)" : "#fef2f2", border: `1px solid ${isDark ? "rgba(239, 68, 68, 0.2)" : "#fecaca"}` }}>
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" style={{ color: isDark ? "#f87171" : "#dc2626" }} />
+                      <span className="text-sm font-medium" style={{ color: isDark ? "#f87171" : "#dc2626" }}>Contando...</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-bold" style={{ color: isDark ? "#f87171" : "#dc2626" }}>
+                      {preview?.count ?? 0} trabalhos serão movidos
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={handleConfirm}
+                  disabled={bulkUpdate.isPending || previewLoading || !preview?.count}
+                  className="flex-1 py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: isDark ? "#7c3aed" : "#6d28d9" }}>
+                  {bulkUpdate.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Movendo...</> : "Confirmar"}
+                </button>
+                <button onClick={() => setConfirmOpen(false)}
+                  disabled={bulkUpdate.isPending}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
+                  style={{ background: "var(--secondary)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 export default function Trabalhos() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -532,6 +867,9 @@ export default function Trabalhos() {
             </div>
           </div>
         </FadeIn>
+
+        {/* Painel de ações em massa — somente admin */}
+        {isAdmin && <BulkActionPanel />}
 
         {/* Tabs */}
         <div className="flex p-1 rounded-2xl bg-[var(--secondary)]/50 border border-[var(--border)] overflow-x-auto no-scrollbar">

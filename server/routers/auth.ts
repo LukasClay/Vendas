@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { createAuditLog, createUserSession, getDb, withRetry, deleteUser } from "../db";
 import { users } from "../../drizzle/schema";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -102,24 +102,37 @@ export const ownAuthRouter = router({
       const user = result[0];
 
       if (!user) {
+        console.warn(`[Login:MISS] Usuário não encontrado: "${input.username}" (ip=${ip})`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       if (!user.passwordHash) {
-        console.warn(`[Login] Conta sem senha configurada (id=${user.id})`);
+        console.warn(`[Login:NOHASH] Conta sem senha configurada (id=${user.id}, username="${user.username}")`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       if (!user.active) {
+        console.warn(`[Login:INACTIVE] Usuário desativado (id=${user.id}, username="${user.username}")`);
         throw new TRPCError({ code: "FORBIDDEN", message: "Usuário desativado. Entre em contato com o administrador." });
       }
 
-      const valid = await bcrypt.compare(input.password, user.passwordHash);
+      let valid: boolean;
+      try {
+        valid = await bcrypt.compare(input.password, user.passwordHash);
+      } catch (error) {
+        console.error(`[Login:BCRYPT_ERR] bcrypt.compare falhou (id=${user.id}, username="${user.username}"):`, error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erro interno ao validar credenciais. Contate o administrador.",
+        });
+      }
       if (!valid) {
+        console.warn(`[Login:WRONG_PWD] Senha incorreta (id=${user.id}, username="${user.username}", ip=${ip})`);
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
       }
 
       // Login bem-sucedido: limpar contador
+      console.log(`[Login:OK] Login bem-sucedido (id=${user.id}, username="${user.username}", role=${user.role}, ip=${ip})`);
       clearRateLimit(ip, input.username);
 
       // Gera JWT de sessão usando o SDK existente
@@ -240,22 +253,60 @@ export const ownAuthRouter = router({
       if (input.role !== undefined) updateData.role = input.role;
       if (input.active !== undefined) updateData.active = input.active;
 
-      // Ao desativar: renomeia username para username_old (libera o username original)
+      // Ao reativar: restaura username original removendo sufixo _XXXX
+      if (input.active === true) {
+        const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (user.length > 0 && user[0].username) {
+          const current = user[0].username;
+          // Detecta sufixo _XXXX (4 hex chars adicionados na desativação)
+          const match = current.match(/^(.+)_[a-f0-9]{4}$/);
+          if (match) {
+            const originalUsername = match[1];
+            // Verifica se o username original está disponível
+            const conflict = await db.select({ id: users.id }).from(users)
+              .where(and(
+                eq(users.username, originalUsername),
+                isNull(users.deletedAt),
+                ne(users.id, input.userId)
+              )).limit(1);
+            if (conflict.length === 0) {
+              updateData.username = originalUsername;
+            }
+          }
+        }
+      }
+
+      // Ao desativar: renomeia username para username_XXXX (libera o username original)
       if (input.active === false) {
         const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
         if (user.length > 0 && user[0].username) {
           const baseUsername = user[0].username;
-          // Não renomeia se já tem sufixo _old
-          if (!baseUsername.endsWith("_old") && !/_old\d+$/.test(baseUsername)) {
-            // Verifica quantos _old já existem para esse username
-            const oldUsers = await db.select({ username: users.username }).from(users)
-              .where(
-                sql`(${users.username} = ${baseUsername + "_old"} OR ${users.username} LIKE ${baseUsername + "_old%"})`
-              );
-            if (oldUsers.length === 0) {
-              updateData.username = `${baseUsername}_old`;
+          // Se já for um username de desativado (contém _), não renomeia novamente
+          if (!baseUsername.includes("_")) {
+            let newUsername = "";
+            let isUnique = false;
+            let attempts = 0;
+
+            while (!isUnique && attempts < 5) {
+              // Gera sufixo aleatório de 4 caracteres hex (criptograficamente seguro)
+              const suffix = randomBytes(2).toString("hex");
+              newUsername = `${baseUsername}_${suffix}`;
+
+              // Verifica se já existe alguém com esse username gerado
+              const existing = await db.select({ id: users.id }).from(users)
+                .where(eq(users.username, newUsername)).limit(1);
+
+              if (existing.length === 0) {
+                isUnique = true;
+              }
+              attempts++;
+            }
+
+            if (isUnique) {
+              updateData.username = newUsername;
             } else {
-              updateData.username = `${baseUsername}_old${oldUsers.length + 1}`;
+              // Fallback de segurança caso as 5 tentativas falhem (improvável)
+              updateData.username = `${baseUsername}_${Date.now().toString(36).slice(-2)}`;
             }
           }
         }
@@ -263,7 +314,13 @@ export const ownAuthRouter = router({
         updateData.sessionVersion = sql`${users.sessionVersion} + 1`;
       }
 
-      await db.update(users).set(updateData).where(eq(users.id, input.userId));
+      await db.update(users).set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(updateData.username !== undefined ? { username: updateData.username as string } : {}),
+        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(updateData.sessionVersion !== undefined ? { sessionVersion: updateData.sessionVersion as any } : {}),
+      }).where(eq(users.id, input.userId));
       return { success: true };
     }),
 

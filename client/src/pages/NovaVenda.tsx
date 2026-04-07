@@ -1,11 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, Star, Camera, Calendar, Clock, ChevronDown, ImagePlus } from "lucide-react";
+import { COUNTRIES, applyPhoneMask, type CountryPhone } from "@/lib/phoneCountries";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
+import { TYPES_WITH_PHOTOS } from "@shared/const";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
 
@@ -60,6 +62,33 @@ export default function NovaVenda() {
   const isAdmin = user?.role === "admin";
   const isDark = isAdmin && resolvedTheme === "dark";
   const { data: products = [], isLoading: loadingProducts } = trpc.products.list.useQuery();
+
+  // Estado do seletor de DDI/país
+  const [selectedCountry, setSelectedCountry] = useState<CountryPhone>(COUNTRIES[0]); // Brasil
+  const [ddiSearch, setDdiSearch] = useState("");
+  const [showDdiDropdown, setShowDdiDropdown] = useState(false);
+  const ddiRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ddiRef.current && !ddiRef.current.contains(e.target as Node)) {
+        setShowDdiDropdown(false);
+        setDdiSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filteredCountries = useMemo(() => {
+    if (!ddiSearch) return COUNTRIES;
+    const q = ddiSearch.toLowerCase().replace(/^\+/, "");
+    return COUNTRIES.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.ddi.includes(q) ||
+      c.code.toLowerCase().includes(q)
+    );
+  }, [ddiSearch]);
 
   // Estado do campo de data de nascimento como texto mascarado
   const [birthDateMasked, setBirthDateMasked] = useState("");
@@ -116,6 +145,16 @@ export default function NovaVenda() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // Fotos do cliente (Individual)
+  const [photo1, setPhoto1] = useState<File | null>(null);
+  const [photo1Preview, setPhoto1Preview] = useState<string | null>(null);
+  const [photo2, setPhoto2] = useState<File | null>(null);
+  const [photo2Preview, setPhoto2Preview] = useState<string | null>(null);
+  const photo1CameraRef = useRef<HTMLInputElement>(null);
+  const photo1GalleryRef = useRef<HTMLInputElement>(null);
+  const photo2CameraRef = useRef<HTMLInputElement>(null);
+  const photo2GalleryRef = useRef<HTMLInputElement>(null);
+
   const createSale = trpc.sales.create.useMutation({
     onSuccess: () => {
       setSuccess(true);
@@ -153,6 +192,25 @@ export default function NovaVenda() {
     if (dropped) handleFileChange(dropped);
   }, []);
 
+  const handlePhotoChange = (selectedFile: File | null, slot: 1 | 2) => {
+    if (!selectedFile) return;
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Foto muito grande. Máximo 5MB.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(selectedFile.type)) {
+      toast.error("Use JPG, PNG ou WEBP para fotos.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (slot === 1) { setPhoto1(selectedFile); setPhoto1Preview(result); }
+      else { setPhoto2(selectedFile); setPhoto2Preview(result); }
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "");
     if (!raw) { setForm(f => ({ ...f, amountFormatted: "" })); return; }
@@ -162,11 +220,22 @@ export default function NovaVenda() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, "");
-    if (v.length <= 11) {
-      v = v.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
-    }
-    setForm(f => ({ ...f, clientPhone: v }));
+    const digits = e.target.value.replace(/\D/g, "").slice(0, selectedCountry.maxDigits);
+    setForm(f => ({ ...f, clientPhone: applyPhoneMask(digits, selectedCountry.mask) }));
+  };
+
+  const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const raw = e.clipboardData.getData("text");
+    if (!raw.trim().startsWith("+")) return; // sem DDI → onChange trata normalmente
+    e.preventDefault();
+    const allDigits = raw.replace(/\D/g, "");
+    // Detecta o país pelo DDI (testa do mais longo para o mais curto para evitar ambiguidade)
+    const sorted = [...COUNTRIES].sort((a, b) => b.ddi.length - a.ddi.length);
+    const detected = sorted.find(c => allDigits.startsWith(c.ddi));
+    const country = detected ?? selectedCountry;
+    if (detected) setSelectedCountry(detected);
+    const local = allDigits.slice(country.ddi.length).slice(0, country.maxDigits);
+    setForm(f => ({ ...f, clientPhone: applyPhoneMask(local, country.mask) }));
   };
 
   // Handler da máscara de data de nascimento
@@ -226,10 +295,33 @@ export default function NovaVenda() {
       return;
     }
 
+    // Converte fotos para base64 se existirem
+    const toBase64 = (f: File): Promise<string> => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = () => reject(new Error("Erro ao ler foto"));
+      reader.readAsDataURL(f);
+    });
+
+    const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(form.productCategory);
+    let photo1Base64: string | undefined;
+    let photo1Mime: string | undefined;
+    let photo2Base64: string | undefined;
+    let photo2Mime: string | undefined;
+
+    if (isPhotoType) {
+      if (photo1) { photo1Base64 = await toBase64(photo1); photo1Mime = photo1.type; }
+      if (photo2) { photo2Base64 = await toBase64(photo2); photo2Mime = photo2.type; }
+    }
+
     await createSale.mutateAsync({
       clientName: form.clientName.trim(),
       clientBirthDate: form.clientBirthDate || undefined,
-      clientPhone: form.clientPhone.replace(/\D/g, "") || undefined,
+      clientPhone: form.clientPhone
+        ? (selectedCountry.ddi === "55"
+            ? form.clientPhone.replace(/\D/g, "")
+            : `+${selectedCountry.ddi}${form.clientPhone.replace(/\D/g, "")}`)
+        : undefined,
       productName: form.productName,
       productId: form.productId ?? undefined,
       productCategory: form.productCategory,
@@ -240,6 +332,10 @@ export default function NovaVenda() {
       attachmentBase64,
       attachmentMime,
       attachmentName,
+      photo1Base64,
+      photo1Mime,
+      photo2Base64,
+      photo2Mime,
     });
   };
 
@@ -260,6 +356,10 @@ export default function NovaVenda() {
     setProductDropdownOpen(false);
     setFile(null);
     setFilePreview(null);
+    setPhoto1(null);
+    setPhoto1Preview(null);
+    setPhoto2(null);
+    setPhoto2Preview(null);
     setConsultationSlotId(null);
     setSuccess(false);
   };
@@ -408,17 +508,76 @@ export default function NovaVenda() {
                 <label className="block text-sm font-medium mb-2" style={dynLabelStyle}>
                   Telefone {requiredStar}
                 </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={form.clientPhone}
-                  onChange={handlePhoneChange}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                  className={inputClass}
-                  style={dynInputStyle}
-                  required
-                />
+                <div className="flex gap-2">
+                  {/* Seletor de DDI */}
+                  <div ref={ddiRef} className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => { setShowDdiDropdown(d => !d); setDdiSearch(""); }}
+                      className={`flex items-center gap-1 px-3 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${isMobile ? "py-4" : "py-3"}`}
+                      style={{ ...dynInputStyle, width: "auto" }}
+                    >
+                      <span className="text-base leading-none">{selectedCountry.flag}</span>
+                      <span className="text-xs font-mono font-semibold">+{selectedCountry.ddi}</span>
+                      <ChevronDown className="w-3 h-3 opacity-60" />
+                    </button>
+
+                    {showDdiDropdown && (
+                      <div className="absolute z-30 left-0 top-full mt-1 w-64 rounded-xl shadow-xl border border-[var(--border)] overflow-hidden"
+                        style={{ background: "var(--card)" }}>
+                        <div className="p-2 border-b border-[var(--border)]">
+                          <input
+                            type="text"
+                            value={ddiSearch}
+                            onChange={e => setDdiSearch(e.target.value)}
+                            placeholder="País ou código (+55, Brazil...)"
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] outline-none focus:ring-2 focus:ring-amber-400/40"
+                            style={dynInputStyle}
+                            autoFocus
+                          />
+                        </div>
+                        <ul className="max-h-52 overflow-y-auto">
+                          {filteredCountries.length === 0 && (
+                            <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--muted-foreground)" }}>
+                              Nenhum país encontrado
+                            </li>
+                          )}
+                          {filteredCountries.map(country => (
+                            <li
+                              key={country.code}
+                              onMouseDown={() => {
+                                setSelectedCountry(country);
+                                setShowDdiDropdown(false);
+                                setDdiSearch("");
+                                setForm(f => ({ ...f, clientPhone: "" }));
+                              }}
+                              className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-[var(--secondary)] transition-colors"
+                              style={{ color: "var(--foreground)", background: selectedCountry.code === country.code ? "var(--secondary)" : undefined }}
+                            >
+                              <span className="text-base w-6 text-center">{country.flag}</span>
+                              <span className="flex-1 truncate">{country.name}</span>
+                              <span className="text-xs font-mono shrink-0" style={{ color: "var(--muted-foreground)" }}>+{country.ddi}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input do número local */}
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={form.clientPhone}
+                    onChange={handlePhoneChange}
+                    onPaste={handlePhonePaste}
+                    placeholder={selectedCountry.mask.replace(/#/g, "0")}
+                    maxLength={selectedCountry.mask.length}
+                    className={`flex-1 ${inputClass}`}
+                    style={dynInputStyle}
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -794,6 +953,66 @@ export default function NovaVenda() {
               onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
             />
           </div>
+
+          {/* ── Card 4: Fotos do Cliente (apenas Individual) ── */}
+          {(TYPES_WITH_PHOTOS as readonly string[]).includes(form.productCategory) && (
+            <div className={cardClass} style={cardStyle}>
+              <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: dynHeadingColor }}>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  style={{ background: "#c17f24" }}>4</span>
+                Fotos do Cliente <span className="text-xs font-normal ml-1" style={{ color: dynSubColor }}>(opcional)</span>
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {([1, 2] as const).map((slot) => {
+                  const preview = slot === 1 ? photo1Preview : photo2Preview;
+                  const photoFile = slot === 1 ? photo1 : photo2;
+                  const cameraRef = slot === 1 ? photo1CameraRef : photo2CameraRef;
+                  const galleryRef = slot === 1 ? photo1GalleryRef : photo2GalleryRef;
+                  const clearPhoto = () => {
+                    if (slot === 1) { setPhoto1(null); setPhoto1Preview(null); }
+                    else { setPhoto2(null); setPhoto2Preview(null); }
+                  };
+                  return (
+                    <div key={slot}>
+                      <p className="text-xs font-medium mb-2" style={{ color: dynSubColor }}>Foto {slot}</p>
+                      {preview ? (
+                        <div className="relative">
+                          <img src={preview} alt={`Foto ${slot}`}
+                            className="w-full aspect-[3/4] object-cover rounded-xl shadow-sm" />
+                          <button type="button" onClick={clearPhoto}
+                            className="absolute top-2 right-2 p-1.5 rounded-full shadow"
+                            style={{ background: "rgba(0,0,0,0.55)" }}>
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <button type="button" onClick={() => cameraRef.current?.click()}
+                            className="flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all active:scale-[0.97]"
+                            style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
+                            <Camera className="w-6 h-6" style={{ color: "#c17f24" }} />
+                            <span className="text-xs font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Câmera</span>
+                          </button>
+                          <button type="button" onClick={() => galleryRef.current?.click()}
+                            className="flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all active:scale-[0.97]"
+                            style={{ background: isDark ? "var(--secondary)" : "#ede8de", border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4" }}>
+                            <ImagePlus className="w-6 h-6" style={{ color: "#c17f24" }} />
+                            <span className="text-xs font-medium" style={{ color: isDark ? "var(--foreground)" : "#2a2a40" }}>Galeria</span>
+                          </button>
+                        </div>
+                      )}
+                      <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp"
+                        capture="environment" className="hidden"
+                        onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, slot)} />
+                      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={e => handlePhotoChange(e.target.files?.[0] ?? null, slot)} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Botão Registrar ── */}
           <button
