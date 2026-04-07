@@ -2,9 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { sales, users, consultationSlots } from "../../drizzle/schema";
-import { and, asc, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
+import { createAuditLog } from "../db";
 
 // Apenas consultoras e admins podem acessar estes endpoints
 const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -397,5 +398,132 @@ export const consultoraRouter = router({
       .filter((item: any) => item.isOverdue || item.isUrgent)
       .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
   }),
+
+  // ── ADM: Ações em massa ──────────────────────────────────────────────
+
+  // Lista produtos distintos com contagem para um status (e categoria opcional)
+  distinctProducts: adminProcedure
+    .input(z.object({
+      workStatus: z.enum(["para_escrever", "pendente", "feito"]),
+      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const conditions = [
+        eq(sales.workStatus, input.workStatus),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
+      if (input.productCategory) {
+        conditions.push(eq(sales.productCategory, input.productCategory));
+      }
+      const rows = await db
+        .select({ productName: sales.productName, total: count() })
+        .from(sales)
+        .where(and(...conditions))
+        .groupBy(sales.productName)
+        .orderBy(asc(sales.productName));
+      return rows.map(r => ({ productName: r.productName, count: Number(r.total) }));
+    }),
+
+  // Preview: contagem real de trabalhos que serão movidos
+  bulkUpdatePreview: adminProcedure
+    .input(z.object({
+      fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
+      productNames: z.array(z.string()).min(1),
+      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const conditions = [
+        eq(sales.workStatus, input.fromStatus),
+        inArray(sales.productName, input.productNames),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
+      if (input.productCategory) {
+        conditions.push(eq(sales.productCategory, input.productCategory));
+      }
+      const [row] = await db.select({ total: count() }).from(sales).where(and(...conditions));
+      return { count: Number(row?.total ?? 0) };
+    }),
+
+  // Mover trabalhos em massa
+  bulkUpdateStatus: adminProcedure
+    .input(z.object({
+      fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
+      toStatus: z.enum(["para_escrever", "pendente", "feito"]),
+      productNames: z.array(z.string()).min(1),
+      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.fromStatus === input.toStatus) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Status de origem e destino devem ser diferentes." });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const conditions = [
+        eq(sales.workStatus, input.fromStatus),
+        inArray(sales.productName, input.productNames),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
+      if (input.productCategory) {
+        conditions.push(eq(sales.productCategory, input.productCategory));
+      }
+
+      // Contagem antes do update
+      const [countRow] = await db.select({ total: count() }).from(sales).where(and(...conditions));
+      const total = Number(countRow?.total ?? 0);
+      if (total === 0) {
+        return { success: true, updatedCount: 0 };
+      }
+
+      // Timestamps conforme o destino
+      const now = new Date();
+      let setData: Record<string, any> = { workStatus: input.toStatus };
+      if (input.toStatus === "para_escrever") {
+        setData.writtenAt = null;
+        setData.completedAt = null;
+      } else if (input.toStatus === "pendente") {
+        setData.writtenAt = now;
+        setData.completedAt = null;
+      } else if (input.toStatus === "feito") {
+        // Se vem de para_escrever, preenche writtenAt também
+        if (input.fromStatus === "para_escrever") {
+          setData.writtenAt = now;
+        }
+        setData.completedAt = now;
+      }
+
+      await db.update(sales).set(setData).where(and(...conditions));
+
+      // Audit log
+      const statusLabels: Record<string, string> = {
+        para_escrever: "Para Escrever",
+        pendente: "Pendente",
+        feito: "Feito",
+      };
+      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({
+        userId: ctx.user.id,
+        userName: adminName,
+        action: "Bulk Update Trabalhos",
+        details: JSON.stringify({
+          fromStatus: statusLabels[input.fromStatus],
+          toStatus: statusLabels[input.toStatus],
+          productNames: input.productNames,
+          productCategory: input.productCategory ?? "todos",
+          updatedCount: total,
+        }),
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
+      return { success: true, updatedCount: total };
+    }),
 
 });
