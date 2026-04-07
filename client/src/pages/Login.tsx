@@ -37,9 +37,28 @@ export default function Login() {
     defaultValues: { username: "", password: "", rememberMe: true },
   });
 
+  const utils = trpc.useUtils();
+
   const loginMutation = trpc.ownAuth.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setLoginError(null);
+
+      // Verifica se o cookie de sessão foi aceito pelo navegador
+      // (httpOnly cookies não são acessíveis por JS, então testamos via auth.me)
+      try {
+        const me = await utils.auth.me.fetch();
+        if (!me) {
+          setLoginError("Login realizado, mas seu navegador não salvou o cookie de sessão. Verifique as configurações de privacidade/cookies do navegador e tente novamente.");
+          toast.error("Erro: cookie de sessão não foi salvo pelo navegador.");
+          return;
+        }
+      } catch {
+        // Se auth.me falhar, o cookie provavelmente não foi salvo
+        setLoginError("Login realizado, mas seu navegador não salvou o cookie de sessão. Verifique as configurações de privacidade/cookies do navegador e tente novamente.");
+        toast.error("Erro: cookie de sessão não foi salvo pelo navegador.");
+        return;
+      }
+
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
         if (data.role === "admin") window.location.href = "/admin";
