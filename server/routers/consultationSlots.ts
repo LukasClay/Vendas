@@ -543,4 +543,60 @@ export const consultationSlotsRouter = router({
       );
       return { success: true };
     }),
+
+  // Reagenda uma consulta: move a venda de um slot para outro (somente ADM)
+  reschedule: protectedProcedure
+    .input(z.object({ saleId: z.number(), newSlotId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem reagendar consultas." });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+
+      // Busca o slot antigo vinculado à venda
+      const oldSlots = await withRetry(() =>
+        db.select().from(consultationSlots)
+          .where(and(eq(consultationSlots.saleId, input.saleId), eq(consultationSlots.sold, true)))
+          .limit(1)
+      );
+
+      // Busca o novo slot (deve estar disponível)
+      const newSlot = await withRetry(() =>
+        db.select().from(consultationSlots)
+          .where(and(eq(consultationSlots.id, input.newSlotId), eq(consultationSlots.sold, false), ne(consultationSlots.status, "cancelada")))
+          .limit(1)
+      );
+      if (!newSlot[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Novo horário não está disponível." });
+
+      // Libera o slot antigo (se existir)
+      if (oldSlots[0]) {
+        await withRetry(() =>
+          db.update(consultationSlots)
+            .set({ sold: false, saleId: null, status: "pendente" })
+            .where(eq(consultationSlots.id, oldSlots[0].id))
+        );
+      }
+
+      // Reserva o novo slot atomicamente
+      const reserved = await withRetry(() =>
+        db.update(consultationSlots)
+          .set({ sold: true, saleId: input.saleId, status: "pendente" })
+          .where(and(eq(consultationSlots.id, input.newSlotId), eq(consultationSlots.sold, false)))
+          .returning({ id: consultationSlots.id })
+      );
+      if (!reserved.length) {
+        // Se falhou, restaura o slot antigo
+        if (oldSlots[0]) {
+          await withRetry(() =>
+            db.update(consultationSlots)
+              .set({ sold: true, saleId: input.saleId, status: "pendente" })
+              .where(eq(consultationSlots.id, oldSlots[0].id))
+          );
+        }
+        throw new TRPCError({ code: "CONFLICT", message: "Horário foi reservado por outro usuário. Tente novamente." });
+      }
+
+      return { success: true };
+    }),
 });

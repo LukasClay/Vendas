@@ -243,6 +243,15 @@ export const salesRouter = router({
       attachmentBase64: z.string().max(8000000, "Arquivo muito grande (Máximo ~5MB)").optional(),
       attachmentMime: z.string().optional(),
       attachmentName: z.string().optional(),
+      // Alteração do status do trabalho
+      workStatus: z.enum(["para_escrever", "pendente", "feito"]).optional(),
+      // Troca/remoção de fotos do cliente
+      photo1Base64: z.string().max(8000000, "Foto 1 muito grande (Máximo ~5MB)").optional(),
+      photo1Mime: z.string().optional(),
+      removePhoto1: z.boolean().optional(),
+      photo2Base64: z.string().max(8000000, "Foto 2 muito grande (Máximo ~5MB)").optional(),
+      photo2Mime: z.string().optional(),
+      removePhoto2: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
@@ -258,6 +267,21 @@ export const salesRouter = router({
       if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
       if (fields.company !== undefined) data.company = fields.company;
 
+      // Atualização do status do trabalho com timestamps
+      if (fields.workStatus !== undefined) {
+        data.workStatus = fields.workStatus;
+        if (fields.workStatus === "para_escrever") {
+          data.writtenAt = null;
+          data.completedAt = null;
+        } else if (fields.workStatus === "pendente") {
+          data.writtenAt = new Date();
+          data.completedAt = null;
+        } else if (fields.workStatus === "feito") {
+          if (!data.writtenAt) data.writtenAt = new Date();
+          data.completedAt = new Date();
+        }
+      }
+
       // Upload de novo comprovante se fornecido
       if (fields.attachmentBase64 && fields.attachmentMime) {
         const buffer = Buffer.from(fields.attachmentBase64, "base64");
@@ -270,6 +294,38 @@ export const salesRouter = router({
         data.attachmentUrl = uploaded.url;
         data.attachmentKey = key;
         data.attachmentMime = fields.attachmentMime;
+      }
+
+      // Upload/remoção de foto 1
+      if (fields.removePhoto1) {
+        data.photo1Url = null;
+        data.photo1Key = null;
+      } else if (fields.photo1Base64 && fields.photo1Mime) {
+        const buf = Buffer.from(fields.photo1Base64, "base64");
+        if (buf.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 1 muito grande. Máximo 5MB." });
+        }
+        const ext = fields.photo1Mime.includes("png") ? "png" : fields.photo1Mime.includes("webp") ? "webp" : "jpg";
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const r = await storagePut(key, buf, fields.photo1Mime);
+        data.photo1Url = r.url;
+        data.photo1Key = key;
+      }
+
+      // Upload/remoção de foto 2
+      if (fields.removePhoto2) {
+        data.photo2Url = null;
+        data.photo2Key = null;
+      } else if (fields.photo2Base64 && fields.photo2Mime) {
+        const buf = Buffer.from(fields.photo2Base64, "base64");
+        if (buf.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Foto 2 muito grande. Máximo 5MB." });
+        }
+        const ext = fields.photo2Mime.includes("png") ? "png" : fields.photo2Mime.includes("webp") ? "webp" : "jpg";
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const r = await storagePut(key, buf, fields.photo2Mime);
+        data.photo2Url = r.url;
+        data.photo2Key = key;
       }
 
       await updateSale(id, data as any);
