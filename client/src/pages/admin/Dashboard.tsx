@@ -10,6 +10,15 @@ import { useTheme } from "@/contexts/ThemeContext";
 import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
 import { Building2 } from "lucide-react";
 
+interface WorkItem {
+  id: number;
+  clientName: string;
+  productName: string;
+  deadline?: string | Date;
+  isOverdue?: boolean;
+  isUrgent?: boolean;
+}
+
 function formatDeadline(deadline: string | Date | undefined): string {
   if (!deadline) return "—";
   const d = deadline instanceof Date ? deadline : new Date(deadline);
@@ -64,14 +73,14 @@ export default function AdminDashboard() {
   const topClients = reportData?.topClients ?? [];
   const summaryByCompany = reportData?.summaryByCompany ?? [];
 
-  const magiaData = summaryByCompany.find(c => c.company === "mundo_da_magia");
-  const ciganoData = summaryByCompany.find(c => c.company === "mundo_cigano");
+  const magiaData = summaryByCompany.find((c: { company: string | null }) => c.company === "mundo_da_magia");
+  const ciganoData = summaryByCompany.find((c: { company: string | null }) => c.company === "mundo_cigano");
   const magiaInfo = getCompanyInfo("mundo_da_magia");
   const ciganoInfo = getCompanyInfo("mundo_cigano");
 
   const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(undefined, { staleTime: 3 * 60 * 1000 });
-  const pendingWorks = worksSummary?.pending ?? [];
-  const toWriteWorks = worksSummary?.toWrite ?? [];
+  const pendingWorks: WorkItem[] = (worksSummary?.pending ?? []) as WorkItem[];
+  const toWriteWorks: WorkItem[] = (worksSummary?.toWrite ?? []) as WorkItem[];
 
   const overdueWorks = pendingWorks.filter(w => w.isOverdue);
   const urgentWorks = pendingWorks.filter(w => w.isUrgent);
