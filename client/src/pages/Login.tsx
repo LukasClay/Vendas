@@ -45,17 +45,21 @@ export default function Login() {
 
       // Verifica se o cookie de sessão foi aceito pelo navegador
       // (httpOnly cookies não são acessíveis por JS, então testamos via auth.me)
-      try {
-        const me = await utils.auth.me.fetch();
-        if (!me) {
-          setLoginError("Login realizado, mas seu navegador não salvou o cookie de sessão. Verifique as configurações de privacidade/cookies do navegador e tente novamente.");
-          toast.error("Erro: cookie de sessão não foi salvo pelo navegador.");
-          return;
+      // Tenta 2x para evitar falso positivo por erro transitório de rede
+      let sessionOk = false;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const me = await utils.auth.me.fetch();
+          if (me) { sessionOk = true; break; }
+        } catch {
+          // Retry silencioso na primeira tentativa
         }
-      } catch {
-        // Se auth.me falhar, o cookie provavelmente não foi salvo
-        setLoginError("Login realizado, mas seu navegador não salvou o cookie de sessão. Verifique as configurações de privacidade/cookies do navegador e tente novamente.");
-        toast.error("Erro: cookie de sessão não foi salvo pelo navegador.");
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+
+      if (!sessionOk) {
+        setLoginError("Login realizado no servidor, mas a sessão não pôde ser verificada. Verifique se os cookies estão habilitados no navegador e tente novamente.");
+        toast.error("Sessão não verificada. Verifique os cookies do navegador.");
         return;
       }
 
