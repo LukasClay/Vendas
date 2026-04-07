@@ -532,9 +532,8 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
               />
             </div>
 
-            {/* ── Fotos do Cliente ── */}
-            {(sale.photo1Url || sale.photo2Url || editForm.productCategory === "individual") && (
-              <div className="sm:col-span-2">
+            {/* ── Fotos do Cliente (ADM pode adicionar a qualquer categoria) ── */}
+            <div className="sm:col-span-2">
                 <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
                   Fotos do Cliente
                 </label>
@@ -618,7 +617,6 @@ function EditSaleModal({ sale, sellers, onClose }: { sale: any; sellers: any[]; 
                   </div>
                 </div>
               </div>
-            )}
 
             {/* ── Reagendamento de Consulta ── */}
             {isConsultaCartas && (
