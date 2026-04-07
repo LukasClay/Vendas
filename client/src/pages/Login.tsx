@@ -37,32 +37,9 @@ export default function Login() {
     defaultValues: { username: "", password: "", rememberMe: true },
   });
 
-  const utils = trpc.useUtils();
-
   const loginMutation = trpc.ownAuth.login.useMutation({
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       setLoginError(null);
-
-      // Verifica se o cookie de sessão foi aceito pelo navegador
-      // (httpOnly cookies não são acessíveis por JS, então testamos via auth.me)
-      // Tenta 2x para evitar falso positivo por erro transitório de rede
-      let sessionOk = false;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const me = await utils.auth.me.fetch();
-          if (me) { sessionOk = true; break; }
-        } catch {
-          // Retry silencioso na primeira tentativa
-        }
-        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-      }
-
-      if (!sessionOk) {
-        setLoginError("Login realizado no servidor, mas a sessão não pôde ser verificada. Verifique se os cookies estão habilitados no navegador e tente novamente.");
-        toast.error("Sessão não verificada. Verifique os cookies do navegador.");
-        return;
-      }
-
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
         if (data.role === "admin") window.location.href = "/admin";
