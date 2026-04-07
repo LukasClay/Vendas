@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -252,8 +252,8 @@ export const ownAuthRouter = router({
             let attempts = 0;
 
             while (!isUnique && attempts < 5) {
-              // Gera sufixo aleatório de 2 caracteres (letras minúsculas e números)
-              const suffix = Math.random().toString(36).substring(2, 4);
+              // Gera sufixo aleatório de 4 caracteres hex (criptograficamente seguro)
+              const suffix = randomBytes(2).toString("hex");
               newUsername = `${baseUsername}_${suffix}`;
 
               // Verifica se já existe alguém com esse username gerado

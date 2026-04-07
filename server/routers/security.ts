@@ -7,11 +7,10 @@ import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
 // Senha mestre hasheada (SHA-256) para validação de operações críticas
-// A senha nunca é armazenada em texto puro no código
-const MASTER_PASSWORD_HASH = crypto
-  .createHash("sha256")
-  .update("^i~YTE_}-~shA0Pp~boiB),s}xFCa]L10DmPEFgoJv.mgCc)U}8a7)Z!H.::-5@M6pf1}~!9eN8r!N3YDMNno2-}#Fs.5*Ri_6Wv")
-  .digest("hex");
+// Lê de ENV para não expor a senha no código fonte. Fallback hardcoded para compatibilidade.
+const MASTER_PASSWORD_HASH =
+  process.env.MASTER_PASSWORD_HASH ||
+  "2259180d28299fada66242f3c25eb2adc9b8ecfa2c6cce67d219f286fbe47241";
 
 function verifyMasterPassword(password: string): boolean {
   const hash = crypto.createHash("sha256").update(password).digest("hex");
