@@ -535,6 +535,7 @@ function BulkActionPanel() {
       utils.consultora.pending.invalidate();
       utils.consultora.done.invalidate();
       utils.consultora.statusCounts.invalidate();
+      utils.consultora.distinctProducts.invalidate();
       setConfirmOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
