@@ -56,7 +56,7 @@ export default function CompanySwitch() {
       utils.settings.getActiveCompany.invalidate();
       setShowModal(false);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: { message: string }) => toast.error(err.message),
   });
 
   const current = getCompanyInfo(activeCompany);

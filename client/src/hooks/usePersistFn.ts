@@ -1,11 +1,12 @@
 import { useRef } from "react";
 
-type noop = (...args: any[]) => any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- necessario para constraint generico covariante
+type AnyFunction = (...args: any[]) => any;
 
 /**
  * usePersistFn instead of useCallback to reduce cognitive load
  */
-export function usePersistFn<T extends noop>(fn: T) {
+export function usePersistFn<T extends AnyFunction>(fn: T) {
   const fnRef = useRef<T>(fn);
   fnRef.current = fn;
 
