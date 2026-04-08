@@ -67,9 +67,9 @@ export default function AdminConfiguracoes() {
               <div className="space-y-3">
                 {[
                   ["Sistema", "Gestão de Vendas Espirituais"],
-                  ["Versão", "2.5.0"],
+                  ["Versão", "2.6.0"],
                   ["Banco de Dados", "PostgreSQL"],
-                  ["Armazenamento", "S3 (5GB inicial)"],
+                  ["Armazenamento", "10GB/mês"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between items-center py-2 border-b last:border-0"
                     style={{ borderColor: "var(--border)" }}>

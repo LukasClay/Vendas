@@ -3,9 +3,24 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { appSettings, auditLogs, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, userSessions, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { getLocalLoginHealth, type LocalLoginHealthResult } from "./_core/localLoginHealth";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
+
+export interface AdminUserListItem extends LocalLoginHealthResult {
+  id: number;
+  openId: string;
+  name: string | null;
+  email: string | null;
+  role: "user" | "consultora" | "admin";
+  displayName: string | null;
+  phone: string | null;
+  active: boolean;
+  username: string | null;
+  createdAt: Date;
+  lastSignedIn: Date;
+}
 
 /** Extrai rows de resultado de db.execute() (compatível com diferentes versões do driver) */
 function extractRows(result: unknown): Record<string, unknown>[] {
@@ -100,11 +115,11 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(): Promise<AdminUserListItem[]> {
   const db = await getDb();
   if (!db) return [];
-  // Retorna apenas dados seguros, blindando o passwordHash e sessionVersion
-  return db.select({
+
+  const rows = await db.select({
     id: users.id,
     openId: users.openId,
     name: users.name,
@@ -114,9 +129,21 @@ export async function getAllUsers() {
     phone: users.phone,
     active: users.active,
     username: users.username,
+    passwordHash: users.passwordHash,
+    deletedAt: users.deletedAt,
     createdAt: users.createdAt,
     lastSignedIn: users.lastSignedIn
   }).from(users).where(isNull(users.deletedAt)).orderBy(asc(users.name));
+
+  return rows.map(({ passwordHash, deletedAt, ...user }) => ({
+    ...user,
+    ...getLocalLoginHealth({
+      active: user.active,
+      deletedAt,
+      username: user.username,
+      passwordHash,
+    }),
+  }));
 }
 
 export async function getUserById(id: number) {
