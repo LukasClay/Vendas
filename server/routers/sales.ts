@@ -277,7 +277,8 @@ export const salesRouter = router({
           data.writtenAt = new Date();
           data.completedAt = null;
         } else if (fields.workStatus === "feito") {
-          if (!data.writtenAt) data.writtenAt = new Date();
+          const existingSale = await getSaleById(id);
+          if (!existingSale?.writtenAt) data.writtenAt = new Date();
           data.completedAt = new Date();
         }
       }
