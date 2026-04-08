@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createAuditLog, createSale, deleteSale, getSaleById, getSales, getSalesBySeller, updateSale, upsertClient, getDb, withRetry, getDeletedSales, restoreSale, permanentDeleteSale, cleanupExpiredTrash } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
-import { storagePut } from "../storage";
+import { storageDelete, storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import { consultationSlots, sales, products } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
@@ -256,6 +256,23 @@ export const salesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
       const data: Record<string, unknown> = {};
+      const shouldLoadExistingFiles =
+        Boolean(fields.attachmentBase64 && fields.attachmentMime) ||
+        Boolean(fields.removePhoto1) ||
+        Boolean(fields.removePhoto2) ||
+        Boolean(fields.photo1Base64 && fields.photo1Mime) ||
+        Boolean(fields.photo2Base64 && fields.photo2Mime);
+      const existingSale = shouldLoadExistingFiles ? await getSaleById(id) : undefined;
+      const keysToDeleteAfterUpdate: string[] = [];
+      const uploadedKeysToCleanup: string[] = [];
+      const queueDeleteAfterUpdate = (key: string | null | undefined) => {
+        if (!key) return;
+        keysToDeleteAfterUpdate.push(key);
+      };
+      const safeDeleteAll = async (keys: string[]) => {
+        await Promise.all(keys.map((key) => storageDelete(key).catch(() => undefined)));
+      };
+
       if (fields.clientName !== undefined) data.clientName = fields.clientName;
       if (fields.clientBirthDate !== undefined) data.clientBirthDate = fields.clientBirthDate ?? null;
       if (fields.clientPhone !== undefined) data.clientPhone = fields.clientPhone;
@@ -291,15 +308,18 @@ export const salesRouter = router({
         const ext = fields.attachmentMime.includes("pdf") ? "pdf" : "jpg";
         const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
         const uploaded = await storagePut(key, buffer, fields.attachmentMime);
+        uploadedKeysToCleanup.push(key);
         data.attachmentUrl = uploaded.url;
         data.attachmentKey = key;
         data.attachmentMime = fields.attachmentMime;
+        queueDeleteAfterUpdate(existingSale?.attachmentKey);
       }
 
       // Upload/remoção de foto 1
       if (fields.removePhoto1) {
         data.photo1Url = null;
         data.photo1Key = null;
+        queueDeleteAfterUpdate(existingSale?.photo1Key);
       } else if (fields.photo1Base64 && fields.photo1Mime) {
         const buf = Buffer.from(fields.photo1Base64, "base64");
         if (buf.length > 5 * 1024 * 1024) {
@@ -308,14 +328,17 @@ export const salesRouter = router({
         const ext = fields.photo1Mime.includes("png") ? "png" : fields.photo1Mime.includes("webp") ? "webp" : "jpg";
         const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
         const r = await storagePut(key, buf, fields.photo1Mime);
+        uploadedKeysToCleanup.push(key);
         data.photo1Url = r.url;
         data.photo1Key = key;
+        queueDeleteAfterUpdate(existingSale?.photo1Key);
       }
 
       // Upload/remoção de foto 2
       if (fields.removePhoto2) {
         data.photo2Url = null;
         data.photo2Key = null;
+        queueDeleteAfterUpdate(existingSale?.photo2Key);
       } else if (fields.photo2Base64 && fields.photo2Mime) {
         const buf = Buffer.from(fields.photo2Base64, "base64");
         if (buf.length > 5 * 1024 * 1024) {
@@ -324,11 +347,20 @@ export const salesRouter = router({
         const ext = fields.photo2Mime.includes("png") ? "png" : fields.photo2Mime.includes("webp") ? "webp" : "jpg";
         const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
         const r = await storagePut(key, buf, fields.photo2Mime);
+        uploadedKeysToCleanup.push(key);
         data.photo2Url = r.url;
         data.photo2Key = key;
+        queueDeleteAfterUpdate(existingSale?.photo2Key);
       }
 
-      await updateSale(id, data as any);
+      try {
+        await updateSale(id, data as any);
+      } catch (error) {
+        await safeDeleteAll(uploadedKeysToCleanup);
+        throw error;
+      }
+
+      await safeDeleteAll(keysToDeleteAfterUpdate);
       const userName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({ userId: ctx.user.id, userName, action: "Editou Venda", details: JSON.stringify({ saleId: id, changes: data }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
       return { success: true };
