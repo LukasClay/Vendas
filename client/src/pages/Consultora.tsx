@@ -113,16 +113,18 @@ function ToWriteCard({ item, onMarkWritten }: {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: "#1a1a2e" }}>{item.clientName}</p>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <p className="text-xs truncate" style={{ color: "#737390" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
+            <p className="text-xs" style={{ color: "#737390" }}>{item.productName}{item.sellerName ? ` • ${item.sellerName}` : ""}</p>
             {item.productCategory === "promocao" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#fde8e8", color: "#c0392b", border: "1px solid #f0b0b0" }}>⭐ Promoção</span>}
             {item.productCategory === "coletivo" && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold shrink-0" style={{ background: "#e8e8f8", color: "#4040b0", border: "1px solid #c0c0e8" }}>👥 Coletivo</span>}
           </div>
-          <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#ede8de", color: "#8a6520" }}>
+              {formatDate(item.saleDate)}
+            </span>
+            <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#ede8de", color: "#8a6520" }}>
-            {formatDate(item.saleDate)}
-          </span>
+        <div className="shrink-0">
           {expanded ? <ChevronUp className="w-4 h-4" style={{ color: "#737390" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "#737390" }} />}
         </div>
       </button>
