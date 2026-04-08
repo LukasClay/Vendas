@@ -86,7 +86,7 @@ beforeEach(() => {
   mocks.notifyOwner.mockResolvedValue(undefined);
 });
 
-describe("consultationSlots.listPending (permissão)", () => {
+describe("consultationSlots.listPending (permissÃ£o)", () => {
   it("permite acesso para admin", async () => {
     mocks.queryResults.push([
       { sold: true, status: "pendente", consultationDate: "2099-01-01", consultationTime: "10:00" },
@@ -111,13 +111,13 @@ describe("consultationSlots.listPending (permissão)", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("bloqueia acesso para usuário comum", async () => {
+  it("bloqueia acesso para usuÃ¡rio comum", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.listPending()).rejects.toThrow();
   });
 });
 
-describe("consultationSlots.listCancelled (permissão)", () => {
+describe("consultationSlots.listCancelled (permissÃ£o)", () => {
   it("permite acesso para admin", async () => {
     mocks.queryResults.push([
       { status: "cancelada", consultationDate: "2099-01-01", consultationTime: "10:00" },
@@ -142,14 +142,14 @@ describe("consultationSlots.listCancelled (permissão)", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("bloqueia acesso para usuário comum", async () => {
+  it("bloqueia acesso para usuÃ¡rio comum", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.listCancelled()).rejects.toThrow();
   });
 });
 
-describe("consultationSlots.cancel (permissão)", () => {
-  it("bloqueia usuário comum de cancelar", async () => {
+describe("consultationSlots.cancel (permissÃ£o)", () => {
+  it("bloqueia usuÃ¡rio comum de cancelar", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow();
   });
@@ -159,12 +159,12 @@ describe("consultationSlots.cancel (permissão)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|não encontrado/i,
+      /NOT_FOUND|nÃ£o encontrado/i,
     );
   });
 });
 
-describe("consultationSlots.restore (permissão)", () => {
+describe("consultationSlots.restore (permissÃ£o)", () => {
   it("bloqueia consultora de restaurar", async () => {
     const caller = appRouter.createCaller(createContext("consultora"));
     await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
@@ -172,7 +172,7 @@ describe("consultationSlots.restore (permissão)", () => {
     );
   });
 
-  it("bloqueia usuário comum de restaurar", async () => {
+  it("bloqueia usuÃ¡rio comum de restaurar", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow();
   });
@@ -182,20 +182,20 @@ describe("consultationSlots.restore (permissão)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|não encontrado/i,
+      /NOT_FOUND|nÃ£o encontrado/i,
     );
   });
 });
 
-describe("consultationSlots.deleteCancelled (permissão)", () => {
-  it("bloqueia consultora de liberar horário cancelado", async () => {
+describe("consultationSlots.deleteCancelled (permissÃ£o)", () => {
+  it("bloqueia consultora de liberar horÃ¡rio cancelado", async () => {
     const caller = appRouter.createCaller(createContext("consultora"));
     await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
       /FORBIDDEN|administradores/i,
     );
   });
 
-  it("bloqueia usuário comum de liberar horário cancelado", async () => {
+  it("bloqueia usuÃ¡rio comum de liberar horÃ¡rio cancelado", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow();
   });
@@ -205,13 +205,13 @@ describe("consultationSlots.deleteCancelled (permissão)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|não encontrado/i,
+      /NOT_FOUND|nÃ£o encontrado/i,
     );
   });
 });
 
-describe("consultationSlots.listAvailable (público)", () => {
-  it("retorna lista de slots disponíveis para qualquer usuário autenticado", async () => {
+describe("consultationSlots.listAvailable (pÃºblico)", () => {
+  it("retorna lista de slots disponÃ­veis para qualquer usuÃ¡rio autenticado", async () => {
     mocks.queryResults.push([
       { sold: false, status: "pendente", consultationDate: "2099-01-01", consultationTime: "15:00" },
     ]);

@@ -81,9 +81,16 @@ function getS3Config() {
 // Singleton do S3Client para reutilizar conexões TCP
 let _s3Client: any = null;
 let _PutObjectCommand: any = null;
+let _DeleteObjectCommand: any = null;
 
 async function getS3Client() {
-  if (_s3Client) return { client: _s3Client, PutObjectCommand: _PutObjectCommand };
+  if (_s3Client) {
+    return {
+      client: _s3Client,
+      PutObjectCommand: _PutObjectCommand,
+      DeleteObjectCommand: _DeleteObjectCommand,
+    };
+  }
   try {
     const s3module = await import("@aws-sdk/client-s3");
     const config = getS3Config()!;
@@ -96,7 +103,12 @@ async function getS3Client() {
       },
     });
     _PutObjectCommand = s3module.PutObjectCommand;
-    return { client: _s3Client, PutObjectCommand: _PutObjectCommand };
+    _DeleteObjectCommand = s3module.DeleteObjectCommand;
+    return {
+      client: _s3Client,
+      PutObjectCommand: _PutObjectCommand,
+      DeleteObjectCommand: _DeleteObjectCommand,
+    };
   } catch {
     throw new Error(
       "Para usar S3 no Railway, instale o SDK: npm install @aws-sdk/client-s3"
@@ -141,6 +153,19 @@ async function s3Get(relKey: string): Promise<{ key: string; url: string }> {
   return { key, url: `${publicBase.replace(/\/+$/, "")}/${key}` };
 }
 
+async function s3Delete(relKey: string): Promise<void> {
+  const { client, DeleteObjectCommand } = await getS3Client();
+  const config = getS3Config()!;
+  const key = normalizeKey(relKey);
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: config.bucket,
+      Key: key,
+    })
+  );
+}
+
 // ─── API Pública ─────────────────────────────────────────────────────────────
 
 export async function storagePut(
@@ -160,4 +185,9 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
   if (getManusConfig()) return manusGet(relKey);
   if (getS3Config()) return s3Get(relKey);
   throw new Error("Nenhum serviço de storage configurado.");
+}
+
+export async function storageDelete(relKey: string): Promise<void> {
+  if (getManusConfig()) return;
+  if (getS3Config()) return s3Delete(relKey);
 }
