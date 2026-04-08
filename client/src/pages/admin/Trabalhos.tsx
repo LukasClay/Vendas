@@ -122,14 +122,14 @@ function SellerEditInline({ saleId, currentSellerName, sellers, onUpdated }: {
   if (!editing) {
     return (
       <button onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full transition-all active:scale-95 font-bold uppercase tracking-wider"
-        style={{ 
-          background: isDark ? "rgba(139, 92, 246, 0.15)" : "#eaeaf8", 
+        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-all active:scale-95 font-semibold max-w-full"
+        style={{
+          background: isDark ? "rgba(139, 92, 246, 0.15)" : "#eaeaf8",
           color: isDark ? "#a78bfa" : "#4a4a80",
           border: `1px solid ${isDark ? "rgba(139, 92, 246, 0.3)" : "#c0c0e8"}`
         }}>
-        <UserCog className="w-3 h-3" />
-        {currentSellerName || "Sem vendedor"}
+        <UserCog className="w-3.5 h-3.5 shrink-0" />
+        <span className="truncate">{currentSellerName || "Sem vendedor"}</span>
       </button>
     );
   }
@@ -200,8 +200,8 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
             </div>
-            <div className="flex items-center gap-2 flex-wrap" >
-              <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+            <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+            <div className="mt-1">
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-1">
@@ -312,8 +312,8 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+            <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+            <div className="mt-1">
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-1">
@@ -411,8 +411,8 @@ function DoneCard({ item, onUndo, sellers }: {
     <div className="rounded-2xl p-4 border transition-all shadow-sm" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+          <span className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
+          <div className="mt-1">
             <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
