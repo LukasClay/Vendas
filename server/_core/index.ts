@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -11,6 +12,7 @@ import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
 import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
 import { sql } from "drizzle-orm";
+import { logKnownHttpError } from "./httpRequestErrors";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -72,6 +74,20 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
+    const knownError = logKnownHttpError(req, error);
+    if (!knownError) {
+      next(error);
+      return;
+    }
+
+    if (req.aborted || req.destroyed || res.headersSent || res.writableEnded) {
+      return;
+    }
+
+    res.status(knownError.status).json({ message: knownError.message });
+  });
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

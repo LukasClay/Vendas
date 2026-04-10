@@ -149,6 +149,11 @@ class SDKServer {
     return new Map(Object.entries(parsed));
   }
 
+  getSessionCookieFromRequest(req: Pick<Request, "headers">): string | null {
+    const cookies = this.parseCookies(req.headers.cookie);
+    return cookies.get(COOKIE_NAME) ?? null;
+  }
+
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
     return new TextEncoder().encode(secret);
@@ -197,7 +202,6 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string; sessionVersion?: number } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
       return null;
     }
 
@@ -253,10 +257,12 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request): Promise<User> {
+  async authenticateRequest(
+    req: Request,
+    providedSessionCookie?: string | null,
+  ): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = cookies.get(COOKIE_NAME);
+    const sessionCookie = providedSessionCookie ?? this.getSessionCookieFromRequest(req);
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {

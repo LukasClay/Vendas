@@ -14,12 +14,15 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  const sessionCookie = sdk.getSessionCookieFromRequest(opts.req);
 
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+  if (sessionCookie) {
+    try {
+      user = await sdk.authenticateRequest(opts.req, sessionCookie);
+    } catch {
+      // Authentication is optional for public procedures.
+      user = null;
+    }
   }
 
   // Captura IP real (considerando proxy do Railway) e User-Agent
