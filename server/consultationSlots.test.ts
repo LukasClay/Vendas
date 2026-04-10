@@ -86,6 +86,12 @@ beforeEach(() => {
   mocks.notifyOwner.mockResolvedValue(undefined);
 });
 
+async function expectNotFoundError(promise: Promise<unknown>) {
+  await expect(promise).rejects.toMatchObject({
+    message: "Horário não encontrado.",
+  });
+}
+
 describe("consultationSlots.listPending (permissÃ£o)", () => {
   it("permite acesso para admin", async () => {
     mocks.queryResults.push([
@@ -158,9 +164,7 @@ describe("consultationSlots.cancel (permissÃ£o)", () => {
     mocks.queryResults.push([]);
 
     const caller = appRouter.createCaller(createContext("admin"));
-    await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|encontrado/i,
-    );
+    await expectNotFoundError(caller.consultationSlots.cancel({ id: 9999 }));
   });
 });
 
@@ -181,9 +185,7 @@ describe("consultationSlots.restore (permissÃ£o)", () => {
     mocks.queryResults.push([]);
 
     const caller = appRouter.createCaller(createContext("admin"));
-    await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|encontrado/i,
-    );
+    await expectNotFoundError(caller.consultationSlots.restore({ id: 9999 }));
   });
 });
 
@@ -204,9 +206,7 @@ describe("consultationSlots.deleteCancelled (permissÃ£o)", () => {
     mocks.queryResults.push([]);
 
     const caller = appRouter.createCaller(createContext("admin"));
-    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|encontrado/i,
-    );
+    await expectNotFoundError(caller.consultationSlots.deleteCancelled({ id: 9999 }));
   });
 });
 
