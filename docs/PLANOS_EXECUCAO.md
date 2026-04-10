@@ -5,6 +5,7 @@ Documentação de todos os planos de refatoração e hardening implementados.
 ---
 
 ## 📑 Índice
+
 1. [Plano 1: Refactor de Segurança](#plano-1-refactor-de-segurança)
 2. [Plano 2: SSL/TLS Hardening](#plano-2-ssltls-hardening)
 3. [Resumo SSL de Alterações](#resumo-ssl-de-alterações)
@@ -32,22 +33,24 @@ Implementar 3 melhorias identificadas na auditoria de segurança:
 ## 2. Pré-requisitos
 
 ### Verificação de Branch
+
 ```bash
 git checkout claude/security-code-review-MIe4M
 ```
 
 ### Confirmar adminProcedure Central
+
 Verificar que existe em `server/_core/trpc.ts`:
 
 ```typescript
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
-    if (!ctx.user || ctx.user.role !== 'admin') {
+    if (!ctx.user || ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
     return next({ ctx });
-  }),
+  })
 );
 ```
 
@@ -60,6 +63,7 @@ export const adminProcedure = t.procedure.use(
 ### ITEM 6: 6 arquivos com adminProcedure centralizado
 
 **Files:**
+
 - server/routers/sales.ts
 - server/routers/auth.ts
 - server/routers/consultora.ts
@@ -68,6 +72,7 @@ export const adminProcedure = t.procedure.use(
 - server/routers/users.ts
 
 **Ação por arquivo:**
+
 1. Alterar import para incluir `adminProcedure` de `_core/trpc`
 2. Remover definição local de `adminProcedure`
 3. Manter imports que ainda são usados (`TRPCError`, `protectedProcedure`)
@@ -79,6 +84,7 @@ export const adminProcedure = t.procedure.use(
 **File:** server/routers/reports.ts
 
 **Alteração:**
+
 ```typescript
 // Limite: 10000 → 5000
 limit: 5000,
@@ -97,16 +103,21 @@ if (salesData.length >= 5000) {
 ### ITEM 3: getBrazilTime() robusta
 
 **Files:**
+
 1. server/routers/consultationSlots.ts
 2. server/routers/sales.ts
 
 **Antes (double-parse):**
+
 ```typescript
 const now = new Date();
-const br = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+const br = new Date(
+  now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+);
 ```
 
 **Depois (formatToParts):**
+
 ```typescript
 const now = new Date();
 const parts = new Intl.DateTimeFormat("en-US", {
@@ -129,30 +140,35 @@ return new Date(+get("year"), +get("month") - 1, +get("day"), ...);
 ## 4. Validações
 
 ### Validação 1: Nenhuma definição local restante
+
 ```bash
 grep -r "const adminProcedure" server/routers/
 → Esperado: 0 linhas
 ```
 
 ### Validação 2: 6 imports centralizados
+
 ```bash
 grep -r "import.*adminProcedure" server/routers/
 → Esperado: 6 linhas (uma por arquivo)
 ```
 
 ### Validação 3: Limite 5000
+
 ```bash
 grep "limit: 5000" server/routers/reports.ts
 → Esperado: 1 linha
 ```
 
 ### Validação 4: formatToParts
+
 ```bash
 grep "formatToParts" server/routers/consultationSlots.ts server/routers/sales.ts
 → Esperado: 2 linhas
 ```
 
 ### Validação 5: TypeScript compila
+
 ```bash
 npx tsc --noEmit
 → Esperado: Zero erros
@@ -189,11 +205,13 @@ Isso habilita verificação do certificado SSL do servidor de banco, prevenindo 
 ## 2. Pré-requisitos
 
 ### Verificação de Branch
+
 ```bash
 git checkout claude/security-code-review-MIe4M
 ```
 
 ### Plano 1 Status
+
 O Plano 1 deve ter sido executado ANTES. Status: ✅ COMPLETADO
 
 ---
@@ -201,6 +219,7 @@ O Plano 1 deve ter sido executado ANTES. Status: ✅ COMPLETADO
 ## 3. Passo a Passo
 
 ### Passo 1: `server/db.ts`
+
 ```typescript
 // ANTES:
 ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
@@ -210,6 +229,7 @@ ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : unde
 ```
 
 ### Passo 2: `scripts/create-admin.mjs`
+
 ```javascript
 // ANTES:
 ssl: { rejectUnauthorized: false },
@@ -219,6 +239,7 @@ ssl: { rejectUnauthorized: true },
 ```
 
 ### Passo 3: `scripts/migrate-railway.mjs`
+
 ```javascript
 // ANTES:
 ssl: { rejectUnauthorized: false },
@@ -232,18 +253,21 @@ ssl: { rejectUnauthorized: true },
 ## 4. Validações
 
 ### Validação 1: Zero `rejectUnauthorized: false`
+
 ```bash
 grep -r "rejectUnauthorized: false" server/ scripts/
 → Esperado: 0 linhas
 ```
 
 ### Validação 2: 3 ocorrências de true
+
 ```bash
 grep -r "rejectUnauthorized: true" server/ scripts/
 → Esperado: 3 linhas
 ```
 
 ### Validação 3: TypeScript compila
+
 ```bash
 npx tsc --noEmit
 → Esperado: Zero erros
@@ -292,11 +316,13 @@ Implementadas alterações de segurança SSL/TLS em **3 arquivos**, habilitando 
 ## 🔒 Impacto de Segurança
 
 ### Antes (rejectUnauthorized: false):
+
 - ❌ Conecta sem validar certificado
 - ❌ Vulnerável a **Man-in-the-Middle**
 - ❌ Credenciais podem ser capturadas
 
 ### Depois (rejectUnauthorized: true):
+
 - ✅ Valida certificado SSL genuíno
 - ✅ Previne MitM
 - ✅ Garante servidor legítimo
@@ -306,14 +332,14 @@ Implementadas alterações de segurança SSL/TLS em **3 arquivos**, habilitando 
 
 ## 📊 ESTATÍSTICAS
 
-| Métrica | Número |
-|---------|--------|
-| Arquivos alterados | 3 |
-| Linhas alteradas | 3 |
-| `rejectUnauthorized` alterações | 3 |
-| Lógica condicional removida | 0 |
-| Compilação TypeScript | ✅ Sem erros |
+| Métrica                         | Número       |
+| ------------------------------- | ------------ |
+| Arquivos alterados              | 3            |
+| Linhas alteradas                | 3            |
+| `rejectUnauthorized` alterações | 3            |
+| Lógica condicional removida     | 0            |
+| Compilação TypeScript           | ✅ Sem erros |
 
 ---
 
-*Consolidação de Planos de Execução em 27/03/2026*
+_Consolidação de Planos de Execução em 27/03/2026_

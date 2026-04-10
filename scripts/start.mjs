@@ -9,6 +9,6 @@ const child = spawn("node", ["dist/index.js"], {
   },
 });
 
-child.on("exit", (code) => {
+child.on("exit", code => {
   process.exit(code ?? 0);
 });

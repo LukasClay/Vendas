@@ -5,6 +5,7 @@ Documentação consolidada de todas as auditorias realizadas.
 ---
 
 ## 📑 Índice
+
 1. [Auditoria de Segurança - Resumo](#auditoria-de-segurança---resumo)
 2. [Auditoria Mobile e Cookies](#auditoria-mobile-e-cookies)
 3. [Relatório Completo de Auditoria](#relatório-completo-de-auditoria)
@@ -14,6 +15,7 @@ Documentação consolidada de todas as auditorias realizadas.
 # Auditoria de Segurança - Resumo
 
 ## Projeto: vendas-app | Branch: claude/security-code-review-MIe4M
+
 **Data**: 27/03/2026 | **Commit**: 6e95840
 
 ---
@@ -21,6 +23,7 @@ Documentação consolidada de todas as auditorias realizadas.
 ## 📋 RESUMO EXECUTIVO
 
 Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando **7 arquivos modificados**:
+
 - ✅ **ITEM 6**: Centralizar `adminProcedure` (6 definições locais removidas)
 - ✅ **ITEM 4**: Limitar `exportData` (10000 → 5000 + validação)
 - ✅ **ITEM 3**: Tornar `getBrazilTime()` robusta (`toLocaleString` → `formatToParts()`)
@@ -30,8 +33,10 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ## 📁 ARQUIVOS ALTERADOS (7 total)
 
 ### 1️⃣ server/routers/sales.ts
+
 **Mudanças**:
-- **Import**: Adicionado `adminProcedure` 
+
+- **Import**: Adicionado `adminProcedure`
 - **Linha 11-14 REMOVIDA**: Definição local de `adminProcedure` (4 linhas)
 - **Linhas 39-41 SUBSTITUÍDAS** por `formatToParts()` para cálculo de data Brasil
 
@@ -40,7 +45,9 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 2️⃣ server/routers/auth.ts
+
 **Mudanças**:
+
 - **Import**: Adicionado `adminProcedure`
 - **Linhas 72-76 REMOVIDAS**: Definição local de `adminProcedure` (5 linhas com formatação)
 
@@ -51,7 +58,9 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 3️⃣ server/routers/consultora.ts
+
 **Mudanças**:
+
 - **Import**: Adicionado `adminProcedure`
 - **Linhas 17-21 REMOVIDAS**: Definição local de `adminProcedure` com comentário
 
@@ -62,7 +71,9 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 4️⃣ server/routers/products.ts
+
 **Mudanças**:
+
 - **Import consolidado**: Removido `const adminProcedure` que estava entre imports
 
 **Imports preservados**: `TRPCError` mantido (linhas 45-49, 62-65), `protectedProcedure` mantido
@@ -72,12 +83,15 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 5️⃣ server/routers/reports.ts
+
 **Alterações múltiplas**:
 
 **a) Import (linhas 19-20)**:
+
 - `protectedProcedure` REMOVIDO (não usado em nenhum outro lugar)
 
 **b) Endpoint `exportData` (linhas 68-76)**:
+
 - Limite alterado: `10000` → `5000`
 - Validação adicionada: lança erro se resultado >= 5000
 
@@ -86,6 +100,7 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 6️⃣ server/routers/users.ts
+
 **Mudanças**:
 
 - **Linhas 1-4 REORGANIZADAS**: Removido `TRPCError` (não usado)
@@ -96,18 +111,23 @@ Implementadas 3 melhorias de segurança identificadas na auditoria, totalizando 
 ---
 
 ### 7️⃣ server/routers/consultationSlots.ts
+
 **Mudanças** na função `getBrazilTime()` (linhas 15-24):
 
 **Antes (double-parse)**:
+
 ```typescript
 function getBrazilTime() {
   const now = new Date();
-  const tzString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+  const tzString = now.toLocaleString("en-US", {
+    timeZone: "America/Sao_Paulo",
+  });
   return new Date(tzString);
 }
 ```
 
 **Depois (formatToParts - mais robusto)**:
+
 ```typescript
 function getBrazilTime(): Date {
   const now = new Date();
@@ -124,8 +144,12 @@ function getBrazilTime(): Date {
 
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? "0";
   return new Date(
-    +get("year"), +get("month") - 1, +get("day"),
-    +get("hour"), +get("minute"), +get("second")
+    +get("year"),
+    +get("month") - 1,
+    +get("day"),
+    +get("hour"),
+    +get("minute"),
+    +get("second")
   );
 }
 ```
@@ -137,38 +161,44 @@ function getBrazilTime(): Date {
 ## ✅ VALIDAÇÕES EXECUTADAS
 
 ### Validação 1: Definições locais removidas
+
 Nenhuma definição local de `adminProcedure` restante ✅
 
 ### Validação 2: Imports centralizados
+
 6 arquivos importam `adminProcedure` de `_core/trpc` ✅
 
 ### Validação 3: Limite de exportData
+
 `limit: 5000` ✅
 
 ### Validação 4: formatToParts presente
+
 - consultationSlots.ts ✅
 - sales.ts ✅
 
 ### Validação 5: Compilação TypeScript
+
 Sem erros ✅
 
 ### Validação 6: Nenhum arquivo frontend alterado
+
 Zero arquivos em client/ ✅
 
 ---
 
 ## 📊 ESTATÍSTICAS
 
-| Métrica | Número |
-|---------|--------|
-| Arquivos alterados | 7 |
-| Definições `adminProcedure` removidas | 6 |
-| Imports consolidados | 6 |
-| Funções refatoradas `getBrazilTime()` | 2 |
-| Limite reduzido (10000→5000) | 1 |
-| Validações adicionadas | 1 |
-| Linhas removidas (código duplicado) | ~44 |
-| Linhas adicionadas | ~41 |
+| Métrica                               | Número |
+| ------------------------------------- | ------ |
+| Arquivos alterados                    | 7      |
+| Definições `adminProcedure` removidas | 6      |
+| Imports consolidados                  | 6      |
+| Funções refatoradas `getBrazilTime()` | 2      |
+| Limite reduzido (10000→5000)          | 1      |
+| Validações adicionadas                | 1      |
+| Linhas removidas (código duplicado)   | ~44    |
+| Linhas adicionadas                    | ~41    |
 
 ---
 
@@ -181,19 +211,21 @@ Esta auditoria foca exclusivamente nos três pontos críticos levantados para ga
 ## 1. Cookies e Loop de Login em Dispositivos Reais
 
 **Análise do Cenário:**
-- **Ameaça do Safari ITP:** O Safari bloqueia cookies *cross-site* (third-party) por padrão
+
+- **Ameaça do Safari ITP:** O Safari bloqueia cookies _cross-site_ (third-party) por padrão
 - **Nossa Arquitetura:** Tanto o frontend quanto a API (`/api/trpc`) são servidos pelo **mesmo servidor Express** no mesmo domínio (`*.up.railway.app`)
 - **Veredito First-Party:** Os cookies gerados são classificados como **First-Party**. O Safari ITP **não bloqueia** cookies first-party
 
 **Configuração Atual (`cookies.ts`)**:
 
-| Atributo | Valor | Justificativa |
-| :--- | :--- | :--- |
-| `httpOnly` | `true` | Protege contra XSS |
-| `secure` | `true` | Exige HTTPS garantido pelo Railway |
+| Atributo   | Valor   | Justificativa                          |
+| :--------- | :------ | :------------------------------------- |
+| `httpOnly` | `true`  | Protege contra XSS                     |
+| `secure`   | `true`  | Exige HTTPS garantido pelo Railway     |
 | `sameSite` | `"lax"` | Padrão seguro para cookies first-party |
 
 **Respostas às Perguntas Específicas:**
+
 - **O `sameSite` e `secure` estão corretos?** Sim. É a combinação ideal para aplicações na mesma origem
 - **O cookie persiste no iOS Safari?** Sim. Por ser first-party, Safari não o bloqueia
 - **Android com economia de dados?** Sim. O modo não altera ou remove cookies HTTP
@@ -203,15 +235,18 @@ Esta auditoria foca exclusivamente nos três pontos críticos levantados para ga
 ## 2. Celulares Antigos e Internet Ruim
 
 **Análise do Bundle e Cache:**
+
 - Bundle otimizado no `vite.config.ts` com code splitting
 - Cache implementado: `Cache-Control: max-age=1y, immutable` aos assets com hash
 
 **Timeouts e Resiliência (tRPC e React Query):**
+
 - **Timeout do tRPC**: Fetch nativa sem timeout rígido (esperado)
 - **Retry do React Query**: Configurado para tentar 1 vez em caso de falha de rede
 - **Feedback Visual**: Spinner nos botões de ação garante feedback ao usuário
 
 **Service Worker e PWA:**
+
 - Manifest e SW implementados
 - **Estado**: SW configurado **exclusivamente para Web Push**
 - **Limitação**: Sem cache offline
@@ -221,18 +256,21 @@ Esta auditoria foca exclusivamente nos três pontos críticos levantados para ga
 ## 3. Teste de Fluxo Completo em Dispositivo Real
 
 ### Cenário 1: Login e Persistência
+
 - **Ação:** Login como Vendedor
 - **Resultado:** Autenticação bem-sucedida. Cookie `SESSION` com `HttpOnly` e `Secure` retornado
 - **Ação:** Fechar aba, abrir nova aba e acessar URL
 - **Resultado:** Usuário entra direto no painel `/venda`. Cookie foi enviado corretamente
 
 ### Cenário 2: Criar Venda em Rede Lenta
+
 - **Ação:** Preencher formulário com 3G simulado
 - **Resultado:** Botão desabilitado com spinner. Interface não congela
 - **Tempo**: ~8 segundos para completar (upload de imagem)
 - **Finalização:** Toast de sucesso, formulário limpo
 
 ### Cenário 3: Troca de Abas (Consultora)
+
 - **Ação:** Carregar aba "Pendentes", minimizar navegador por 2 minutos
 - **Resultado:** Tela volta como estava
 - **Background reload:** React Query faz re-fetch silencioso (staleTime: 30s)
@@ -284,19 +322,23 @@ Foram encontrados **19 problemas** no total. **15 foram corrigidos** com altera�
 ## Detalhamento das Alterações
 
 ### 1. `scripts/create-admin.mjs` — Credenciais Hardcoded
+
 - **Antes:** Username e senha escritos no código-fonte
 - **Depois:** Lê de variáveis de ambiente com validação
 - **Impacto:** Zero em funcionário existentes; novas contas requerem env vars
 
 ### 2. `server/db.ts` — SQL LIKE Injection + Otimização de Cleanup
+
 - **LIKE**: Caracteres especiais `%`, `_`, `\` agora são escapados
 - **Cleanup**: Loop N+1 substituído por single subquery UPDATE
 
 ### 3. `server/routers/consultora.ts` — SQL LIKE Injection + Bug undefined vs null
+
 - **LIKE**: Mesmo escaping aplicado em 3 instâncias
 - **undefined → null**: `completedAt` e `writtenAt` agora são corretamente limpos ao reverter status
 
 ### 4. `server/routers/auth.ts` — Múltiplas Correções
+
 - Filtro `deletedAt IS NULL` no login
 - Logs sanitizados (sem exposição de usernames)
 - Senha mínima: 6 → 8 caracteres
@@ -304,18 +346,23 @@ Foram encontrados **19 problemas** no total. **15 foram corrigidos** com altera�
 - Admin não pode se auto-excluir
 
 ### 5. `server/routers/consultationSlots.ts` — Restauração Incompleta
+
 - Ao restaurar slot: `cancelReason` agora é corretamente limpo
 
 ### 6. `server/jobs/reportsJob.ts` — XSS em Templates de Email
+
 - HTML escape adicionado para nomes de clientes, vendedores, produtos
 
 ### 7. `server/_core/index.ts` — Exposição de Informação no Health Check
+
 - Erro logado no console, mas resposta HTTP retorna mensagem genérica
 
 ### 8. `server/storage.ts` — S3Client Recriado a Cada Upload
+
 - S3Client agora é singleton (criado uma vez, reutilizado)
 
 ### 9. `server/routers/sales.ts` — Comentário Desatualizado
+
 - MySQL → PostgreSQL (correção textual)
 
 ---
@@ -328,4 +375,4 @@ Foram encontrados **19 problemas** no total. **15 foram corrigidos** com altera�
 
 ---
 
-*Auditorias compiladas em 27/03/2026*
+_Auditorias compiladas em 27/03/2026_

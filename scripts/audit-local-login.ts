@@ -6,16 +6,22 @@ import { users } from "../drizzle/schema";
 import { getLocalLoginHealth } from "../server/_core/localLoginHealth";
 
 async function run() {
-  const connectionString = process.env.RAILWAY_DATABASE_URL || process.env.DATABASE_URL;
+  const connectionString =
+    process.env.RAILWAY_DATABASE_URL || process.env.DATABASE_URL;
 
   if (!connectionString) {
-    console.error("Banco de dados indisponível. Defina RAILWAY_DATABASE_URL ou DATABASE_URL.");
+    console.error(
+      "Banco de dados indisponível. Defina RAILWAY_DATABASE_URL ou DATABASE_URL."
+    );
     process.exit(1);
   }
 
   const pool = new Pool({
     connectionString,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : undefined,
     connectionTimeoutMillis: 10000,
   });
 
@@ -36,7 +42,7 @@ async function run() {
       .orderBy(asc(users.name));
 
     const inconsistentUsers = rows
-      .map((user) => ({
+      .map(user => ({
         id: user.id,
         name: user.name,
         username: user.username,
@@ -49,7 +55,7 @@ async function run() {
           passwordHash: user.passwordHash,
         }),
       }))
-      .filter((user) => user.localLoginHealth !== "ok");
+      .filter(user => user.localLoginHealth !== "ok");
 
     if (inconsistentUsers.length === 0) {
       console.log("Nenhuma conta inconsistente encontrada.");
@@ -57,7 +63,7 @@ async function run() {
     }
 
     console.table(
-      inconsistentUsers.map((user) => ({
+      inconsistentUsers.map(user => ({
         id: user.id,
         name: user.name ?? "",
         username: user.username ?? "",
@@ -65,14 +71,14 @@ async function run() {
         active: user.active,
         localLoginHealth: user.localLoginHealth,
         localLoginMessage: user.localLoginMessage,
-      })),
+      }))
     );
   } finally {
     await pool.end();
   }
 }
 
-run().catch((error) => {
+run().catch(error => {
   console.error("Falha na auditoria de login local:", error);
   process.exit(1);
 });

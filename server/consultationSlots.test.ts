@@ -159,7 +159,7 @@ describe("consultationSlots.cancel (permissÃ£o)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|nÃ£o encontrado/i,
+      /NOT_FOUND|encontrado/i,
     );
   });
 });
@@ -182,7 +182,7 @@ describe("consultationSlots.restore (permissÃ£o)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|nÃ£o encontrado/i,
+      /NOT_FOUND|encontrado/i,
     );
   });
 });
@@ -205,7 +205,7 @@ describe("consultationSlots.deleteCancelled (permissÃ£o)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
-      /NOT_FOUND|nÃ£o encontrado/i,
+      /NOT_FOUND|encontrado/i,
     );
   });
 });

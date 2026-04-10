@@ -7,6 +7,7 @@
 ## Fundação do Sistema
 
 ### Banco de Dados
+
 - [x] Schema: tabela users (com role vendedor/admin)
 - [x] Schema: tabela products (trabalhos espirituais)
 - [x] Schema: tabela sales (vendas com todos os campos)
@@ -15,6 +16,7 @@
 - [x] Executar migration SQL
 
 ### Backend (tRPC Routers)
+
 - [x] Router: auth (me, logout)
 - [x] Router: users (listar, criar, editar, remover — admin)
 - [x] Router: products (listar, criar, editar, remover — admin)
@@ -26,18 +28,21 @@
 - [x] Envio automático de relatórios por email (diário, semanal, mensal)
 
 ### Frontend — Layout e Design
+
 - [x] Design system: cores douradas, tipografia Playfair Display, tema elegante
 - [x] DashboardLayout com sidebar adaptada por role
 - [x] Página de login/autenticação
 - [x] Roteamento por role (vendedor vs admin) com AuthGuard
 
 ### Frontend — Vendedor
+
 - [x] Formulário de nova venda
 - [x] Upload de comprovante (PDF/imagem, máx 5MB, drag-and-drop)
 - [x] Confirmação visual de venda registrada
 - [x] Histórico de vendas do vendedor logado
 
 ### Frontend — Administrador
+
 - [x] Dashboard com métricas principais (cards de totais)
 - [x] Gráfico de vendas por mês (Recharts)
 - [x] Tabela de todas as vendas com filtros (data, vendedor, produto)
@@ -49,6 +54,7 @@
 - [x] Página de configurações
 
 ### Testes e Deploy
+
 - [x] Testes unitários dos routers principais (13 testes passando)
 - [x] Verificação de controle de acesso por role
 - [x] Deploy no Railway
@@ -118,10 +124,12 @@ Status de trabalhos em 3 etapas, com regra de prazo em dias úteis.
 - [x] Painel Funcionários: botão "Novo Admin" para criar outros administradores
 
 ### Segurança e Controle de Acesso
+
 - [x] Frontend: guard de rota `/admin` bloqueia vendedor e consultora com redirecionamento imediato
 - [x] Backend: `adminProcedure` revisada em todos os routers (products, users, reports, sales admin)
 
 ### Gestão de Vendas (Admin)
+
 - [x] Botão "Editar" venda — altera qualquer campo
 - [x] Botão "Excluir" venda — com confirmação
 - [x] Botão "Exportar para CSV" na página Todas as Vendas
@@ -132,11 +140,13 @@ Status de trabalhos em 3 etapas, com regra de prazo em dias úteis.
 ## Responsividade Mobile
 
 ### Fundação Mobile
+
 - [x] DashboardLayout: sidebar como menu hamburguer no mobile
 - [x] Formulário de nova venda: otimizado para celular (inputs grandes, teclado numérico, UX simples)
 - [x] Painel admin: dashboard, vendas, produtos e vendedores responsivos no mobile
 
 ### Varredura Mobile do Painel Admin (uso emergencial)
+
 - [x] Edição de vendas (modal) no celular
 - [x] Tabela de vendas no celular (scroll horizontal ou layout adaptado)
 - [x] Gestão de funcionários no celular (edição inline, reset senha)
@@ -169,6 +179,7 @@ Sistema de agendamento de horários vinculado ao trabalho "Consulta Cartas".
 - [x] `listAll`: ocultar slots não vendidos que já passaram (mantém vendidos no histórico)
 
 ### Sistema de Status de Consultas (pendente / realizada / cancelada)
+
 - [x] Schema: campo `status` na tabela `consultation_slots`
 - [x] Backend: lógica automática +50min para marcar como realizada nas queries
 - [x] Backend: procedures cancelar (consultora e ADM), restaurar (só ADM), listCancelled
@@ -178,6 +189,7 @@ Sistema de agendamento de horários vinculado ao trabalho "Consulta Cartas".
 - [x] Testes: 28 testes passando (cobertura completa de consultationSlots)
 
 ### Motivo de Cancelamento
+
 - [x] Migration: campo `cancelReason` (texto opcional) na tabela `consultation_slots`
 - [x] Backend: `cancelReason` incluído no procedure cancel
 - [x] Frontend ADM e Consultora: campo de motivo no modal de confirmação de cancelamento
@@ -223,6 +235,7 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Testes: 32 testes passando
 
 ### Filtros e UX dos Cards
+
 - [x] Filtro por tipo de trabalho (chips dinâmicos) nas 3 abas — mostra apenas tipos presentes naquela aba
 - [x] ADM Trabalhos: botão para alterar o vendedor de uma venda (select com funcionários ativos)
 - [x] Backend: procedures `updateSeller` + `listActiveSellers` — inclui todos os roles ativos (vendedor, consultora, admin)
@@ -258,6 +271,7 @@ Categoria definida no momento da venda, não no cadastro do produto.
 ## Performance e Estabilidade
 
 ### Otimizações de Query e Conexão
+
 - [x] Pool de conexões MySQL: `connectionLimit 20`, `connectTimeout 10s`, `idleTimeout 60s`
 - [x] `QueryClient` global: `staleTime: 30s`, `refetchOnWindowFocus: false`, retry inteligente (1x em erros de rede, 0x em 4xx/5xx)
 - [x] `trpc.auth.me`: `staleTime: 5min` no `useAuth` — instâncias simultâneas compartilham 1 request
@@ -266,12 +280,14 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] `worksSummary`: retorna toWrite + pending em paralelo (`Promise.all`) para o Dashboard ADM
 
 ### Eliminação de Polling Agressivo
+
 - [x] Identificados e removidos: `refetchInterval` no Dashboard ADM (60s), na Consultora (30s) e nas páginas de Alertas (5min)
 - [x] Substituídos por `staleTime` — dados ficam frescos por 2–3min sem polling automático
 - [x] `webpush.ts`: imports estáticos e envio paralelo com `Promise.allSettled`
 - [x] Bug de compilação: caracteres unicode box-drawing (`─`) no `consultora.ts` causavam erro no esbuild
 
 ### Correção de Bundle e Tela Branca
+
 - [x] `React.lazy()` aplicado em todas as páginas do `App.tsx` (code splitting por rota)
 - [x] Import de XLSX convertido para dynamic import no `Relatorios.tsx`
 - [x] `manualChunks` no `vite.config.ts`: react-core, trpc-query, radix-ui, charts, exports
@@ -279,6 +295,7 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Bundle inicial: de 1,9 MB para 114 kB (redução de 94%)
 
 ### Correção de Loop Infinito de Queries (Dashboard ADM)
+
 - [x] `currentYear` e `{ limit: 8 }` movidos para constantes fora do componente (inputs instáveis causavam re-renders)
 - [x] `summaryInput` estabilizado com `useMemo` para não disparar re-fetch ao trocar de aba
 - [x] Varredura completa de inputs instáveis em Vendas, Relatórios, Funcionários e Consultora

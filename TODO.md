@@ -21,7 +21,7 @@
 - **Painel ADM (Desktop First, Mobile Ready):** O ADM é usado 99% do tempo em desktop — deve ser otimizado para telas grandes (layout amplo, tabelas completas, colunas lado a lado). A responsividade mobile deve ser mantida para uso emergencial.
 - **Performance Mobile (Consultora e Vendedor):** Vendedoras e consultoras acessam pelo celular próprio, frequentemente com internet móvel limitada (3G/4G fraco). Qualquer regressão de performance nessas telas impacta diretamente o trabalho delas. Ver seção ⚡ Regras de Performance.
 - **Notificações e Alertas:** O botão de notificação (PushNotificationButton) e a aba "Alertas" aparecem **apenas** nos painéis ADM e Consultora. O painel do Vendedor é estritamente focado em "Nova Venda" e "Minhas Vendas".
-- **Identidade Visual:** O nome oficial é **"Mundo Da Magia LTDA"** (tela de login, cabeçalho e todo o sistema). Tipografia *Playfair Display* para títulos, paleta elegante com suporte a múltiplos temas por empresa no ADM.
+- **Identidade Visual:** O nome oficial é **"Mundo Da Magia LTDA"** (tela de login, cabeçalho e todo o sistema). Tipografia _Playfair Display_ para títulos, paleta elegante com suporte a múltiplos temas por empresa no ADM.
 - **Efeitos Visuais:** Animações (framer-motion) são permitidas **apenas no ADM**. Nos painéis de Vendedora e Consultora use CSS simples ou nada — cada KB e cada ms de render importam.
 
 ### 3. Regras de Negócio e Arquitetura
@@ -45,11 +45,11 @@
 
 Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versão atual em `client/src/pages/admin/Configuracoes.tsx` e atualize de acordo:
 
-| Tipo de mudança | Incremento | Exemplo (partindo de 2.3.0) |
-|---|---|---|
-| Pequena (fix, ajuste visual, texto) | `+0.0.1` | 2.3.0 → 2.3.1 |
-| Média (nova feature, melhoria relevante) | `+0.1.0` | 2.3.0 → 2.4.0 |
-| Grande (novo sistema, refactor estrutural) | `+1.0.0` | 2.3.0 → 3.0.0 |
+| Tipo de mudança                            | Incremento | Exemplo (partindo de 2.3.0) |
+| ------------------------------------------ | ---------- | --------------------------- |
+| Pequena (fix, ajuste visual, texto)        | `+0.0.1`   | 2.3.0 → 2.3.1               |
+| Média (nova feature, melhoria relevante)   | `+0.1.0`   | 2.3.0 → 2.4.0               |
+| Grande (novo sistema, refactor estrutural) | `+1.0.0`   | 2.3.0 → 3.0.0               |
 
 > A versão atual está sempre em `client/src/pages/admin/Configuracoes.tsx` — não é mantida aqui para evitar desatualização.
 
@@ -57,14 +57,14 @@ Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versã
 
 ## 🏗️ Arquitetura & Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Frontend | React + Vite + TailwindCSS + shadcn/ui |
-| Backend | Express + tRPC (type-safe end-to-end) |
-| Banco | PostgreSQL (Railway) via Drizzle ORM |
-| Storage | Cloudflare R2 (S3-compatible) — plano free: 10GB |
-| Auth | JWT + sessionVersion (invalidação forçada) |
-| Deploy | Railway — branch `main` = produção automática |
+| Camada   | Tecnologia                                       |
+| -------- | ------------------------------------------------ |
+| Frontend | React + Vite + TailwindCSS + shadcn/ui           |
+| Backend  | Express + tRPC (type-safe end-to-end)            |
+| Banco    | PostgreSQL (Railway) via Drizzle ORM             |
+| Storage  | Cloudflare R2 (S3-compatible) — plano free: 10GB |
+| Auth     | JWT + sessionVersion (invalidação forçada)       |
+| Deploy   | Railway — branch `main` = produção automática    |
 
 **Migrations:** não usar `drizzle-kit push` em produção — usar `ensureXxxColumns()` no startup (`server/db.ts`) com `ALTER TABLE IF NOT EXISTS`. Padrão já estabelecido para `isSystem` e `photoColumns`. Nunca adicionar Pre-deploy Command de migration no Railway.
 
@@ -75,6 +75,7 @@ Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versã
 > **Contexto:** Vendedoras e consultoras acessam o sistema pelo celular próprio, frequentemente com internet móvel limitada (3G/4G fraco). Qualquer regressão de performance nessas telas impacta diretamente o trabalho delas.
 
 ### Painéis prioritários (do mais crítico ao menos crítico)
+
 1. `NovaVenda.tsx` — vendedora registra venda no celular, muitas vezes em campo
 2. `Consultora.tsx` — consultora consulta trabalhos pendentes pelo celular
 3. `admin/*` — ADM geralmente acessa via desktop/Wi-Fi, menor criticidade
@@ -89,12 +90,14 @@ Ao finalizar alterações, avalie o peso das mudanças feitas, consulte a versã
 - **Não adicionar imagens sem dimensões fixas** — causa layout shift (CLS) perceptível em mobile
 
 ### O que é permitido no ADM (menor criticidade)
+
 - Animações com framer-motion ✓
 - Modais complexos com múltiplos estados ✓
 - Tabelas com muitos dados e filtros ✓
 - Dependências extras de visualização ✓
 
 ### Checklist antes de qualquer PR que toque em `NovaVenda.tsx` ou `Consultora.tsx`
+
 - [ ] A mudança adiciona alguma dependência nova ao bundle?
 - [ ] Há novas chamadas de API no carregamento inicial?
 - [ ] Há animações ou transições adicionadas?

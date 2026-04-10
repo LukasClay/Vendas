@@ -9,6 +9,6 @@ const child = spawn("tsx", ["watch", "server/_core/index.ts"], {
   },
 });
 
-child.on("exit", (code) => {
+child.on("exit", code => {
   process.exit(code ?? 0);
 });

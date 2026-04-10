@@ -5,6 +5,7 @@ Documentação de guias, scripts de teste e configurações.
 ---
 
 ## 📑 Índice
+
 1. [Guia de Configuração do Storage](#guia-de-configuração-do-storage)
 2. [Script de Teste v1.9.0](#script-de-teste-v190)
 
@@ -58,6 +59,7 @@ Crie uma "senha" para o Railway fazer upload das imagens.
 6. **Create API Token**
 
 **⚠️ NÃO feche a tela!** Você precisa copiar:
+
 - **Access Key ID** → `S3_ACCESS_KEY`
 - **Secret Access Key** → `S3_SECRET_KEY`
 - **Endpoint for S3 Clients** → `S3_ENDPOINT` (termina em `.r2.cloudflarestorage.com`)
@@ -71,12 +73,12 @@ Crie uma "senha" para o Railway fazer upload das imagens.
 3. Aba **Variables**
 4. Adicione as 5 variáveis:
 
-| Nome | O que colocar |
-| :--- | :--- |
-| `S3_ENDPOINT` | URL "Endpoint for S3 Clients" do Passo 3 |
-| `S3_BUCKET` | Nome do bucket (ex: `vendas-magia-comprovantes`) |
-| `S3_ACCESS_KEY` | "Access Key ID" do Passo 3 |
-| `S3_SECRET_KEY` | "Secret Access Key" do Passo 3 |
+| Nome            | O que colocar                                            |
+| :-------------- | :------------------------------------------------------- |
+| `S3_ENDPOINT`   | URL "Endpoint for S3 Clients" do Passo 3                 |
+| `S3_BUCKET`     | Nome do bucket (ex: `vendas-magia-comprovantes`)         |
+| `S3_ACCESS_KEY` | "Access Key ID" do Passo 3                               |
+| `S3_SECRET_KEY` | "Secret Access Key" do Passo 3                           |
 | `S3_PUBLIC_URL` | URL pública do Passo 2 (ex: `https://pub-xxxxxx.r2.dev`) |
 
 ---
@@ -146,8 +148,8 @@ Para validar as novas funcionalidades e melhorias de UI/UX do Painel ADM.
 
 ## 🐛 Relatório de Erros
 
-*Em caso de qualquer comportamento inesperado, por favor, reporte!*
+_Em caso de qualquer comportamento inesperado, por favor, reporte!_
 
 ---
 
-*Consolidação de Guias e Documentação em 27/03/2026*
+_Consolidação de Guias e Documentação em 27/03/2026_
