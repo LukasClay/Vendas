@@ -1,6 +1,57 @@
-import { describe, it, expect } from "vitest";
-import { appRouter } from "./routers";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
+
+const mocks = vi.hoisted(() => ({
+  getDb: vi.fn(),
+  withRetry: vi.fn(),
+  notifyOwner: vi.fn(),
+  queryResults: [] as unknown[],
+}));
+
+function nextQueryResult() {
+  return mocks.queryResults.shift() ?? [];
+}
+
+function createDbMock() {
+  const selectBuilder: any = {
+    from: vi.fn(() => selectBuilder),
+    leftJoin: vi.fn(() => selectBuilder),
+    where: vi.fn(() => selectBuilder),
+    orderBy: vi.fn(() => Promise.resolve(nextQueryResult())),
+    limit: vi.fn(() => Promise.resolve(nextQueryResult())),
+  };
+
+  return {
+    select: vi.fn(() => selectBuilder),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve(nextQueryResult())),
+        returning: vi.fn(() => Promise.resolve(nextQueryResult())),
+      })),
+    })),
+    delete: vi.fn(() => ({
+      where: vi.fn(() => Promise.resolve(nextQueryResult())),
+    })),
+    insert: vi.fn(() => ({
+      values: vi.fn(() => Promise.resolve(nextQueryResult())),
+    })),
+  };
+}
+
+vi.mock("./db", async () => {
+  const actual = await vi.importActual<typeof import("./db")>("./db");
+  return {
+    ...actual,
+    getDb: mocks.getDb,
+    withRetry: mocks.withRetry,
+  };
+});
+
+vi.mock("./_core/notification", () => ({
+  notifyOwner: mocks.notifyOwner,
+}));
+
+const { appRouter } = await import("./routers");
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -11,7 +62,7 @@ function createContext(role: "user" | "admin" | "consultora" = "user", id = 1): 
     email: `user${id}@test.com`,
     name: `Test User ${id}`,
     loginMethod: "manus",
-    role: role as "user" | "admin",
+    role: role as AuthenticatedUser["role"],
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
@@ -19,6 +70,7 @@ function createContext(role: "user" | "admin" | "consultora" = "user", id = 1): 
     phone: null,
     active: true,
   };
+
   return {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
@@ -26,111 +78,148 @@ function createContext(role: "user" | "admin" | "consultora" = "user", id = 1): 
   };
 }
 
-// ─── Testes de permissão ──────────────────────────────────────────────────────
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.queryResults.length = 0;
+  mocks.getDb.mockResolvedValue(createDbMock());
+  mocks.withRetry.mockImplementation(async (fn: () => Promise<unknown>) => await fn());
+  mocks.notifyOwner.mockResolvedValue(undefined);
+});
 
 describe("consultationSlots.listPending (permissão)", () => {
   it("permite acesso para admin", async () => {
-    const ctx = createContext("admin");
-    const caller = appRouter.createCaller(ctx);
+    mocks.queryResults.push([
+      { sold: true, status: "pendente", consultationDate: "2099-01-01", consultationTime: "10:00" },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
     const result = await caller.consultationSlots.listPending();
+
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
   });
 
   it("permite acesso para consultora", async () => {
-    const ctx = createContext("consultora");
-    const caller = appRouter.createCaller(ctx);
+    mocks.queryResults.push([
+      { sold: true, status: "pendente", consultationDate: "2099-01-01", consultationTime: "11:00" },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("consultora"));
     const result = await caller.consultationSlots.listPending();
+
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
   });
 
   it("bloqueia acesso para usuário comum", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.listPending()).rejects.toThrow();
   });
 });
 
 describe("consultationSlots.listCancelled (permissão)", () => {
   it("permite acesso para admin", async () => {
-    const ctx = createContext("admin");
-    const caller = appRouter.createCaller(ctx);
+    mocks.queryResults.push([
+      { status: "cancelada", consultationDate: "2099-01-01", consultationTime: "10:00" },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
     const result = await caller.consultationSlots.listCancelled();
+
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
   });
 
   it("permite acesso para consultora", async () => {
-    const ctx = createContext("consultora");
-    const caller = appRouter.createCaller(ctx);
+    mocks.queryResults.push([
+      { status: "cancelada", consultationDate: "2099-01-01", consultationTime: "11:00" },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("consultora"));
     const result = await caller.consultationSlots.listCancelled();
+
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
   });
 
   it("bloqueia acesso para usuário comum", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.listCancelled()).rejects.toThrow();
   });
 });
 
 describe("consultationSlots.cancel (permissão)", () => {
   it("bloqueia usuário comum de cancelar", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow();
   });
 
   it("retorna NOT_FOUND para slot inexistente (admin)", async () => {
-    const ctx = createContext("admin");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow(/NOT_FOUND|não encontrado/i);
+    mocks.queryResults.push([]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await expect(caller.consultationSlots.cancel({ id: 9999 })).rejects.toThrow(
+      /NOT_FOUND|não encontrado/i,
+    );
   });
 });
 
 describe("consultationSlots.restore (permissão)", () => {
   it("bloqueia consultora de restaurar", async () => {
-    const ctx = createContext("consultora");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(/FORBIDDEN|administradores/i);
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
+      /FORBIDDEN|administradores/i,
+    );
   });
 
   it("bloqueia usuário comum de restaurar", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow();
   });
 
   it("retorna NOT_FOUND para slot inexistente (admin)", async () => {
-    const ctx = createContext("admin");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(/NOT_FOUND|não encontrado/i);
+    mocks.queryResults.push([]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await expect(caller.consultationSlots.restore({ id: 9999 })).rejects.toThrow(
+      /NOT_FOUND|não encontrado/i,
+    );
   });
 });
 
 describe("consultationSlots.deleteCancelled (permissão)", () => {
   it("bloqueia consultora de liberar horário cancelado", async () => {
-    const ctx = createContext("consultora");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(/FORBIDDEN|administradores/i);
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
+      /FORBIDDEN|administradores/i,
+    );
   });
 
   it("bloqueia usuário comum de liberar horário cancelado", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow();
   });
 
   it("retorna NOT_FOUND para slot inexistente (admin)", async () => {
-    const ctx = createContext("admin");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(/NOT_FOUND|não encontrado/i);
+    mocks.queryResults.push([]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await expect(caller.consultationSlots.deleteCancelled({ id: 9999 })).rejects.toThrow(
+      /NOT_FOUND|não encontrado/i,
+    );
   });
 });
 
 describe("consultationSlots.listAvailable (público)", () => {
   it("retorna lista de slots disponíveis para qualquer usuário autenticado", async () => {
-    const ctx = createContext("user");
-    const caller = appRouter.createCaller(ctx);
+    mocks.queryResults.push([
+      { sold: false, status: "pendente", consultationDate: "2099-01-01", consultationTime: "15:00" },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("user"));
     const result = await caller.consultationSlots.listAvailable();
+
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
   });
 });
