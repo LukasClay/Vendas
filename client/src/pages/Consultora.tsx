@@ -40,6 +40,13 @@ type ClientPhoto = {
   slot: ConsultoraPhotoSlot;
 };
 
+function hasClientPhotos(item: {
+  photo1Url?: string | null;
+  photo2Url?: string | null;
+}): boolean {
+  return Boolean(item.photo1Url || item.photo2Url);
+}
+
 function getClientPhotos(
   photo1Url?: string | null,
   photo2Url?: string | null
@@ -1237,6 +1244,7 @@ export default function ConsultoraPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -1328,9 +1336,17 @@ export default function ConsultoraPage() {
         i => (i.productCategory ?? "individual") === selectedCategory
       )
     : activeItems;
+  const photoFilteredItems = onlyWithPhotos
+    ? (categoryFilteredItems as any[]).filter(hasClientPhotos)
+    : categoryFilteredItems;
+  const photoCount = (categoryFilteredItems as any[]).filter(
+    hasClientPhotos
+  ).length;
+  const shouldShowPhotoFilter =
+    activeTab !== "alertas" && (onlyWithPhotos || photoCount > 0);
   const uniqueTypes = Array.from(
     new Set(
-      (categoryFilteredItems as Array<{ productName: string }>).map(
+      (photoFilteredItems as Array<{ productName: string }>).map(
         i => i.productName
       )
     )
@@ -1343,6 +1359,7 @@ export default function ConsultoraPage() {
       result = result.filter(
         i => (i.productCategory ?? "individual") === selectedCategory
       );
+    if (onlyWithPhotos) result = result.filter(hasClientPhotos);
     if (selectedType)
       result = result.filter(i => i.productName === selectedType);
     return result;
@@ -1350,6 +1367,19 @@ export default function ConsultoraPage() {
   const filteredToWrite = applyFilters(toWriteItems);
   const filteredPending = applyFilters(pendingItems);
   const filteredDone = applyFilters(doneItems);
+
+  function getEmptyText(statusText: string, fallbackText: string): string {
+    if (selectedType && onlyWithPhotos) {
+      return `Nenhum "${selectedType}" com fotos ${statusText}`;
+    }
+    if (selectedType) return `Nenhum "${selectedType}" ${statusText}`;
+    if (onlyWithPhotos) return `Nenhum trabalho com fotos ${statusText}`;
+    return fallbackText;
+  }
+
+  function getEmptySub(fallbackSub: string): string {
+    return selectedType || onlyWithPhotos ? "Tente outro filtro" : fallbackSub;
+  }
 
   const alertCount = (alertItems as any[]).length;
   const tabs = [
@@ -1501,6 +1531,25 @@ export default function ConsultoraPage() {
             </div>
           )}
 
+        {shouldShowPhotoFilter && (
+          <div className="flex gap-2 flex-wrap mb-3">
+            <button
+              onClick={() => {
+                setOnlyWithPhotos(value => !value);
+                setSelectedType(null);
+              }}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={
+                onlyWithPhotos
+                  ? { background: "#1a7a4a", color: "white" }
+                  : { background: "#e7f4ec", color: "#1a7a4a" }
+              }
+            >
+              Somente com fotos ({photoCount})
+            </button>
+          </div>
+        )}
+
         {/* Filtro por tipo de trabalho (chips dinâmicos) */}
         {!isLoading && uniqueTypes.length > 1 && (
           <div className="flex gap-2 flex-wrap mb-3">
@@ -1513,11 +1562,11 @@ export default function ConsultoraPage() {
                   : { background: "#ddd5c4", color: "#6b5020" }
               }
             >
-              Todos ({categoryFilteredItems.length})
+              Todos ({photoFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
               const count = (
-                categoryFilteredItems as Array<{ productName: string }>
+                photoFilteredItems as Array<{ productName: string }>
               ).filter(i => i.productName === type).length;
               return (
                 <button
@@ -1584,16 +1633,11 @@ export default function ConsultoraPage() {
               (filteredToWrite.length === 0 ? (
                 <EmptyState
                   icon={<Pencil className="w-10 h-10" />}
-                  text={
-                    selectedType
-                      ? `Nenhum "${selectedType}" para escrever`
-                      : "Nenhum trabalho para escrever"
-                  }
-                  sub={
-                    selectedType
-                      ? "Tente outro filtro"
-                      : "Novos trabalhos vendidos aparecerão aqui"
-                  }
+                  text={getEmptyText(
+                    "para escrever",
+                    "Nenhum trabalho para escrever"
+                  )}
+                  sub={getEmptySub("Novos trabalhos vendidos aparecerão aqui")}
                 />
               ) : (
                 filteredToWrite.map((item: any) => (
@@ -1608,16 +1652,10 @@ export default function ConsultoraPage() {
               (filteredPending.length === 0 ? (
                 <EmptyState
                   icon={<Hourglass className="w-10 h-10" />}
-                  text={
-                    selectedType
-                      ? `Nenhum "${selectedType}" pendente`
-                      : "Nenhum trabalho pendente"
-                  }
-                  sub={
-                    selectedType
-                      ? "Tente outro filtro"
-                      : "Trabalhos marcados como escritos aparecerão aqui"
-                  }
+                  text={getEmptyText("pendente", "Nenhum trabalho pendente")}
+                  sub={getEmptySub(
+                    "Trabalhos marcados como escritos aparecerão aqui"
+                  )}
                 />
               ) : (
                 filteredPending.map((item: any) => (
@@ -1632,16 +1670,8 @@ export default function ConsultoraPage() {
               (filteredDone.length === 0 ? (
                 <EmptyState
                   icon={<BookCheck className="w-10 h-10" />}
-                  text={
-                    selectedType
-                      ? `Nenhum "${selectedType}" feito`
-                      : "Nenhum trabalho feito ainda"
-                  }
-                  sub={
-                    selectedType
-                      ? "Tente outro filtro"
-                      : "Trabalhos concluídos aparecerão aqui"
-                  }
+                  text={getEmptyText("feito", "Nenhum trabalho feito ainda")}
+                  sub={getEmptySub("Trabalhos concluídos aparecerão aqui")}
                 />
               ) : (
                 filteredDone.map((item: any) => (
