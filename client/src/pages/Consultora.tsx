@@ -36,30 +36,6 @@ function formatBirthDate(d: Date | string | null | undefined): string {
   return formatDate(d);
 }
 
-async function downloadFile(url: string, fallbackName: string) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Falha ao baixar arquivo");
-  }
-
-  const blob = await response.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const fileName =
-    decodeURIComponent(url.split("/").pop() || "").split("?")[0] ||
-    fallbackName;
-
-  try {
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
 // Hook de cópia com fallback para celulares antigos
 function useCopy() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -384,21 +360,15 @@ function ToWriteCard({
                           alt={`Foto ${i + 1}`}
                           className="w-20 h-28 object-cover rounded-xl shadow-sm"
                         />
-                        <button
-                          type="button"
+                        <a
+                          href={url!}
+                          download
                           className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
                           style={{ background: "rgba(0,0,0,0.6)" }}
-                          onClick={async e => {
-                            e.stopPropagation();
-                            try {
-                              await downloadFile(url!, `foto-${i + 1}.jpg`);
-                            } catch {
-                              toast.error("Não foi possível baixar a foto.");
-                            }
-                          }}
+                          onClick={e => e.stopPropagation()}
                         >
                           <Download className="w-3.5 h-3.5 text-white" />
-                        </button>
+                        </a>
                       </div>
                     ))}
                 </div>
@@ -879,21 +849,15 @@ function PendingCard({
                           alt={`Foto ${i + 1}`}
                           className="w-20 h-28 object-cover rounded-xl shadow-sm"
                         />
-                        <button
-                          type="button"
+                        <a
+                          href={url!}
+                          download
                           className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
                           style={{ background: "rgba(0,0,0,0.6)" }}
-                          onClick={async e => {
-                            e.stopPropagation();
-                            try {
-                              await downloadFile(url!, `foto-${i + 1}.jpg`);
-                            } catch {
-                              toast.error("Não foi possível baixar a foto.");
-                            }
-                          }}
+                          onClick={e => e.stopPropagation()}
                         >
                           <Download className="w-3.5 h-3.5 text-white" />
-                        </button>
+                        </a>
                       </div>
                     ))}
                 </div>
