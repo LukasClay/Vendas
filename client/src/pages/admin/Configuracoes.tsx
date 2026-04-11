@@ -85,13 +85,13 @@ export default function AdminConfiguracoes() {
                     className="text-sm"
                     style={{ color: "var(--muted-foreground)" }}
                   >
-                    Email
+                    Login
                   </span>
                   <span
                     className="text-sm font-medium"
                     style={{ color: "var(--foreground)" }}
                   >
-                    {user?.email || "—"}
+                    {user?.username || "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
