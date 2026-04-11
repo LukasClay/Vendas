@@ -67,7 +67,10 @@ describe("sales.update storage cleanup", () => {
     mocks.createAuditLog.mockResolvedValue(undefined);
     mocks.getSaleById.mockResolvedValue(undefined);
     mocks.updateSale.mockResolvedValue(undefined);
-    mocks.storagePut.mockResolvedValue({ key: "ignored", url: "https://cdn.test/uploaded-file" });
+    mocks.storagePut.mockResolvedValue({
+      key: "ignored",
+      url: "https://cdn.test/uploaded-file",
+    });
     mocks.storageDelete.mockResolvedValue(undefined);
   });
 
@@ -87,11 +90,11 @@ describe("sales.update storage cleanup", () => {
       expect.objectContaining({
         photo1Url: "https://cdn.test/uploaded-file",
         photo1Key: "fotos/7/fixed-id.png",
-      }),
+      })
     );
     expect(mocks.storageDelete).toHaveBeenCalledWith("fotos/old-photo.jpg");
     expect(mocks.updateSale.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.storageDelete.mock.invocationCallOrder[0],
+      mocks.storageDelete.mock.invocationCallOrder[0]
     );
   });
 
@@ -111,13 +114,15 @@ describe("sales.update storage cleanup", () => {
       expect.objectContaining({
         photo1Url: null,
         photo1Key: null,
-      }),
+      })
     );
     expect(mocks.storageDelete).toHaveBeenCalledWith("fotos/old-photo.jpg");
   });
 
   it("limpa o arquivo recém-enviado se o update do banco falhar", async () => {
-    mocks.getSaleById.mockResolvedValue({ attachmentKey: "comprovantes/old-proof.pdf" });
+    mocks.getSaleById.mockResolvedValue({
+      attachmentKey: "comprovantes/old-proof.pdf",
+    });
     mocks.updateSale.mockRejectedValue(new Error("db failed"));
 
     const caller = salesRouter.createCaller(createAdminContext());
@@ -127,10 +132,48 @@ describe("sales.update storage cleanup", () => {
         id: 12,
         attachmentBase64: Buffer.from("pdf-content").toString("base64"),
         attachmentMime: "application/pdf",
-      }),
+      })
     ).rejects.toThrow("db failed");
 
-    expect(mocks.storageDelete).toHaveBeenCalledWith("comprovantes/7/fixed-id.pdf");
-    expect(mocks.storageDelete).not.toHaveBeenCalledWith("comprovantes/old-proof.pdf");
+    expect(mocks.storageDelete).toHaveBeenCalledWith(
+      "comprovantes/7/fixed-id.pdf"
+    );
+    expect(mocks.storageDelete).not.toHaveBeenCalledWith(
+      "comprovantes/old-proof.pdf"
+    );
+  });
+
+  it("limpa uploads já concluídos se um segundo storagePut falhar antes do update", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      photo1Key: "fotos/old-photo-1.jpg",
+      photo2Key: "fotos/old-photo-2.jpg",
+    });
+    mocks.storagePut
+      .mockResolvedValueOnce({
+        key: "fotos/7/fixed-id.jpg",
+        url: "https://cdn.test/photo-1",
+      })
+      .mockRejectedValueOnce(new Error("upload failed"));
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 13,
+        photo1Base64: Buffer.from("new-photo-1").toString("base64"),
+        photo1Mime: "image/jpeg",
+        photo2Base64: Buffer.from("new-photo-2").toString("base64"),
+        photo2Mime: "image/jpeg",
+      })
+    ).rejects.toThrow("upload failed");
+
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+    expect(mocks.storageDelete).toHaveBeenCalledWith("fotos/7/fixed-id.jpg");
+    expect(mocks.storageDelete).not.toHaveBeenCalledWith(
+      "fotos/old-photo-1.jpg"
+    );
+    expect(mocks.storageDelete).not.toHaveBeenCalledWith(
+      "fotos/old-photo-2.jpg"
+    );
   });
 });

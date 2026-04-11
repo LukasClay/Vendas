@@ -33,12 +33,15 @@ export function usePushNotifications() {
     setPermission(Notification.permission as PushPermission);
 
     // Registrar service worker
-    navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-      const sub = await reg.pushManager.getSubscription();
-      setIsSubscribed(!!sub);
-    }).catch(() => {
-      setPermission("unsupported");
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(async reg => {
+        const sub = await reg.pushManager.getSubscription();
+        setIsSubscribed(!!sub);
+      })
+      .catch(() => {
+        setPermission("unsupported");
+      });
   }, []);
 
   // Solicitar permissão e se inscrever
@@ -57,7 +60,8 @@ export function usePushNotifications() {
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          .buffer as ArrayBuffer,
       });
 
       const json = sub.toJSON() as {

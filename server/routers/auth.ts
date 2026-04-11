@@ -2,8 +2,19 @@ import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { createAuditLog, createUserSession, getDb, withRetry, deleteUser } from "../db";
+import {
+  adminProcedure,
+  protectedProcedure,
+  publicProcedure,
+  router,
+} from "../_core/trpc";
+import {
+  createAuditLog,
+  createUserSession,
+  getDb,
+  withRetry,
+  deleteUser,
+} from "../db";
 import { users } from "../../drizzle/schema";
 import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { sdk } from "../_core/sdk";
@@ -27,16 +38,19 @@ const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 min
 const RATE_LIMIT_MAP_MAX_SIZE = 10_000; // Teto de segurança contra DoS
 
 // Limpeza periódica para não acumular entradas expiradas em memória
-setInterval(() => {
-  const now = Date.now();
-  const keysToDelete: string[] = [];
-  loginAttempts.forEach((entry, key) => {
-    if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-      keysToDelete.push(key);
-    }
-  });
-  keysToDelete.forEach(key => loginAttempts.delete(key));
-}, 5 * 60 * 1000); // a cada 5 min
+setInterval(
+  () => {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    loginAttempts.forEach((entry, key) => {
+      if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach(key => loginAttempts.delete(key));
+  },
+  5 * 60 * 1000
+); // a cada 5 min
 
 function checkRateLimit(ip: string, username: string): void {
   const key = `${ip}:${username.toLowerCase()}`;
@@ -72,11 +86,13 @@ function clearRateLimit(ip: string, username: string): void {
 export const ownAuthRouter = router({
   // Login com username e senha (sem email)
   login: publicProcedure
-    .input(z.object({
-      username: z.string().min(1, "Usuário obrigatório"),
-      password: z.string().min(1, "Senha obrigatória"),
-      rememberMe: z.boolean().default(false),
-    }))
+    .input(
+      z.object({
+        username: z.string().min(1, "Usuário obrigatório"),
+        password: z.string().min(1, "Senha obrigatória"),
+        rememberMe: z.boolean().default(false),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // IP seguro via trust proxy do Express
       const ip = ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown";
@@ -85,54 +101,88 @@ export const ownAuthRouter = router({
       checkRateLimit(ip, input.username);
 
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco de dados indisponível.",
+        });
 
       // Busca por username OU email (compatibilidade com contas antigas) - Usando SQL direto para busca case-insensitive
       const result = await withRetry(() =>
-        db.select().from(users).where(
-          and(
-            or(
-              sql`LOWER(${users.username}) = LOWER(${input.username})`,
-              sql`LOWER(${users.email}) = LOWER(${input.username})`
-            ),
-            isNull(users.deletedAt)
+        db
+          .select()
+          .from(users)
+          .where(
+            and(
+              or(
+                sql`LOWER(${users.username}) = LOWER(${input.username})`,
+                sql`LOWER(${users.email}) = LOWER(${input.username})`
+              ),
+              isNull(users.deletedAt)
+            )
           )
-        ).limit(1)
+          .limit(1)
       );
       const user = result[0];
 
       if (!user) {
-        console.warn(`[Login:MISS] Usuário não encontrado: "${input.username}" (ip=${ip})`);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
+        console.warn(
+          `[Login:MISS] Usuário não encontrado: "${input.username}" (ip=${ip})`
+        );
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Usuário ou senha incorretos.",
+        });
       }
 
       if (!user.passwordHash) {
-        console.warn(`[Login:NOHASH] Conta sem senha configurada (id=${user.id}, username="${user.username}")`);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
+        console.warn(
+          `[Login:NOHASH] Conta sem senha configurada (id=${user.id}, username="${user.username}")`
+        );
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Usuário ou senha incorretos.",
+        });
       }
 
       if (!user.active) {
-        console.warn(`[Login:INACTIVE] Usuário desativado (id=${user.id}, username="${user.username}")`);
-        throw new TRPCError({ code: "FORBIDDEN", message: "Usuário desativado. Entre em contato com o administrador." });
+        console.warn(
+          `[Login:INACTIVE] Usuário desativado (id=${user.id}, username="${user.username}")`
+        );
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Usuário desativado. Entre em contato com o administrador.",
+        });
       }
 
       let valid: boolean;
       try {
         valid = await bcrypt.compare(input.password, user.passwordHash);
       } catch (error) {
-        console.error(`[Login:BCRYPT_ERR] bcrypt.compare falhou (id=${user.id}, username="${user.username}"):`, error);
+        console.error(
+          `[Login:BCRYPT_ERR] bcrypt.compare falhou (id=${user.id}, username="${user.username}"):`,
+          error
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Erro interno ao validar credenciais. Contate o administrador.",
+          message:
+            "Erro interno ao validar credenciais. Contate o administrador.",
         });
       }
       if (!valid) {
-        console.warn(`[Login:WRONG_PWD] Senha incorreta (id=${user.id}, username="${user.username}", ip=${ip})`);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário ou senha incorretos." });
+        console.warn(
+          `[Login:WRONG_PWD] Senha incorreta (id=${user.id}, username="${user.username}", ip=${ip})`
+        );
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Usuário ou senha incorretos.",
+        });
       }
 
       // Login bem-sucedido: limpar contador
-      console.log(`[Login:OK] Login bem-sucedido (id=${user.id}, username="${user.username}", role=${user.role}, ip=${ip})`);
+      console.log(
+        `[Login:OK] Login bem-sucedido (id=${user.id}, username="${user.username}", role=${user.role}, ip=${ip})`
+      );
       clearRateLimit(ip, input.username);
 
       // Gera JWT de sessão usando o SDK existente
@@ -148,7 +198,10 @@ export const ownAuthRouter = router({
       );
 
       // Atualiza lastSignedIn
-      await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+      await db
+        .update(users)
+        .set({ lastSignedIn: new Date() })
+        .where(eq(users.id, user.id));
 
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, token, {
@@ -158,49 +211,83 @@ export const ownAuthRouter = router({
 
       // Registra sessão ativa (passivo — não afeta o login se falhar)
       try {
-        await createUserSession({ userId: user.id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent, expiresAt: new Date(Date.now() + expiresInMs) });
-      } catch (e) { console.error("[Session] Erro ao registrar sessão:", e); }
+        await createUserSession({
+          userId: user.id,
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+          expiresAt: new Date(Date.now() + expiresInMs),
+        });
+      } catch (e) {
+        console.error("[Session] Erro ao registrar sessão:", e);
+      }
 
       // Audit log de login
       const loginName = user.name || user.username || `Usuário #${user.id}`;
-      await createAuditLog({ userId: user.id, userName: loginName, action: "Login", details: JSON.stringify({ role: user.role, rememberMe: input.rememberMe }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
+      await createAuditLog({
+        userId: user.id,
+        userName: loginName,
+        action: "Login",
+        details: JSON.stringify({
+          role: user.role,
+          rememberMe: input.rememberMe,
+        }),
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
 
       return { success: true, role: user.role };
     }),
 
   // A2: Logout — incrementa sessionVersion para invalidar todos os JWTs anteriores
-  logout: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      const db = await getDb();
-      if (db) {
-        await db.update(users)
-          .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
-          .where(eq(users.id, ctx.user.id));
-      }
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
-      return { success: true };
-    }),
+  logout: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (db) {
+      await db
+        .update(users)
+        .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+        .where(eq(users.id, ctx.user.id));
+    }
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+    return { success: true };
+  }),
 
   // Admin cria novo funcionário (vendedor, consultora ou admin) com username e senha
   createSeller: adminProcedure
-    .input(z.object({
-      name: z.string().min(1, "Nome obrigatório"),
-      username: z.string().min(3, "Usuário deve ter no mínimo 3 caracteres").regex(/^[a-zA-Z0-9_]+$/, "Usuário só pode conter letras, números e _"),
-      password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
-      phone: z.string().optional(),
-      role: z.enum(["user", "consultora", "admin"]).default("user"),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1, "Nome obrigatório"),
+        username: z
+          .string()
+          .min(3, "Usuário deve ter no mínimo 3 caracteres")
+          .regex(
+            /^[a-zA-Z0-9_]+$/,
+            "Usuário só pode conter letras, números e _"
+          ),
+        password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+        phone: z.string().optional(),
+        role: z.enum(["user", "consultora", "admin"]).default("user"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco de dados indisponível.",
+        });
 
       // Verifica se username já existe (ignora usuários excluídos via soft delete)
-      const existing = await db.select().from(users).where(
-        and(eq(users.username, input.username), isNull(users.deletedAt))
-      ).limit(1);
+      const existing = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.username, input.username), isNull(users.deletedAt)))
+        .limit(1);
       if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "Já existe um usuário com este nome de usuário." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe um usuário com este nome de usuário.",
+        });
       }
 
       const passwordHash = await bcrypt.hash(input.password, 12);
@@ -219,31 +306,61 @@ export const ownAuthRouter = router({
         lastSignedIn: new Date(),
       });
 
-      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
-      await createAuditLog({ userId: ctx.user.id, userName: adminName, action: "Criou Funcionário", details: JSON.stringify({ name: input.name, username: input.username, role: input.role }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
+      const adminName =
+        ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({
+        userId: ctx.user.id,
+        userName: adminName,
+        action: "Criou Funcionário",
+        details: JSON.stringify({
+          name: input.name,
+          username: input.username,
+          role: input.role,
+        }),
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
 
       return { success: true };
     }),
 
   // Admin edita dados de qualquer funcionário
   updateUser: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      name: z.string().min(1).optional(),
-      username: z.string().min(3).regex(/^[a-zA-Z0-9_]+$/).optional(),
-      role: z.enum(["user", "consultora", "admin"]).optional(),
-      active: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        userId: z.number(),
+        name: z.string().min(1).optional(),
+        username: z
+          .string()
+          .min(3)
+          .regex(/^[a-zA-Z0-9_]+$/)
+          .optional(),
+        role: z.enum(["user", "consultora", "admin"]).optional(),
+        active: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       // Verifica conflito de username (apenas entre ativos e não-deletados)
       if (input.username) {
-        const existing = await db.select().from(users)
-          .where(and(eq(users.username, input.username), eq(users.active, true), isNull(users.deletedAt))).limit(1);
+        const existing = await db
+          .select()
+          .from(users)
+          .where(
+            and(
+              eq(users.username, input.username),
+              eq(users.active, true),
+              isNull(users.deletedAt)
+            )
+          )
+          .limit(1);
         if (existing.length > 0 && existing[0].id !== input.userId) {
-          throw new TRPCError({ code: "CONFLICT", message: "Este nome de usuário já está em uso." });
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Este nome de usuário já está em uso.",
+          });
         }
       }
 
@@ -255,7 +372,11 @@ export const ownAuthRouter = router({
 
       // Ao reativar: restaura username original removendo sufixo _XXXX
       if (input.active === true) {
-        const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        const user = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
         if (user.length > 0 && user[0].username) {
           const current = user[0].username;
           // Detecta sufixo _XXXX (4 hex chars adicionados na desativação)
@@ -263,12 +384,17 @@ export const ownAuthRouter = router({
           if (match) {
             const originalUsername = match[1];
             // Verifica se o username original está disponível
-            const conflict = await db.select({ id: users.id }).from(users)
-              .where(and(
-                eq(users.username, originalUsername),
-                isNull(users.deletedAt),
-                ne(users.id, input.userId)
-              )).limit(1);
+            const conflict = await db
+              .select({ id: users.id })
+              .from(users)
+              .where(
+                and(
+                  eq(users.username, originalUsername),
+                  isNull(users.deletedAt),
+                  ne(users.id, input.userId)
+                )
+              )
+              .limit(1);
             if (conflict.length === 0) {
               updateData.username = originalUsername;
             }
@@ -278,7 +404,11 @@ export const ownAuthRouter = router({
 
       // Ao desativar: renomeia username para username_XXXX (libera o username original)
       if (input.active === false) {
-        const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        const user = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
         if (user.length > 0 && user[0].username) {
           const baseUsername = user[0].username;
           // Se já for um username de desativado (contém _), não renomeia novamente
@@ -293,8 +423,11 @@ export const ownAuthRouter = router({
               newUsername = `${baseUsername}_${suffix}`;
 
               // Verifica se já existe alguém com esse username gerado
-              const existing = await db.select({ id: users.id }).from(users)
-                .where(eq(users.username, newUsername)).limit(1);
+              const existing = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.username, newUsername))
+                .limit(1);
 
               if (existing.length === 0) {
                 isUnique = true;
@@ -314,47 +447,67 @@ export const ownAuthRouter = router({
         updateData.sessionVersion = sql`${users.sessionVersion} + 1`;
       }
 
-      await db.update(users).set({
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(updateData.username !== undefined ? { username: updateData.username as string } : {}),
-        ...(input.role !== undefined ? { role: input.role } : {}),
-        ...(input.active !== undefined ? { active: input.active } : {}),
-        ...(updateData.sessionVersion !== undefined ? { sessionVersion: updateData.sessionVersion as any } : {}),
-      }).where(eq(users.id, input.userId));
-      return { success: true };
-    }),
-
-  // Admin reseta senha de qualquer funcionário
-  resetPassword: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      newPassword: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
-    }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-      const passwordHash = await bcrypt.hash(input.newPassword, 12);
-      await db.update(users)
+      await db
+        .update(users)
         .set({
-          passwordHash,
-          sessionVersion: sql`${users.sessionVersion} + 1` // Invalida tokens antigos instantaneamente
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(updateData.username !== undefined
+            ? { username: updateData.username as string }
+            : {}),
+          ...(input.role !== undefined ? { role: input.role } : {}),
+          ...(input.active !== undefined ? { active: input.active } : {}),
+          ...(updateData.sessionVersion !== undefined
+            ? { sessionVersion: updateData.sessionVersion as any }
+            : {}),
         })
         .where(eq(users.id, input.userId));
       return { success: true };
     }),
 
+  // Admin reseta senha de qualquer funcionário
+  resetPassword: adminProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        newPassword: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const passwordHash = await bcrypt.hash(input.newPassword, 12);
+      await db
+        .update(users)
+        .set({
+          passwordHash,
+          sessionVersion: sql`${users.sessionVersion} + 1`, // Invalida tokens antigos instantaneamente
+        })
+        .where(eq(users.id, input.userId));
+      return { success: true };
+    }),
 
   // Admin exclui funcionário (Soft Delete Seguro — preserva histórico de vendas)
   deleteUser: adminProcedure
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (input.userId === ctx.user.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode excluir sua própria conta." });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Você não pode excluir sua própria conta.",
+        });
       }
       await deleteUser(input.userId);
-      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
-      await createAuditLog({ userId: ctx.user.id, userName: adminName, action: "Excluiu Funcionário", details: JSON.stringify({ deletedUserId: input.userId }), ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
+      const adminName =
+        ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      await createAuditLog({
+        userId: ctx.user.id,
+        userName: adminName,
+        action: "Excluiu Funcionário",
+        details: JSON.stringify({ deletedUserId: input.userId }),
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
       return { success: true };
     }),
 });

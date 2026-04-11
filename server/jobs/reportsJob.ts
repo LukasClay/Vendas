@@ -17,25 +17,36 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
 /** Escapa HTML para prevenir XSS em templates de email */
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 /**
  * Determina o periodo do relatorio com base na frequencia.
  */
-function getReportPeriod(frequency: string): { startDate: Date; endDate: Date; label: string } {
+function getReportPeriod(frequency: string): {
+  startDate: Date;
+  endDate: Date;
+  label: string;
+} {
   const now = new Date();
   const endDate = new Date(now);
   endDate.setHours(23, 59, 59, 999);
@@ -47,7 +58,11 @@ function getReportPeriod(frequency: string): { startDate: Date; endDate: Date; l
     startDate.setHours(0, 0, 0, 0);
     const end = new Date(startDate);
     end.setHours(23, 59, 59, 999);
-    return { startDate, endDate: end, label: `Relatorio Diario - ${formatDate(startDate)}` };
+    return {
+      startDate,
+      endDate: end,
+      label: `Relatorio Diario - ${formatDate(startDate)}`,
+    };
   }
 
   if (frequency === "weekly") {
@@ -55,13 +70,20 @@ function getReportPeriod(frequency: string): { startDate: Date; endDate: Date; l
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - 7);
     startDate.setHours(0, 0, 0, 0);
-    return { startDate, endDate, label: `Relatorio Semanal - ${formatDate(startDate)} a ${formatDate(now)}` };
+    return {
+      startDate,
+      endDate,
+      label: `Relatorio Semanal - ${formatDate(startDate)} a ${formatDate(now)}`,
+    };
   }
 
   // monthly - mes anterior
   const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-  const monthName = startDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const monthName = startDate.toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
   return { startDate, endDate: end, label: `Relatorio Mensal - ${monthName}` };
 }
 
@@ -101,7 +123,9 @@ function shouldSendNow(frequency: string, lastSentAt: Date | null): boolean {
 /**
  * Busca dados de vendas do periodo e gera o HTML do relatorio.
  */
-async function generateReportHtml(frequency: string): Promise<{ html: string; subject: string } | null> {
+async function generateReportHtml(
+  frequency: string
+): Promise<{ html: string; subject: string } | null> {
   const db = await getDb();
   if (!db) return null;
 
@@ -110,24 +134,30 @@ async function generateReportHtml(frequency: string): Promise<{ html: string; su
   const endStr = endDate.toISOString().split("T")[0];
 
   // Buscar vendas do periodo
-  const periodSales = await (db.select({
-    id: sales.id,
-    clientName: sales.clientName,
-    productName: sales.productName,
-    amount: sales.amount,
-    saleDate: sales.saleDate,
-    sellerName: sales.sellerName,
-    productCategory: sales.productCategory,
-  })
+  const periodSales = await (db
+    .select({
+      id: sales.id,
+      clientName: sales.clientName,
+      productName: sales.productName,
+      amount: sales.amount,
+      saleDate: sales.saleDate,
+      sellerName: sales.sellerName,
+      productCategory: sales.productCategory,
+    })
     .from(sales)
-    .where(and(
-      isNull(sales.deletedAt),
-      sql`${sales.saleDate} >= ${startStr}`,
-      sql`${sales.saleDate} <= ${endStr}`,
-    ))
+    .where(
+      and(
+        isNull(sales.deletedAt),
+        sql`${sales.saleDate} >= ${startStr}`,
+        sql`${sales.saleDate} <= ${endStr}`
+      )
+    )
     .orderBy(desc(sales.saleDate)) as any);
 
-  const totalAmount = periodSales.reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+  const totalAmount = periodSales.reduce(
+    (sum: number, s: any) => sum + Number(s.amount || 0),
+    0
+  );
   const totalSales = periodSales.length;
 
   // Top vendedores
@@ -207,44 +237,69 @@ async function generateReportHtml(frequency: string): Promise<{ html: string; su
         </tr>
       </table>
 
-      ${topSellers.length > 0 ? `
+      ${
+        topSellers.length > 0
+          ? `
       <h2>Top Vendedores</h2>
       <table>
         <thead><tr><th>Vendedor</th><th>Vendas</th><th>Total</th></tr></thead>
         <tbody>
-          ${topSellers.map(([name, data]) => `
+          ${topSellers
+            .map(
+              ([name, data]) => `
             <tr><td>${escapeHtml(name)}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
-          `).join("")}
+          `
+            )
+            .join("")}
         </tbody>
       </table>
-      ` : ""}
+      `
+          : ""
+      }
 
-      ${topProducts.length > 0 ? `
+      ${
+        topProducts.length > 0
+          ? `
       <h2>Top Trabalhos</h2>
       <table>
         <thead><tr><th>Trabalho</th><th>Vendas</th><th>Total</th></tr></thead>
         <tbody>
-          ${topProducts.map(([name, data]) => `
+          ${topProducts
+            .map(
+              ([name, data]) => `
             <tr><td>${escapeHtml(name)}</td><td>${data.count}</td><td>${formatCurrency(data.total)}</td></tr>
-          `).join("")}
+          `
+            )
+            .join("")}
         </tbody>
       </table>
-      ` : ""}
+      `
+          : ""
+      }
 
       ${totalSales === 0 ? '<div class="no-data">Nenhuma venda registrada neste periodo.</div>' : ""}
 
-      ${periodSales.length > 0 ? `
+      ${
+        periodSales.length > 0
+          ? `
       <h2>Ultimas Vendas</h2>
       <table>
         <thead><tr><th>Cliente</th><th>Trabalho</th><th>Valor</th></tr></thead>
         <tbody>
-          ${periodSales.slice(0, 15).map((s: any) => `
+          ${periodSales
+            .slice(0, 15)
+            .map(
+              (s: any) => `
             <tr><td>${escapeHtml(s.clientName)}</td><td>${escapeHtml(s.productName)}</td><td>${formatCurrency(Number(s.amount || 0))}</td></tr>
-          `).join("")}
+          `
+            )
+            .join("")}
           ${periodSales.length > 15 ? `<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">... e mais ${periodSales.length - 15} vendas</td></tr>` : ""}
         </tbody>
       </table>
-      ` : ""}
+      `
+          : ""
+      }
     </div>
     <div class="footer">
       Mundo Da Magia LTDA - Relatorio automatico<br>
@@ -267,7 +322,9 @@ async function processSchedules() {
   if (!db) return;
 
   try {
-    const schedules = await db.select().from(reportSchedules)
+    const schedules = await db
+      .select()
+      .from(reportSchedules)
       .where(eq(reportSchedules.active, true));
 
     for (const schedule of schedules) {
@@ -284,11 +341,14 @@ async function processSchedules() {
 
       if (sent) {
         // Atualizar lastSentAt
-        await db.update(reportSchedules)
+        await db
+          .update(reportSchedules)
           .set({ lastSentAt: new Date() })
           .where(eq(reportSchedules.id, schedule.id));
 
-        console.log(`[ReportsJob] Relatorio ${schedule.frequency} enviado para ${schedule.recipientEmail}`);
+        console.log(
+          `[ReportsJob] Relatorio ${schedule.frequency} enviado para ${schedule.recipientEmail}`
+        );
       }
     }
   } catch (err) {

@@ -13,7 +13,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 interface ThemeProviderProps {
@@ -30,7 +32,8 @@ export function ThemeProvider({
     return (localStorage.getItem("mdm-theme") as Theme) || defaultTheme;
   });
 
-  const resolvedTheme: "light" | "dark" = theme === "system" ? getSystemTheme() : theme;
+  const resolvedTheme: "light" | "dark" =
+    theme === "system" ? getSystemTheme() : theme;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -40,7 +43,10 @@ export function ThemeProvider({
     // Atualizar meta theme-color para PWA
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute("content", resolvedTheme === "dark" ? "#1a1a2e" : "#fdf8f0");
+      meta.setAttribute(
+        "content",
+        resolvedTheme === "dark" ? "#1a1a2e" : "#fdf8f0"
+      );
     }
   }, [resolvedTheme]);
 
@@ -69,7 +75,9 @@ export function ThemeProvider({
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ theme, resolvedTheme, setTheme, toggleTheme }}
+    >
       {children}
     </ThemeContext.Provider>
   );

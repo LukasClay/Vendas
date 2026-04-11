@@ -62,15 +62,20 @@ export function serveStatic(app: Express) {
   // porque o Vite gera um novo hash a cada build, forçando o navegador a baixar
   // a versão nova automaticamente. Isso reduz drasticamente o tempo de carregamento
   // em celulares com internet lenta (3G/4G instável).
-  app.use("/assets", express.static(path.join(distPath, "assets"), {
-    maxAge: "1y",
-    immutable: true,
-  }));
+  app.use(
+    "/assets",
+    express.static(path.join(distPath, "assets"), {
+      maxAge: "1y",
+      immutable: true,
+    })
+  );
 
   // Demais arquivos estáticos (favicon, manifest, etc.) com cache curto
-  app.use(express.static(distPath, {
-    maxAge: "1h",
-  }));
+  app.use(
+    express.static(distPath, {
+      maxAge: "1h",
+    })
+  );
 
   // fall through to index.html if the file doesn't exist
   // index.html nunca deve ser cacheado para garantir que o navegador

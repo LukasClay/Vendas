@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -20,7 +20,12 @@ const queryClient = new QueryClient({
         if (error instanceof TRPCClientError) {
           const code = error.data?.code;
           // Não retentar em erros de autenticação ou validação
-          if (code === "UNAUTHORIZED" || code === "FORBIDDEN" || code === "BAD_REQUEST") return false;
+          if (
+            code === "UNAUTHORIZED" ||
+            code === "FORBIDDEN" ||
+            code === "BAD_REQUEST"
+          )
+            return false;
         }
         return failureCount < 1;
       },
@@ -33,7 +38,13 @@ const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         if (error instanceof TRPCClientError) {
           const code = error.data?.code;
-          if (code === "UNAUTHORIZED" || code === "FORBIDDEN" || code === "BAD_REQUEST" || code === "NOT_FOUND") return false;
+          if (
+            code === "UNAUTHORIZED" ||
+            code === "FORBIDDEN" ||
+            code === "BAD_REQUEST" ||
+            code === "NOT_FOUND"
+          )
+            return false;
         }
         return failureCount < 1;
       },
@@ -70,7 +81,7 @@ queryClient.getMutationCache().subscribe(event => {
 });
 
 // Auto-reload quando um deploy novo invalida os chunks JS cacheados
-window.addEventListener("error", (event) => {
+window.addEventListener("error", event => {
   if (
     event.message?.includes("Failed to fetch dynamically imported module") ||
     event.message?.includes("Importing a module script failed")
@@ -86,7 +97,7 @@ window.addEventListener("error", (event) => {
   }
 });
 
-window.addEventListener("unhandledrejection", (event) => {
+window.addEventListener("unhandledrejection", event => {
   const msg = event.reason?.message || String(event.reason);
   if (
     msg.includes("Failed to fetch dynamically imported module") ||

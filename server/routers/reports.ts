@@ -20,20 +20,25 @@ import { adminProcedure, router } from "../_core/trpc";
 
 export const reportsRouter = router({
   summary: adminProcedure
-    .input(z.object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const sd = input?.startDate ? new Date(input.startDate) : undefined;
       const ed = input?.endDate ? new Date(input.endDate) : undefined;
-      const [summary, topSellers, topClients, topProducts, summaryByCompany] = await Promise.all([
-        getReportSummary(sd, ed),
-        getTopSellers(sd, ed),
-        getTopClients(sd, ed),
-        getTopProducts(sd, ed),
-        getReportSummaryByCompany(sd, ed),
-      ]);
+      const [summary, topSellers, topClients, topProducts, summaryByCompany] =
+        await Promise.all([
+          getReportSummary(sd, ed),
+          getTopSellers(sd, ed),
+          getTopClients(sd, ed),
+          getTopProducts(sd, ed),
+          getReportSummaryByCompany(sd, ed),
+        ]);
       return { summary, topSellers, topClients, topProducts, summaryByCompany };
     }),
 
@@ -43,10 +48,9 @@ export const reportsRouter = router({
       return getSalesByMonth(input.year);
     }),
 
-  salesLast7Days: adminProcedure
-    .query(async () => {
-      return getSalesLast7Days();
-    }),
+  salesLast7Days: adminProcedure.query(async () => {
+    return getSalesLast7Days();
+  }),
 
   salesByMonthByCompany: adminProcedure
     .input(z.object({ year: z.number() }))
@@ -55,11 +59,13 @@ export const reportsRouter = router({
     }),
 
   exportData: adminProcedure
-    .input(z.object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      sellerId: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        sellerId: z.number().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const salesData = await getSales({
         startDate: input.startDate ? new Date(input.startDate) : undefined,
@@ -71,7 +77,8 @@ export const reportsRouter = router({
       if (salesData.length >= 5000) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "A exportação retornou 5.000+ registros. Refine os filtros de data ou vendedor para no máximo 5.000 registros por exportação.",
+          message:
+            "A exportação retornou 5.000+ registros. Refine os filtros de data ou vendedor para no máximo 5.000 registros por exportação.",
         });
       }
 
@@ -84,21 +91,29 @@ export const reportsRouter = router({
   }),
 
   createSchedule: adminProcedure
-    .input(z.object({
-      frequency: z.enum(["daily", "weekly", "monthly"]),
-      recipientEmail: z.string().email("Email inválido"),
-    }))
+    .input(
+      z.object({
+        frequency: z.enum(["daily", "weekly", "monthly"]),
+        recipientEmail: z.string().email("Email inválido"),
+      })
+    )
     .mutation(async ({ input }) => {
-      await createReportSchedule({ frequency: input.frequency, recipientEmail: input.recipientEmail, active: true });
+      await createReportSchedule({
+        frequency: input.frequency,
+        recipientEmail: input.recipientEmail,
+        active: true,
+      });
       return { success: true };
     }),
 
   updateSchedule: adminProcedure
-    .input(z.object({
-      id: z.number(),
-      active: z.boolean().optional(),
-      recipientEmail: z.string().email().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        active: z.boolean().optional(),
+        recipientEmail: z.string().email().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
       await updateReportSchedule(id, data);
@@ -116,7 +131,11 @@ export const reportsRouter = router({
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
       if (!isEmailConfigured()) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Servico de email nao configurado. Verifique a variavel RESEND_API_KEY." });
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Servico de email nao configurado. Verifique a variavel RESEND_API_KEY.",
+        });
       }
       const sent = await sendEmail({
         to: input.email,
@@ -143,7 +162,11 @@ export const reportsRouter = router({
 </body>
 </html>`,
       });
-      if (!sent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar email. Verifique os logs do servidor." });
+      if (!sent)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Falha ao enviar email. Verifique os logs do servidor.",
+        });
       return { success: true };
     }),
 });

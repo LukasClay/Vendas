@@ -27,8 +27,12 @@ function getBrazilTime(): Date {
 
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? "0";
   return new Date(
-    +get("year"), +get("month") - 1, +get("day"),
-    +get("hour"), +get("minute"), +get("second")
+    +get("year"),
+    +get("month") - 1,
+    +get("day"),
+    +get("hour"),
+    +get("minute"),
+    +get("second")
   );
 }
 
@@ -62,7 +66,9 @@ function effectiveStatus(slot: {
   if (slot.status === "cancelada") return "cancelada";
 
   // Monta datetime do slot no fuso de São Paulo (servidor roda em UTC no Railway)
-  const slotDatetime = new Date(`${slot.consultationDate}T${slot.consultationTime}:00`);
+  const slotDatetime = new Date(
+    `${slot.consultationDate}T${slot.consultationTime}:00`
+  );
   const now = getBrazilTime();
   const diffMs = now.getTime() - slotDatetime.getTime();
   const diffMinutes = diffMs / 60000;
@@ -72,7 +78,11 @@ function effectiveStatus(slot: {
 }
 
 // Campos comuns retornados nas queries com JOIN
-const slotFields = (cs: typeof consultationSlots, s: typeof sales, u: typeof users) => ({
+const slotFields = (
+  cs: typeof consultationSlots,
+  s: typeof sales,
+  u: typeof users
+) => ({
   id: cs.id,
   consultationDate: cs.consultationDate,
   consultationTime: cs.consultationTime,
@@ -96,17 +106,21 @@ const slotFields = (cs: typeof consultationSlots, s: typeof sales, u: typeof use
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const consultationSlotsRouter = router({
-
   // Lista horários disponíveis (não vendidos, não cancelados, data+hora >= agora) — para o formulário de venda
   listAvailable: protectedProcedure.query(async () => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível.",
+      });
 
     const today = todayStr();
     const nowTime = nowTimeStr();
 
     const rows = await withRetry(() =>
-      db.select()
+      db
+        .select()
         .from(consultationSlots)
         .where(
           and(
@@ -115,7 +129,10 @@ export const consultationSlotsRouter = router({
             gte(consultationSlots.consultationDate, today as any)
           )
         )
-        .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
+        .orderBy(
+          asc(consultationSlots.consultationDate),
+          asc(consultationSlots.consultationTime)
+        )
     );
 
     // Filtra no JS: remove slots de hoje cujo horário já passou
@@ -133,18 +150,26 @@ export const consultationSlotsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível.",
+      });
 
     const today = todayStr();
     const nowTime = nowTimeStr();
 
     const rows = await withRetry(() =>
-      db.select(slotFields(consultationSlots, sales, users))
+      db
+        .select(slotFields(consultationSlots, sales, users))
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
         .leftJoin(users, eq(sales.sellerId, users.id))
         .where(ne(consultationSlots.status, "cancelada"))
-        .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
+        .orderBy(
+          asc(consultationSlots.consultationDate),
+          asc(consultationSlots.consultationTime)
+        )
     );
 
     // Oculta slots não vendidos cujo horário já passou (mantém vendidos para histórico)
@@ -164,10 +189,15 @@ export const consultationSlotsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível.",
+      });
 
     const rows = await withRetry(() =>
-      db.select(slotFields(consultationSlots, sales, users))
+      db
+        .select(slotFields(consultationSlots, sales, users))
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
         .leftJoin(users, eq(sales.sellerId, users.id))
@@ -177,7 +207,10 @@ export const consultationSlotsRouter = router({
             ne(consultationSlots.status, "cancelada")
           )
         )
-        .orderBy(asc(consultationSlots.consultationDate), asc(consultationSlots.consultationTime))
+        .orderBy(
+          asc(consultationSlots.consultationDate),
+          asc(consultationSlots.consultationTime)
+        )
     );
 
     // Filtra apenas os que ainda são "pendente" pela lógica de +50min
@@ -192,10 +225,15 @@ export const consultationSlotsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível.",
+      });
 
     const rows = await withRetry(() =>
-      db.select(slotFields(consultationSlots, sales, users))
+      db
+        .select(slotFields(consultationSlots, sales, users))
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
         .leftJoin(users, eq(sales.sellerId, users.id))
@@ -205,7 +243,10 @@ export const consultationSlotsRouter = router({
             ne(consultationSlots.status, "cancelada")
           )
         )
-        .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
+        .orderBy(
+          desc(consultationSlots.consultationDate),
+          desc(consultationSlots.consultationTime)
+        )
     );
 
     // Filtra apenas os que já são "realizada" pela lógica de +50min
@@ -220,14 +261,19 @@ export const consultationSlotsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN" });
     }
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível.",
+      });
 
     const rows = await withRetry(() =>
-      db.select({
-        ...slotFields(consultationSlots, sales, users),
-        cancelledAt: consultationSlots.cancelledAt,
-        cancelledBy: consultationSlots.cancelledBy,
-      })
+      db
+        .select({
+          ...slotFields(consultationSlots, sales, users),
+          cancelledAt: consultationSlots.cancelledAt,
+          cancelledBy: consultationSlots.cancelledBy,
+        })
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
         .leftJoin(users, eq(sales.sellerId, users.id))
@@ -239,30 +285,37 @@ export const consultationSlotsRouter = router({
 
   // Cancela um slot (ADM ou consultora)
   cancel: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      reason: z.string().optional(), // Motivo opcional do cancelamento
-      requestRefund: z.boolean().optional(), // Se true, solicita reembolso ao admin
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        reason: z.string().optional(), // Motivo opcional do cancelamento
+        requestRefund: z.boolean().optional(), // Se true, solicita reembolso ao admin
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "consultora") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       // Busca slot com dados da venda e do vendedor para a notificação
       const slotRows = await withRetry(() =>
-        db.select({
-          id: consultationSlots.id,
-          status: consultationSlots.status,
-          consultationDate: consultationSlots.consultationDate,
-          consultationTime: consultationSlots.consultationTime,
-          saleId: consultationSlots.saleId,
-          clientName: sales.clientName,
-          sellerName: users.displayName,
-          sellerUsername: users.username,
-        })
+        db
+          .select({
+            id: consultationSlots.id,
+            status: consultationSlots.status,
+            consultationDate: consultationSlots.consultationDate,
+            consultationTime: consultationSlots.consultationTime,
+            saleId: consultationSlots.saleId,
+            clientName: sales.clientName,
+            sellerName: users.displayName,
+            sellerUsername: users.username,
+          })
           .from(consultationSlots)
           .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
           .leftJoin(users, eq(sales.sellerId, users.id))
@@ -270,17 +323,28 @@ export const consultationSlotsRouter = router({
           .limit(1)
       );
       const slot = slotRows[0];
-      if (!slot) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
-      if (slot.status === "cancelada") throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta já está cancelada." });
+      if (!slot)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Horário não encontrado.",
+        });
+      if (slot.status === "cancelada")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Consulta já está cancelada.",
+        });
 
-      const refundFields = input.requestRefund ? {
-        refundStatus: "pending" as const,
-        refundRequestedAt: new Date(),
-        refundRequestedBy: ctx.user.id,
-      } : {};
+      const refundFields = input.requestRefund
+        ? {
+            refundStatus: "pending" as const,
+            refundRequestedAt: new Date(),
+            refundRequestedBy: ctx.user.id,
+          }
+        : {};
 
       await withRetry(() =>
-        db.update(consultationSlots)
+        db
+          .update(consultationSlots)
           .set({
             status: "cancelada",
             cancelledBy: ctx.user.id,
@@ -294,7 +358,8 @@ export const consultationSlotsRouter = router({
       // Se pediu reembolso, move a venda para a lixeira (soft delete)
       if (input.requestRefund && slot.saleId) {
         await withRetry(() =>
-          db.update(sales)
+          db
+            .update(sales)
             .set({ deletedAt: new Date() })
             .where(eq(sales.id, slot.saleId!))
         );
@@ -302,8 +367,13 @@ export const consultationSlotsRouter = router({
 
       // Envia notificação ao dono do projeto informando o cancelamento
       if (slot.saleId) {
-        const cancelledBy = ctx.user.displayName || ctx.user.name || ctx.user.username || "Usuário";
-        const sellerInfo = slot.sellerName || slot.sellerUsername || "vendedor desconhecido";
+        const cancelledBy =
+          ctx.user.displayName ||
+          ctx.user.name ||
+          ctx.user.username ||
+          "Usuário";
+        const sellerInfo =
+          slot.sellerName || slot.sellerUsername || "vendedor desconhecido";
         const clientInfo = slot.clientName || "cliente desconhecido";
         const dateInfo = `${slot.consultationDate} às ${slot.consultationTime}`;
         const reasonInfo = input.reason ? `\nMotivo: ${input.reason}` : "";
@@ -321,19 +391,40 @@ export const consultationSlotsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem restaurar consultas canceladas." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Apenas administradores podem restaurar consultas canceladas.",
+        });
       }
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+        db
+          .select()
+          .from(consultationSlots)
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
-      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
-      if (slot[0].status !== "cancelada") throw new TRPCError({ code: "BAD_REQUEST", message: "Consulta não está cancelada." });
+      if (!slot[0])
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Horário não encontrado.",
+        });
+      if (slot[0].status !== "cancelada")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Consulta não está cancelada.",
+        });
 
       await withRetry(() =>
-        db.update(consultationSlots)
+        db
+          .update(consultationSlots)
           .set({
             status: "pendente",
             cancelledBy: null,
@@ -350,17 +441,35 @@ export const consultationSlotsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem liberar horários cancelados." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas administradores podem liberar horários cancelados.",
+        });
       }
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+        db
+          .select()
+          .from(consultationSlots)
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
-      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
+      if (!slot[0])
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Horário não encontrado.",
+        });
       if (slot[0].status !== "cancelada") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas horários cancelados podem ser liberados." });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas horários cancelados podem ser liberados.",
+        });
       }
 
       await withRetry(() =>
@@ -371,13 +480,20 @@ export const consultationSlotsRouter = router({
 
   // Cria novo slot de consulta (ADM ou consultora)
   create: protectedProcedure
-    .input(z.object({
-      consultationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
-      consultationTime: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
-    }))
+    .input(
+      z.object({
+        consultationDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+        consultationTime: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "consultora") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para criar horários." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Sem permissão para criar horários.",
+        });
       }
 
       // A3: impedir criação de slots em datas passadas (considerando fuso do Brasil)
@@ -390,20 +506,33 @@ export const consultationSlotsRouter = router({
       }
 
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       // Verifica se já existe esse slot (mesmo que cancelado)
       const existing = await withRetry(() =>
-        db.select().from(consultationSlots)
+        db
+          .select()
+          .from(consultationSlots)
           .where(
             and(
-              eq(consultationSlots.consultationDate, input.consultationDate as any),
+              eq(
+                consultationSlots.consultationDate,
+                input.consultationDate as any
+              ),
               eq(consultationSlots.consultationTime, input.consultationTime)
             )
-          ).limit(1)
+          )
+          .limit(1)
       );
       if (existing.length > 0) {
-        throw new TRPCError({ code: "CONFLICT", message: "Já existe um horário cadastrado para essa data e hora." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe um horário cadastrado para essa data e hora.",
+        });
       }
 
       await withRetry(() =>
@@ -425,24 +554,25 @@ export const consultationSlotsRouter = router({
     if (!db) return [];
 
     const rows = await withRetry(() =>
-      db.select({
-        id: consultationSlots.id,
-        consultationDate: consultationSlots.consultationDate,
-        consultationTime: consultationSlots.consultationTime,
-        saleId: consultationSlots.saleId,
-        refundStatus: consultationSlots.refundStatus,
-        refundRequestedAt: consultationSlots.refundRequestedAt,
-        refundRequestedBy: consultationSlots.refundRequestedBy,
-        refundResolvedAt: consultationSlots.refundResolvedAt,
-        cancelReason: consultationSlots.cancelReason,
-        clientName: sales.clientName,
-        clientPhone: sales.clientPhone,
-        amount: sales.amount,
-        company: sales.company,
-        productName: sales.productName,
-        sellerName: users.displayName,
-        sellerUsername: users.username,
-      })
+      db
+        .select({
+          id: consultationSlots.id,
+          consultationDate: consultationSlots.consultationDate,
+          consultationTime: consultationSlots.consultationTime,
+          saleId: consultationSlots.saleId,
+          refundStatus: consultationSlots.refundStatus,
+          refundRequestedAt: consultationSlots.refundRequestedAt,
+          refundRequestedBy: consultationSlots.refundRequestedBy,
+          refundResolvedAt: consultationSlots.refundResolvedAt,
+          cancelReason: consultationSlots.cancelReason,
+          clientName: sales.clientName,
+          clientPhone: sales.clientPhone,
+          amount: sales.amount,
+          company: sales.company,
+          productName: sales.productName,
+          sellerName: users.displayName,
+          sellerUsername: users.username,
+        })
         .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
         .leftJoin(users, eq(sales.sellerId, users.id))
@@ -460,14 +590,23 @@ export const consultationSlotsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+        db
+          .select()
+          .from(consultationSlots)
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
       if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND" });
-      if (slot[0].refundStatus !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Reembolso não está pendente." });
+      if (slot[0].refundStatus !== "pending")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Reembolso não está pendente.",
+        });
 
       // Aprova: venda permanece na lixeira (será excluída em 30 dias), slot liberado
       await withRetry(() =>
-        db.update(consultationSlots)
+        db
+          .update(consultationSlots)
           .set({
             refundStatus: "approved",
             refundResolvedAt: new Date(),
@@ -490,22 +629,32 @@ export const consultationSlotsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+        db
+          .select()
+          .from(consultationSlots)
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
       if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND" });
-      if (slot[0].refundStatus !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Reembolso não está pendente." });
+      if (slot[0].refundStatus !== "pending")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Reembolso não está pendente.",
+        });
 
       // Rejeita: restaura a venda da lixeira, consulta volta para pendente
       if (slot[0].saleId) {
         await withRetry(() =>
-          db.update(sales)
+          db
+            .update(sales)
             .set({ deletedAt: null })
             .where(eq(sales.id, slot[0].saleId!))
         );
       }
 
       await withRetry(() =>
-        db.update(consultationSlots)
+        db
+          .update(consultationSlots)
           .set({
             refundStatus: "rejected",
             refundResolvedAt: new Date(),
@@ -530,13 +679,30 @@ export const consultationSlotsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       const slot = await withRetry(() =>
-        db.select().from(consultationSlots).where(eq(consultationSlots.id, input.id)).limit(1)
+        db
+          .select()
+          .from(consultationSlots)
+          .where(eq(consultationSlots.id, input.id))
+          .limit(1)
       );
-      if (!slot[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Horário não encontrado." });
-      if (slot[0].sold) throw new TRPCError({ code: "BAD_REQUEST", message: "Não é possível remover um horário já vendido. Use 'Cancelar' em vez disso." });
+      if (!slot[0])
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Horário não encontrado.",
+        });
+      if (slot[0].sold)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Não é possível remover um horário já vendido. Use 'Cancelar' em vez disso.",
+        });
 
       await withRetry(() =>
         db.delete(consultationSlots).where(eq(consultationSlots.id, input.id))
@@ -549,30 +715,57 @@ export const consultationSlotsRouter = router({
     .input(z.object({ saleId: z.number(), newSlotId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem reagendar consultas." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas administradores podem reagendar consultas.",
+        });
       }
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível." });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível.",
+        });
 
       // Busca o slot antigo vinculado à venda
       const oldSlots = await withRetry(() =>
-        db.select().from(consultationSlots)
-          .where(and(eq(consultationSlots.saleId, input.saleId), eq(consultationSlots.sold, true)))
+        db
+          .select()
+          .from(consultationSlots)
+          .where(
+            and(
+              eq(consultationSlots.saleId, input.saleId),
+              eq(consultationSlots.sold, true)
+            )
+          )
           .limit(1)
       );
 
       // Busca o novo slot (deve estar disponível)
       const newSlot = await withRetry(() =>
-        db.select().from(consultationSlots)
-          .where(and(eq(consultationSlots.id, input.newSlotId), eq(consultationSlots.sold, false), ne(consultationSlots.status, "cancelada")))
+        db
+          .select()
+          .from(consultationSlots)
+          .where(
+            and(
+              eq(consultationSlots.id, input.newSlotId),
+              eq(consultationSlots.sold, false),
+              ne(consultationSlots.status, "cancelada")
+            )
+          )
           .limit(1)
       );
-      if (!newSlot[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Novo horário não está disponível." });
+      if (!newSlot[0])
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Novo horário não está disponível.",
+        });
 
       // Libera o slot antigo (se existir)
       if (oldSlots[0]) {
         await withRetry(() =>
-          db.update(consultationSlots)
+          db
+            .update(consultationSlots)
             .set({ sold: false, saleId: null, status: "pendente" })
             .where(eq(consultationSlots.id, oldSlots[0].id))
         );
@@ -580,21 +773,31 @@ export const consultationSlotsRouter = router({
 
       // Reserva o novo slot atomicamente
       const reserved = await withRetry(() =>
-        db.update(consultationSlots)
+        db
+          .update(consultationSlots)
           .set({ sold: true, saleId: input.saleId, status: "pendente" })
-          .where(and(eq(consultationSlots.id, input.newSlotId), eq(consultationSlots.sold, false)))
+          .where(
+            and(
+              eq(consultationSlots.id, input.newSlotId),
+              eq(consultationSlots.sold, false)
+            )
+          )
           .returning({ id: consultationSlots.id })
       );
       if (!reserved.length) {
         // Se falhou, restaura o slot antigo
         if (oldSlots[0]) {
           await withRetry(() =>
-            db.update(consultationSlots)
+            db
+              .update(consultationSlots)
               .set({ sold: true, saleId: input.saleId, status: "pendente" })
               .where(eq(consultationSlots.id, oldSlots[0].id))
           );
         }
-        throw new TRPCError({ code: "CONFLICT", message: "Horário foi reservado por outro usuário. Tente novamente." });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Horário foi reservado por outro usuário. Tente novamente.",
+        });
       }
 
       return { success: true };

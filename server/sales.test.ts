@@ -126,7 +126,9 @@ describe("auth.logout", () => {
     const ctx: TrpcContext = {
       user: createContext().user,
       req: { protocol: "https", headers: {} } as TrpcContext["req"],
-      res: { clearCookie: (name: string) => cleared.push(name) } as TrpcContext["res"],
+      res: {
+        clearCookie: (name: string) => cleared.push(name),
+      } as TrpcContext["res"],
     };
     const caller = appRouter.createCaller(ctx);
     const result = await caller.auth.logout();
@@ -139,7 +141,13 @@ describe("consultora.updateSeller (admin only)", () => {
   it("throws FORBIDDEN for non-admin users", async () => {
     const ctx = createContext("user");
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.consultora.updateSeller({ saleId: 1, sellerId: 1, sellerName: "Test" })).rejects.toThrow();
+    await expect(
+      caller.consultora.updateSeller({
+        saleId: 1,
+        sellerId: 1,
+        sellerName: "Test",
+      })
+    ).rejects.toThrow();
   });
 
   it("throws FORBIDDEN for consultora users", async () => {
@@ -149,7 +157,13 @@ describe("consultora.updateSeller (admin only)", () => {
       res: { clearCookie: () => {} } as TrpcContext["res"],
     };
     const caller = appRouter.createCaller(ctxConsultora);
-    await expect(caller.consultora.updateSeller({ saleId: 1, sellerId: 1, sellerName: "Test" })).rejects.toThrow();
+    await expect(
+      caller.consultora.updateSeller({
+        saleId: 1,
+        sellerId: 1,
+        sellerName: "Test",
+      })
+    ).rejects.toThrow();
   });
 });
 

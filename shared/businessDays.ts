@@ -53,9 +53,9 @@ function getHolidaysForYear(year: number): Set<string> {
 
   addOffset(easter, -48); // Segunda-feira de Carnaval
   addOffset(easter, -47); // Terça-feira de Carnaval
-  addOffset(easter, -2);  // Sexta-feira Santa (Paixão de Cristo) — feriado nacional
-  addOffset(easter, 0);   // Páscoa (Domingo — não útil de qualquer forma)
-  addOffset(easter, 60);  // Corpus Christi
+  addOffset(easter, -2); // Sexta-feira Santa (Paixão de Cristo) — feriado nacional
+  addOffset(easter, 0); // Páscoa (Domingo — não útil de qualquer forma)
+  addOffset(easter, 60); // Corpus Christi
 
   return holidays;
 }
@@ -99,7 +99,10 @@ export function calcDeadline(saleDateStr: string, businessDays = 7): Date {
  * Calcula dias úteis restantes de hoje até o deadline (inclusive).
  * Se já passou do deadline, retorna negativo (dias de atraso).
  */
-export function calcBusinessDaysFromSale(saleDateStr: string, businessDays = 7) {
+export function calcBusinessDaysFromSale(
+  saleDateStr: string,
+  businessDays = 7
+) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -131,7 +134,9 @@ export function calcBusinessDaysFromSale(saleDateStr: string, businessDays = 7) 
 
   const isOverdue = daysRemaining < 0;
   const isUrgent = daysRemaining <= 1 && daysRemaining >= 0;
-  const urgencyScore = isOverdue ? 10000 + Math.abs(daysRemaining) : (businessDays - daysRemaining);
+  const urgencyScore = isOverdue
+    ? 10000 + Math.abs(daysRemaining)
+    : businessDays - daysRemaining;
 
   return { daysRemaining, deadline, isOverdue, isUrgent, urgencyScore };
 }

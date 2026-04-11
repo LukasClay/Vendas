@@ -3,18 +3,18 @@ import { trpc } from "@/lib/trpc";
 
 /**
  * CompanyThemeProvider
- * 
+ *
  * Injeta CSS variables dinâmicas no :root baseado na empresa ativa.
  * Mundo Da Magia = Roxo (#7C3AED) — estilo Nubank
  * Mundo Cigano = Âmbar/Laranja (#D97706) — estilo Inter
- * 
+ *
  * Só é renderizado dentro do painel admin.
  * Consultora e Vendedor NÃO usam este provider (mantêm âmbar fixo).
  */
 
 // Mundo Da Magia — Roxo Nubank (#7C3AED)
 const MAGIA_LIGHT = {
-  "--primary": "oklch(0.55 0.25 285)",        // #7C3AED roxo
+  "--primary": "oklch(0.55 0.25 285)", // #7C3AED roxo
   "--primary-foreground": "oklch(1 0 0)",
   "--ring": "oklch(0.55 0.25 285)",
   "--chart-1": "oklch(0.55 0.25 285)",
@@ -25,7 +25,7 @@ const MAGIA_LIGHT = {
 };
 
 const MAGIA_DARK = {
-  "--primary": "oklch(0.68 0.22 285)",         // roxo mais claro no dark
+  "--primary": "oklch(0.68 0.22 285)", // roxo mais claro no dark
   "--primary-foreground": "oklch(0.15 0.02 260)",
   "--ring": "oklch(0.68 0.22 285)",
   "--chart-1": "oklch(0.68 0.22 285)",
@@ -37,7 +37,7 @@ const MAGIA_DARK = {
 
 // Mundo Cigano — Âmbar/Laranja Inter (#D97706)
 const CIGANO_LIGHT = {
-  "--primary": "oklch(0.60 0.16 70)",          // #D97706 âmbar/laranja
+  "--primary": "oklch(0.60 0.16 70)", // #D97706 âmbar/laranja
   "--primary-foreground": "oklch(1 0 0)",
   "--ring": "oklch(0.60 0.16 70)",
   "--chart-1": "oklch(0.60 0.16 70)",
@@ -48,7 +48,7 @@ const CIGANO_LIGHT = {
 };
 
 const CIGANO_DARK = {
-  "--primary": "oklch(0.70 0.16 70)",          // âmbar mais claro no dark
+  "--primary": "oklch(0.70 0.16 70)", // âmbar mais claro no dark
   "--primary-foreground": "oklch(0.15 0.02 260)",
   "--ring": "oklch(0.70 0.16 70)",
   "--chart-1": "oklch(0.70 0.16 70)",
@@ -62,9 +62,14 @@ type CompanySlug = "mundo_cigano" | "mundo_da_magia";
 
 function applyCompanyTheme(company: CompanySlug, isDark: boolean) {
   const root = document.documentElement;
-  const vars = company === "mundo_cigano"
-    ? (isDark ? CIGANO_DARK : CIGANO_LIGHT)
-    : (isDark ? MAGIA_DARK : MAGIA_LIGHT);
+  const vars =
+    company === "mundo_cigano"
+      ? isDark
+        ? CIGANO_DARK
+        : CIGANO_LIGHT
+      : isDark
+        ? MAGIA_DARK
+        : MAGIA_LIGHT;
 
   // Transição suave ao trocar empresa
   root.style.transition = "color 0.3s ease, background-color 0.3s ease";
@@ -88,15 +93,19 @@ function clearCompanyTheme() {
 }
 
 export default function CompanyThemeProvider() {
-  const { data: activeCompany } = trpc.settings.getActiveCompany.useQuery(undefined, {
-    staleTime: 30_000,
-  });
+  const { data: activeCompany } = trpc.settings.getActiveCompany.useQuery(
+    undefined,
+    {
+      staleTime: 30_000,
+    }
+  );
 
   useEffect(() => {
     if (!activeCompany) return;
 
     // Normaliza para tipo seguro (API retorna string)
-    const company: CompanySlug = activeCompany === "mundo_cigano" ? "mundo_cigano" : "mundo_da_magia";
+    const company: CompanySlug =
+      activeCompany === "mundo_cigano" ? "mundo_cigano" : "mundo_da_magia";
 
     // Detectar tema atual
     const isDark = document.documentElement.classList.contains("dark");

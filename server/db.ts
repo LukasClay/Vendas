@@ -1,9 +1,39 @@
-import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  like,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { appSettings, auditLogs, clients, consultationSlots, InsertClient, InsertProduct, InsertReportSchedule, InsertSale, InsertUser, products, reportSchedules, sales, userSessions, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
-import { getLocalLoginHealth, type LocalLoginHealthResult } from "./_core/localLoginHealth";
+import {
+  appSettings,
+  auditLogs,
+  clients,
+  consultationSlots,
+  InsertClient,
+  InsertProduct,
+  InsertReportSchedule,
+  InsertSale,
+  InsertUser,
+  products,
+  reportSchedules,
+  sales,
+  userSessions,
+  users,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
+import {
+  getLocalLoginHealth,
+  type LocalLoginHealthResult,
+} from "./_core/localLoginHealth";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
@@ -41,7 +71,10 @@ export async function getDb() {
     max: 20,
     idleTimeoutMillis: 60000,
     connectionTimeoutMillis: 10000,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : undefined,
   });
   _db = drizzle(_pool);
   return _db;
@@ -85,7 +118,10 @@ export async function withRetry<T>(
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
+  if (!db) {
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
+  }
 
   const values: InsertUser = { openId: user.openId };
   const updateSet: Record<string, unknown> = {};
@@ -98,20 +134,34 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     values[field] = normalized;
     updateSet[field] = normalized;
   }
-  if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-  if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-  else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+  if (user.lastSignedIn !== undefined) {
+    values.lastSignedIn = user.lastSignedIn;
+    updateSet.lastSignedIn = user.lastSignedIn;
+  }
+  if (user.role !== undefined) {
+    values.role = user.role;
+    updateSet.role = user.role;
+  } else if (user.openId === ENV.ownerOpenId) {
+    values.role = "admin";
+    updateSet.role = "admin";
+  }
   if (!values.lastSignedIn) values.lastSignedIn = new Date();
   if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
-  await db.insert(users).values(values)
+  await db
+    .insert(users)
+    .values(values)
     .onConflictDoUpdate({ target: users.openId, set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -119,21 +169,25 @@ export async function getAllUsers(): Promise<AdminUserListItem[]> {
   const db = await getDb();
   if (!db) return [];
 
-  const rows = await db.select({
-    id: users.id,
-    openId: users.openId,
-    name: users.name,
-    email: users.email,
-    role: users.role,
-    displayName: users.displayName,
-    phone: users.phone,
-    active: users.active,
-    username: users.username,
-    passwordHash: users.passwordHash,
-    deletedAt: users.deletedAt,
-    createdAt: users.createdAt,
-    lastSignedIn: users.lastSignedIn
-  }).from(users).where(isNull(users.deletedAt)).orderBy(asc(users.name));
+  const rows = await db
+    .select({
+      id: users.id,
+      openId: users.openId,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      displayName: users.displayName,
+      phone: users.phone,
+      active: users.active,
+      username: users.username,
+      passwordHash: users.passwordHash,
+      deletedAt: users.deletedAt,
+      createdAt: users.createdAt,
+      lastSignedIn: users.lastSignedIn,
+    })
+    .from(users)
+    .where(isNull(users.deletedAt))
+    .orderBy(asc(users.name));
 
   return rows.map(({ passwordHash, deletedAt, ...user }) => ({
     ...user,
@@ -149,21 +203,25 @@ export async function getAllUsers(): Promise<AdminUserListItem[]> {
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select({
-    id: users.id,
-    openId: users.openId,
-    name: users.name,
-    email: users.email,
-    role: users.role,
-    displayName: users.displayName,
-    phone: users.phone,
-    active: users.active,
-    username: users.username,
-    createdAt: users.createdAt,
-    lastSignedIn: users.lastSignedIn,
-    deletedAt: users.deletedAt,
-    sessionVersion: users.sessionVersion,
-  }).from(users).where(eq(users.id, id)).limit(1);
+  const result = await db
+    .select({
+      id: users.id,
+      openId: users.openId,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      displayName: users.displayName,
+      phone: users.phone,
+      active: users.active,
+      username: users.username,
+      createdAt: users.createdAt,
+      lastSignedIn: users.lastSignedIn,
+      deletedAt: users.deletedAt,
+      sessionVersion: users.sessionVersion,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -181,35 +239,43 @@ export async function deleteUser(id: number) {
   // Passo 1: Salvar snapshot do nome do funcionário ANTES de qualquer alteração
   const user = await getUserById(id);
   if (!user) return;
-  
-  const snapshotName = user.displayName || user.name || user.username || `Usuário #${id}`;
-  
+
+  const snapshotName =
+    user.displayName || user.name || user.username || `Usuário #${id}`;
+
   // Passo 1a: PROTEGER histórico de vendas — salvar snapshot do nome em todas as vendas
   // Isso garante que mesmo depois de deletado, o nome aparece corretamente nos relatórios
-  await db.update(sales).set({ sellerName: snapshotName }).where(
-    and(eq(sales.sellerId, id), sql`${sales.sellerName} IS NULL`)
-  );
+  await db
+    .update(sales)
+    .set({ sellerName: snapshotName })
+    .where(and(eq(sales.sellerId, id), sql`${sales.sellerName} IS NULL`));
 
   // Passo 2: APENAS renomear username/openId para liberar para novos cadastros
   // O suffix _old segue o padrão do projeto (não altera dados na tabela sales)
   const suffix = `_old`;
   const newUsername = user.username ? `${user.username}${suffix}` : null;
   const newOpenId = `${user.openId}${suffix}`;
-  
+
   // Passo 3: Marcar como deletado, inativo e invalidar sessões ativas
   // ⚠️ IMPORTANTE: Tabela sales NÃO é tocada aqui (histórico 100% preservado)
-  await db.update(users).set({
-    active: false,
-    deletedAt: new Date(),
-    username: newUsername,
-    openId: newOpenId,
-    sessionVersion: sql`${users.sessionVersion} + 1`
-  }).where(eq(users.id, id));
+  await db
+    .update(users)
+    .set({
+      active: false,
+      deletedAt: new Date(),
+      username: newUsername,
+      openId: newOpenId,
+      sessionVersion: sql`${users.sessionVersion} + 1`,
+    })
+    .where(eq(users.id, id));
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export async function getAllProducts(includeInactive = false, includeDeleted = false) {
+export async function getAllProducts(
+  includeInactive = false,
+  includeDeleted = false
+) {
   const db = await getDb();
   if (!db) return [];
   try {
@@ -218,10 +284,22 @@ export async function getAllProducts(includeInactive = false, includeDeleted = f
       return await db.select().from(products).orderBy(asc(products.name));
     }
     // Sempre filtra produtos com soft delete (deletedAt IS NULL)
-    if (includeInactive) return await db.select().from(products).where(isNull(products.deletedAt)).orderBy(asc(products.name));
-    return await db.select().from(products).where(and(eq(products.active, true), isNull(products.deletedAt))).orderBy(asc(products.name));
+    if (includeInactive)
+      return await db
+        .select()
+        .from(products)
+        .where(isNull(products.deletedAt))
+        .orderBy(asc(products.name));
+    return await db
+      .select()
+      .from(products)
+      .where(and(eq(products.active, true), isNull(products.deletedAt)))
+      .orderBy(asc(products.name));
   } catch (e: unknown) {
-    console.error("[getAllProducts] Erro:", (e instanceof Error ? e.message : String(e)));
+    console.error(
+      "[getAllProducts] Erro:",
+      e instanceof Error ? e.message : String(e)
+    );
     return [];
   }
 }
@@ -229,37 +307,52 @@ export async function getAllProducts(includeInactive = false, includeDeleted = f
 export async function findDeletedProductByName(name: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(products).where(
-    and(
-      sql`LOWER(${products.name}) = LOWER(${name})`,
-      isNotNull(products.deletedAt)
+  const result = await db
+    .select()
+    .from(products)
+    .where(
+      and(
+        sql`LOWER(${products.name}) = LOWER(${name})`,
+        isNotNull(products.deletedAt)
+      )
     )
-  ).limit(1);
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function restoreProduct(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(products).set({ active: true, deletedAt: null }).where(eq(products.id, id));
+  await db
+    .update(products)
+    .set({ active: true, deletedAt: null })
+    .where(eq(products.id, id));
 }
 
 export async function getProductById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, id))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function findActiveProductByName(name: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(products).where(
-    and(
-      sql`LOWER(${products.name}) = LOWER(${name})`,
-      isNull(products.deletedAt)
+  const result = await db
+    .select()
+    .from(products)
+    .where(
+      and(
+        sql`LOWER(${products.name}) = LOWER(${name})`,
+        isNull(products.deletedAt)
+      )
     )
-  ).limit(1);
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -281,16 +374,21 @@ export async function deleteProduct(id: number) {
   if (!db) return;
   // Bloqueia exclusão de produtos do sistema
   const product = await getProductById(id);
-  if (product?.isSystem) throw new Error("Produto do sistema não pode ser excluído.");
+  if (product?.isSystem)
+    throw new Error("Produto do sistema não pode ser excluído.");
   // Soft delete: marca deletedAt e desativa — productName já é snapshot nas vendas
-  await db.update(products).set({ active: false, deletedAt: new Date() }).where(eq(products.id, id));
+  await db
+    .update(products)
+    .set({ active: false, deletedAt: new Date() })
+    .where(eq(products.id, id));
 }
 
 // ─── Garante que produtos do sistema existam no banco ─────────────────────────
 export const SYSTEM_PRODUCTS = [
   {
     name: "Consulta Cartas",
-    description: "Consulta espiritual com horário agendado (produto do sistema)",
+    description:
+      "Consulta espiritual com horário agendado (produto do sistema)",
     isSystem: true,
     active: true,
   },
@@ -299,17 +397,24 @@ export const SYSTEM_PRODUCTS = [
 export async function ensureSystemProducts() {
   const db = await getDb();
   if (!db) {
-    console.warn("[SystemProducts] Banco não disponível, pulando criação de produtos do sistema.");
+    console.warn(
+      "[SystemProducts] Banco não disponível, pulando criação de produtos do sistema."
+    );
     return;
   }
 
   // 1. Garante que a coluna isSystem existe (auto-migração)
   try {
-    await db.execute(sql`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isSystem" boolean NOT NULL DEFAULT false`);
+    await db.execute(
+      sql`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isSystem" boolean NOT NULL DEFAULT false`
+    );
     console.log("[SystemProducts] Coluna isSystem verificada/criada.");
   } catch (e: unknown) {
     // Se der erro (ex: versão antiga do PG sem IF NOT EXISTS), ignora
-    console.warn("[SystemProducts] Aviso ao verificar coluna isSystem:", (e instanceof Error ? e.message : String(e)));
+    console.warn(
+      "[SystemProducts] Aviso ao verificar coluna isSystem:",
+      e instanceof Error ? e.message : String(e)
+    );
   }
 
   // 2. Garante que cada produto do sistema existe
@@ -327,18 +432,27 @@ export async function ensureSystemProducts() {
           await db.execute(
             sql`UPDATE products SET "isSystem" = true, active = true, "deletedAt" = NULL, "updatedAt" = NOW() WHERE id = ${p.id}`
           );
-          console.log(`[SystemProducts] Produto "${sp.name}" restaurado/atualizado (id=${p.id}).`);
+          console.log(
+            `[SystemProducts] Produto "${sp.name}" restaurado/atualizado (id=${p.id}).`
+          );
         } else {
-          console.log(`[SystemProducts] Produto "${sp.name}" já existe (id=${p.id}). OK.`);
+          console.log(
+            `[SystemProducts] Produto "${sp.name}" já existe (id=${p.id}). OK.`
+          );
         }
       } else {
         await db.execute(
           sql`INSERT INTO products (name, description, active, "isSystem", "createdAt", "updatedAt") VALUES (${sp.name}, ${sp.description}, true, true, NOW(), NOW())`
         );
-        console.log(`[SystemProducts] Produto "${sp.name}" criado com sucesso.`);
+        console.log(
+          `[SystemProducts] Produto "${sp.name}" criado com sucesso.`
+        );
       }
     } catch (e: unknown) {
-      console.error(`[SystemProducts] Erro ao processar "${sp.name}":`, (e instanceof Error ? e.message : String(e)));
+      console.error(
+        `[SystemProducts] Erro ao processar "${sp.name}":`,
+        e instanceof Error ? e.message : String(e)
+      );
     }
   }
 }
@@ -354,9 +468,14 @@ export async function ensurePhotoColumns() {
   ];
   for (const col of columns) {
     try {
-      await db.execute(sql`ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS ${sql.raw(`"${col.name}" ${col.def}`)}`);
+      await db.execute(
+        sql`ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS ${sql.raw(`"${col.name}" ${col.def}`)}`
+      );
     } catch (e: unknown) {
-      console.warn(`[PhotoColumns] Aviso ao adicionar ${col.name}:`, (e instanceof Error ? e.message : String(e)));
+      console.warn(
+        `[PhotoColumns] Aviso ao adicionar ${col.name}:`,
+        e instanceof Error ? e.message : String(e)
+      );
     }
   }
   console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
@@ -369,14 +488,24 @@ export async function upsertClient(data: InsertClient) {
   if (!db) throw new Error("Database not available");
   // Try to find existing client by phone
   if (data.phone) {
-    const existing = await db.select().from(clients).where(eq(clients.phone, data.phone)).limit(1);
+    const existing = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.phone, data.phone))
+      .limit(1);
     if (existing.length > 0) {
-      await db.update(clients).set({ fullName: data.fullName, birthDate: data.birthDate }).where(eq(clients.id, existing[0].id));
+      await db
+        .update(clients)
+        .set({ fullName: data.fullName, birthDate: data.birthDate })
+        .where(eq(clients.id, existing[0].id));
       return existing[0].id;
     }
   }
   // PostgreSQL: usar .returning() para obter o ID gerado
-  const result = await db.insert(clients).values(data).returning({ id: clients.id });
+  const result = await db
+    .insert(clients)
+    .values(data)
+    .returning({ id: clients.id });
   return result[0].id;
 }
 
@@ -392,11 +521,17 @@ export interface SaleFilters {
 }
 
 // Retorna a empresa ativa no momento (para carimbar vendas)
-export async function getActiveCompany(): Promise<"mundo_da_magia" | "mundo_cigano"> {
+export async function getActiveCompany(): Promise<
+  "mundo_da_magia" | "mundo_cigano"
+> {
   const db = await getDb();
   if (!db) return "mundo_da_magia";
   const rows = await withRetry(() =>
-    db.select().from(appSettings).where(eq(appSettings.key, "active_company")).limit(1)
+    db
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.key, "active_company"))
+      .limit(1)
   );
   if (rows.length === 0) return "mundo_da_magia";
   return rows[0].value as "mundo_da_magia" | "mundo_cigano";
@@ -410,7 +545,10 @@ export async function createSale(data: InsertSale) {
     data.company = await getActiveCompany();
   }
   // PostgreSQL: usar .returning() para obter o ID gerado
-  const result = await db.insert(sales).values(data).returning({ id: sales.id });
+  const result = await db
+    .insert(sales)
+    .values(data)
+    .returning({ id: sales.id });
   return result[0].id;
 }
 
@@ -418,29 +556,41 @@ export async function getSales(filters: SaleFilters = {}) {
   const db = await getDb();
   if (!db) return [];
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (filters.startDate) conditions.push(sql`${sales.saleDate} >= ${filters.startDate.toISOString().split('T')[0]}`);
-  if (filters.endDate) conditions.push(sql`${sales.saleDate} <= ${filters.endDate.toISOString().split('T')[0]}`);
+  if (filters.startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${filters.startDate.toISOString().split("T")[0]}`
+    );
+  if (filters.endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${filters.endDate.toISOString().split("T")[0]}`
+    );
   if (filters.sellerId) conditions.push(eq(sales.sellerId, filters.sellerId));
   if (filters.productName) {
-    const escaped = filters.productName.replace(/[%_\\]/g, '\\$&');
-    conditions.push(sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`);
+    const escaped = filters.productName.replace(/[%_\\]/g, "\\$&");
+    conditions.push(
+      sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
+    );
   }
 
-  const query = db.select({
-    sale: sales,
-    // Usa snapshot sellerName se disponível (vendedor excluído), senão busca do JOIN
-    seller: {
-      id: users.id,
-      name: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
-      displayName: users.displayName,
-    },
-  })
+  const query = db
+    .select({
+      sale: sales,
+      // Usa snapshot sellerName se disponível (vendedor excluído), senão busca do JOIN
+      seller: {
+        id: users.id,
+        name: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+        displayName: users.displayName,
+      },
+    })
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id))
     .orderBy(desc(sales.saleDate), desc(sales.createdAt));
 
   if (conditions.length > 0) {
-    return (query as any).where(and(...conditions)).limit(filters.limit ?? 100).offset(filters.offset ?? 0);
+    return (query as any)
+      .where(and(...conditions))
+      .limit(filters.limit ?? 100)
+      .offset(filters.offset ?? 0);
   }
   return (query as any).limit(filters.limit ?? 100).offset(filters.offset ?? 0);
 }
@@ -448,14 +598,22 @@ export async function getSales(filters: SaleFilters = {}) {
 export async function getSaleById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(sales).where(and(eq(sales.id, id), isNull(sales.deletedAt))).limit(1);
+  const result = await db
+    .select()
+    .from(sales)
+    .where(and(eq(sales.id, id), isNull(sales.deletedAt)))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getSalesBySeller(sellerId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(sales).where(and(eq(sales.sellerId, sellerId), isNull(sales.deletedAt))).orderBy(desc(sales.saleDate));
+  return db
+    .select()
+    .from(sales)
+    .where(and(eq(sales.sellerId, sellerId), isNull(sales.deletedAt)))
+    .orderBy(desc(sales.saleDate));
 }
 
 export async function updateSale(id: number, data: Partial<InsertSale>) {
@@ -469,14 +627,13 @@ export async function deleteSale(id: number) {
   if (!db) throw new Error("Database not available");
 
   // Libera o horário de consulta caso essa venda seja de uma "Consulta Cartas"
-  await db.update(consultationSlots)
+  await db
+    .update(consultationSlots)
     .set({ sold: false, saleId: null, status: "pendente" })
     .where(eq(consultationSlots.saleId, id));
 
   // M1: soft delete — preserva o registro no banco
-  await db.update(sales)
-    .set({ deletedAt: new Date() })
-    .where(eq(sales.id, id));
+  await db.update(sales).set({ deletedAt: new Date() }).where(eq(sales.id, id));
 }
 
 // ─── Lixeira (Trash) ─────────────────────────────────────────────────────────
@@ -485,11 +642,12 @@ export async function getDeletedSales() {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select({
-    sale: sales,
-    sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
-    sellerDisplayName: users.displayName,
-  })
+  return db
+    .select({
+      sale: sales,
+      sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+      sellerDisplayName: users.displayName,
+    })
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id))
     .where(isNotNull(sales.deletedAt))
@@ -501,9 +659,7 @@ export async function restoreSale(id: number) {
   if (!db) throw new Error("Database not available");
 
   // Restaura a venda (remove deletedAt)
-  await db.update(sales)
-    .set({ deletedAt: null })
-    .where(eq(sales.id, id));
+  await db.update(sales).set({ deletedAt: null }).where(eq(sales.id, id));
 }
 
 export async function permanentDeleteSale(id: number) {
@@ -511,7 +667,8 @@ export async function permanentDeleteSale(id: number) {
   if (!db) throw new Error("Database not available");
 
   // Libera o horário de consulta se houver
-  await db.update(consultationSlots)
+  await db
+    .update(consultationSlots)
     .set({ sold: false, saleId: null, status: "pendente" })
     .where(eq(consultationSlots.saleId, id));
 
@@ -533,13 +690,25 @@ export async function cleanupExpiredTrash(daysOld = 30) {
   );
 
   // Seleciona IDs antes de deletar para retornar contagem
-  const expiredSales = await db.select({ id: sales.id })
+  const expiredSales = await db
+    .select({ id: sales.id })
     .from(sales)
-    .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
+    .where(
+      and(
+        isNotNull(sales.deletedAt),
+        sql`${sales.deletedAt} < ${cutoff.toISOString()}`
+      )
+    );
 
   // Delete permanente
-  await db.delete(sales)
-    .where(and(isNotNull(sales.deletedAt), sql`${sales.deletedAt} < ${cutoff.toISOString()}`));
+  await db
+    .delete(sales)
+    .where(
+      and(
+        isNotNull(sales.deletedAt),
+        sql`${sales.deletedAt} < ${cutoff.toISOString()}`
+      )
+    );
 
   return expiredSales.length;
 }
@@ -551,106 +720,170 @@ export async function getReportSummary(startDate?: Date, endDate?: Date) {
   if (!db) return { totalAmount: 0, totalSales: 0 };
 
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
-  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+  if (startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${startDate.toISOString().split("T")[0]}`
+    );
+  if (endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
+    );
 
-  const query = db.select({
-    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
-    totalSales: sql<number>`COUNT(*)`,
-  }).from(sales);
+  const query = db
+    .select({
+      totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+      totalSales: sql<number>`COUNT(*)`,
+    })
+    .from(sales);
 
-  const result = conditions.length > 0
-    ? await (query as any).where(and(...conditions))
-    : await query;
+  const result =
+    conditions.length > 0
+      ? await (query as any).where(and(...conditions))
+      : await query;
 
   return result[0] ?? { totalAmount: 0, totalSales: 0 };
 }
 
-export async function getReportSummaryByCompany(startDate?: Date, endDate?: Date) {
+export async function getReportSummaryByCompany(
+  startDate?: Date,
+  endDate?: Date
+) {
   const db = await getDb();
   if (!db) return [];
 
   const conditions: SQL[] = [isNull(sales.deletedAt)];
-  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
-  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+  if (startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${startDate.toISOString().split("T")[0]}`
+    );
+  if (endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
+    );
 
-  const query = db.select({
-    company: sales.company,
-    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
-    totalSales: sql<number>`COUNT(*)`,
-  }).from(sales).groupBy(sales.company);
+  const query = db
+    .select({
+      company: sales.company,
+      totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+      totalSales: sql<number>`COUNT(*)`,
+    })
+    .from(sales)
+    .groupBy(sales.company);
 
   return conditions.length > 0
     ? (query as any).where(and(...conditions))
     : query;
 }
 
-export async function getTopSellers(startDate?: Date, endDate?: Date, limit = 10) {
+export async function getTopSellers(
+  startDate?: Date,
+  endDate?: Date,
+  limit = 10
+) {
   const db = await getDb();
   if (!db) return [];
 
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
-  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+  if (startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${startDate.toISOString().split("T")[0]}`
+    );
+  if (endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
+    );
 
-  const query = db.select({
-    sellerId: sales.sellerId,
-    // Usa snapshot sellerName se disponível, senão faz JOIN com users
-    sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
-    sellerDisplayName: users.displayName,
-    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
-    totalSales: sql<number>`COUNT(*)`,
-  })
+  const query = db
+    .select({
+      sellerId: sales.sellerId,
+      // Usa snapshot sellerName se disponível, senão faz JOIN com users
+      sellerName: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+      sellerDisplayName: users.displayName,
+      totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+      totalSales: sql<number>`COUNT(*)`,
+    })
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id))
-    .groupBy(sales.sellerId, sql`COALESCE(${sales.sellerName}, ${users.name})`, users.displayName)
+    .groupBy(
+      sales.sellerId,
+      sql`COALESCE(${sales.sellerName}, ${users.name})`,
+      users.displayName
+    )
     .orderBy(desc(sql`SUM(${sales.amount})`))
     .limit(limit);
 
-  return conditions.length > 0 ? (query as any).where(and(...conditions)) : query;
+  return conditions.length > 0
+    ? (query as any).where(and(...conditions))
+    : query;
 }
 
-export async function getTopClients(startDate?: Date, endDate?: Date, limit = 10) {
+export async function getTopClients(
+  startDate?: Date,
+  endDate?: Date,
+  limit = 10
+) {
   const db = await getDb();
   if (!db) return [];
 
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
-  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+  if (startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${startDate.toISOString().split("T")[0]}`
+    );
+  if (endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
+    );
 
-  const query = db.select({
-    clientName: sales.clientName,
-    clientPhone: sales.clientPhone,
-    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
-    totalSales: sql<number>`COUNT(*)`,
-  })
+  const query = db
+    .select({
+      clientName: sales.clientName,
+      clientPhone: sales.clientPhone,
+      totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+      totalSales: sql<number>`COUNT(*)`,
+    })
     .from(sales)
     .groupBy(sales.clientName, sales.clientPhone)
     .orderBy(desc(sql`SUM(${sales.amount})`))
     .limit(limit);
 
-  return conditions.length > 0 ? (query as any).where(and(...conditions)) : query;
+  return conditions.length > 0
+    ? (query as any).where(and(...conditions))
+    : query;
 }
 
-export async function getTopProducts(startDate?: Date, endDate?: Date, limit = 10) {
+export async function getTopProducts(
+  startDate?: Date,
+  endDate?: Date,
+  limit = 10
+) {
   const db = await getDb();
   if (!db) return [];
 
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
-  if (startDate) conditions.push(sql`${sales.saleDate} >= ${startDate.toISOString().split('T')[0]}`);
-  if (endDate) conditions.push(sql`${sales.saleDate} <= ${endDate.toISOString().split('T')[0]}`);
+  if (startDate)
+    conditions.push(
+      sql`${sales.saleDate} >= ${startDate.toISOString().split("T")[0]}`
+    );
+  if (endDate)
+    conditions.push(
+      sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
+    );
 
-  const query = db.select({
-    productName: sales.productName,
-    totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
-    totalSales: sql<number>`COUNT(*)`,
-  })
+  const query = db
+    .select({
+      productName: sales.productName,
+      totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
+      totalSales: sql<number>`COUNT(*)`,
+    })
     .from(sales)
     .groupBy(sales.productName)
     .orderBy(desc(sql`COUNT(*)`))
     .limit(limit);
 
-  return conditions.length > 0 ? (query as any).where(and(...conditions)) : query;
+  return conditions.length > 0
+    ? (query as any).where(and(...conditions))
+    : query;
 }
 
 export async function getSalesByMonth(year: number) {
@@ -704,7 +937,10 @@ export async function getSalesLast7Days() {
 export async function getReportSchedules() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(reportSchedules).orderBy(asc(reportSchedules.frequency));
+  return db
+    .select()
+    .from(reportSchedules)
+    .orderBy(asc(reportSchedules.frequency));
 }
 
 export async function createReportSchedule(data: InsertReportSchedule) {
@@ -713,7 +949,10 @@ export async function createReportSchedule(data: InsertReportSchedule) {
   await db.insert(reportSchedules).values(data);
 }
 
-export async function updateReportSchedule(id: number, data: Partial<InsertReportSchedule>) {
+export async function updateReportSchedule(
+  id: number,
+  data: Partial<InsertReportSchedule>
+) {
   const db = await getDb();
   if (!db) return;
   await db.update(reportSchedules).set(data).where(eq(reportSchedules.id, id));
@@ -735,20 +974,26 @@ export async function createUserSession(data: {
 }) {
   const db = await getDb();
   if (!db) return;
-  const result = await db.insert(userSessions).values({
-    userId: data.userId,
-    ipAddress: data.ipAddress ?? null,
-    userAgent: data.userAgent ?? null,
-    lastActive: new Date(),
-    expiresAt: data.expiresAt,
-  }).returning({ id: userSessions.id });
+  const result = await db
+    .insert(userSessions)
+    .values({
+      userId: data.userId,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+      lastActive: new Date(),
+      expiresAt: data.expiresAt,
+    })
+    .returning({ id: userSessions.id });
   return result[0]?.id;
 }
 
 export async function updateUserSession(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(userSessions).set({ lastActive: new Date() }).where(eq(userSessions.id, id));
+  await db
+    .update(userSessions)
+    .set({ lastActive: new Date() })
+    .where(eq(userSessions.id, id));
 }
 
 export async function deleteUserSession(id: number) {
@@ -766,19 +1011,27 @@ export async function deleteUserSessionsByUser(userId: number) {
 export async function getUserSessions(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(userSessions)
-    .where(and(eq(userSessions.userId, userId), sql`${userSessions.expiresAt} > NOW()`))
+  return db
+    .select()
+    .from(userSessions)
+    .where(
+      and(
+        eq(userSessions.userId, userId),
+        sql`${userSessions.expiresAt} > NOW()`
+      )
+    )
     .orderBy(desc(userSessions.lastActive));
 }
 
 export async function getAllUserSessions() {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    session: userSessions,
-    userName: sql<string>`COALESCE(${users.displayName}, ${users.name}, ${users.username})`,
-    userRole: users.role,
-  })
+  return db
+    .select({
+      session: userSessions,
+      userName: sql<string>`COALESCE(${users.displayName}, ${users.name}, ${users.username})`,
+      userRole: users.role,
+    })
     .from(userSessions)
     .leftJoin(users, eq(userSessions.userId, users.id))
     .where(sql`${userSessions.expiresAt} > NOW()`)
@@ -807,22 +1060,28 @@ export async function createAuditLog(data: {
   });
 }
 
-export async function getAuditLogs(filters: {
-  userId?: number;
-  action?: string;
-  limit?: number;
-  offset?: number;
-} = {}) {
+export async function getAuditLogs(
+  filters: {
+    userId?: number;
+    action?: string;
+    limit?: number;
+    offset?: number;
+  } = {}
+) {
   const db = await getDb();
   if (!db) return [];
   const conditions: SQL[] = [];
   if (filters.userId) conditions.push(eq(auditLogs.userId, filters.userId));
   if (filters.action) {
-    const escaped = filters.action.replace(/[%_\\]/g, '\\$&');
-    conditions.push(sql`${auditLogs.action} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`);
+    const escaped = filters.action.replace(/[%_\\]/g, "\\$&");
+    conditions.push(
+      sql`${auditLogs.action} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
+    );
   }
 
-  const query = db.select().from(auditLogs)
+  const query = db
+    .select()
+    .from(auditLogs)
     .orderBy(desc(auditLogs.createdAt))
     .limit(filters.limit ?? 100)
     .offset(filters.offset ?? 0);

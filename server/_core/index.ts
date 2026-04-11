@@ -47,14 +47,18 @@ async function startServer() {
     try {
       const db = await getDb();
       if (!db) {
-        return res.status(503).json({ status: "error", message: "Database not configured" });
+        return res
+          .status(503)
+          .json({ status: "error", message: "Database not configured" });
       }
       // Verifica conexão real com o banco
       await db.execute(sql`SELECT 1`);
       return res.json({ status: "ok", timestamp: new Date().toISOString() });
     } catch (err) {
       console.error("[HealthCheck] Falha:", err);
-      return res.status(503).json({ status: "error", message: "Database connection failed" });
+      return res
+        .status(503)
+        .json({ status: "error", message: "Database connection failed" });
     }
   });
 

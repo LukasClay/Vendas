@@ -31,7 +31,7 @@ describe("classifyKnownHttpError", () => {
       classifyKnownHttpError({
         type: "request.aborted",
         message: "request aborted",
-      }),
+      })
     ).toMatchObject({
       kind: "request_aborted",
       status: 400,
@@ -42,7 +42,7 @@ describe("classifyKnownHttpError", () => {
     expect(
       classifyKnownHttpError({
         type: "entity.too.large",
-      }),
+      })
     ).toMatchObject({
       kind: "entity_too_large",
       status: 413,
@@ -70,10 +70,10 @@ describe("logKnownHttpError", () => {
   it("loga request aborted sem stack trace", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const result = logKnownHttpError(
-      createRequest(),
-      { type: "request.aborted", message: "request aborted" },
-    );
+    const result = logKnownHttpError(createRequest(), {
+      type: "request.aborted",
+      message: "request aborted",
+    });
 
     expect(result).toMatchObject({ kind: "request_aborted", status: 400 });
     expect(warn).toHaveBeenCalledTimes(1);

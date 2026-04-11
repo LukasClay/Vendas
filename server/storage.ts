@@ -7,7 +7,7 @@
  * Se nenhum estiver configurado, o upload falha com mensagem clara.
  */
 
-import { ENV } from './_core/env';
+import { ENV } from "./_core/env";
 
 // ─── Manus Proxy ─────────────────────────────────────────────────────────────
 
@@ -71,7 +71,8 @@ function getS3Config() {
   const endpoint = process.env.S3_ENDPOINT;
   const bucket = process.env.S3_BUCKET_NAME || process.env.S3_BUCKET;
   const accessKey = process.env.S3_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY;
-  const secretKey = process.env.S3_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY;
+  const secretKey =
+    process.env.S3_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY;
   const publicUrl = process.env.S3_PUBLIC_URL; // URL pública do bucket (ex: https://bucket.r2.dev)
   const region = process.env.S3_REGION || "auto";
   if (!endpoint || !bucket || !accessKey || !secretKey) return null;
@@ -177,11 +178,13 @@ export async function storagePut(
   if (getS3Config()) return s3Put(relKey, data, contentType);
   throw new Error(
     "Nenhum serviço de storage configurado. " +
-    "Configure BUILT_IN_FORGE_API_URL (Manus) ou S3_ENDPOINT + S3_BUCKET_NAME + S3_ACCESS_KEY_ID + S3_SECRET_ACCESS_KEY (Railway)."
+      "Configure BUILT_IN_FORGE_API_URL (Manus) ou S3_ENDPOINT + S3_BUCKET_NAME + S3_ACCESS_KEY_ID + S3_SECRET_ACCESS_KEY (Railway)."
   );
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
+export async function storageGet(
+  relKey: string
+): Promise<{ key: string; url: string }> {
   if (getManusConfig()) return manusGet(relKey);
   if (getS3Config()) return s3Get(relKey);
   throw new Error("Nenhum serviço de storage configurado.");

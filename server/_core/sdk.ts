@@ -32,7 +32,6 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {}
 
-
   private decodeState(state: string): string {
     const redirectUri = atob(state);
     return redirectUri;
@@ -198,9 +197,12 @@ class SDKServer {
       .sign(secretKey);
   }
 
-  async verifySession(
-    cookieValue: string | undefined | null
-  ): Promise<{ openId: string; appId: string; name: string; sessionVersion?: number } | null> {
+  async verifySession(cookieValue: string | undefined | null): Promise<{
+    openId: string;
+    appId: string;
+    name: string;
+    sessionVersion?: number;
+  } | null> {
     if (!cookieValue) {
       return null;
     }
@@ -210,7 +212,10 @@ class SDKServer {
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      const { openId, appId, name, sessionVersion } = payload as Record<string, unknown>;
+      const { openId, appId, name, sessionVersion } = payload as Record<
+        string,
+        unknown
+      >;
 
       if (
         !isNonEmptyString(openId) ||
@@ -225,7 +230,8 @@ class SDKServer {
         openId,
         appId,
         name,
-        sessionVersion: typeof sessionVersion === "number" ? sessionVersion : undefined, // A2
+        sessionVersion:
+          typeof sessionVersion === "number" ? sessionVersion : undefined, // A2
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));
@@ -259,10 +265,11 @@ class SDKServer {
 
   async authenticateRequest(
     req: Request,
-    providedSessionCookie?: string | null,
+    providedSessionCookie?: string | null
   ): Promise<User> {
     // Regular authentication flow
-    const sessionCookie = providedSessionCookie ?? this.getSessionCookieFromRequest(req);
+    const sessionCookie =
+      providedSessionCookie ?? this.getSessionCookieFromRequest(req);
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
@@ -300,12 +307,17 @@ class SDKServer {
 
     // BLOQUEIO DE SEGURANÇA: Impede acesso de usuários inativos ou excluídos
     if (!user.active || user.deletedAt !== null) {
-      throw ForbiddenError("Sua conta foi desativada. Entre em contato com a administração.");
+      throw ForbiddenError(
+        "Sua conta foi desativada. Entre em contato com a administração."
+      );
     }
 
     // A2: verificar se sessionVersion do token bate com a do banco
     const tokenVersion = (session as any).sessionVersion ?? 1;
-    if (user.sessionVersion !== undefined && user.sessionVersion !== tokenVersion) {
+    if (
+      user.sessionVersion !== undefined &&
+      user.sessionVersion !== tokenVersion
+    ) {
       throw ForbiddenError("Session invalidated");
     }
 

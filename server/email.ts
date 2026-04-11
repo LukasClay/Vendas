@@ -12,7 +12,9 @@ if (RESEND_API_KEY) {
   resend = new Resend(RESEND_API_KEY);
   console.log("[Email] Resend configurado com sucesso");
 } else {
-  console.warn("[Email] RESEND_API_KEY não configurada — envio de email desabilitado");
+  console.warn(
+    "[Email] RESEND_API_KEY não configurada — envio de email desabilitado"
+  );
 }
 
 export interface EmailOptions {
@@ -23,7 +25,9 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   if (!resend) {
-    console.warn("[Email] Tentativa de envio ignorada — Resend não configurado");
+    console.warn(
+      "[Email] Tentativa de envio ignorada — Resend não configurado"
+    );
     return false;
   }
 
@@ -40,7 +44,9 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       return false;
     }
 
-    console.log(`[Email] Enviado com sucesso para ${options.to} (ID: ${data?.id})`);
+    console.log(
+      `[Email] Enviado com sucesso para ${options.to} (ID: ${data?.id})`
+    );
     return true;
   } catch (err) {
     console.error("[Email] Erro inesperado:", err);

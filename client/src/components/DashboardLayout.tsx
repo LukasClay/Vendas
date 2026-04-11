@@ -3,9 +3,25 @@ import { trpc } from "@/lib/trpc";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
-  BarChart3, Bell, ClipboardList, FileText, LayoutDashboard, LogOut, Package,
-  PlusCircle, User, Users, Menu, X, ChevronRight, Sparkles, Calendar,
-  Sun, Moon, Trash2, Shield,
+  BarChart3,
+  Bell,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  PlusCircle,
+  User,
+  Users,
+  Menu,
+  X,
+  ChevronRight,
+  Sparkles,
+  Calendar,
+  Sun,
+  Moon,
+  Trash2,
+  Shield,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -17,50 +33,52 @@ import CompanyThemeProvider from "./CompanyThemeProvider";
 
 // Cores clássicas (Consultora + Vendedor — âmbar fixo, NÃO muda)
 const CLASSIC_COLORS = {
-  sidebar:        "#111111",
-  sidebarFg:      "#ffffff",
-  sidebarAccent:  "rgba(255,255,255,0.05)",
-  sidebarBorder:  "rgba(255,255,255,0.1)",
-  primary:        "#c17f24",
-  primaryFg:      "#ffffff",
-  bg:             "#faf8f4",
-  mutedFg:        "#8888a0",
-  textHint:       "#8888a0",
-  textFaint:      "#6b6b80",
-  roleBadgeAdminBg:   "rgba(193,127,36,0.2)",
-  roleBadgeAdminFg:   "#b8860b",
+  sidebar: "#111111",
+  sidebarFg: "#ffffff",
+  sidebarAccent: "rgba(255,255,255,0.05)",
+  sidebarBorder: "rgba(255,255,255,0.1)",
+  primary: "#c17f24",
+  primaryFg: "#ffffff",
+  bg: "#faf8f4",
+  mutedFg: "#8888a0",
+  textHint: "#8888a0",
+  textFaint: "#6b6b80",
+  roleBadgeAdminBg: "rgba(193,127,36,0.2)",
+  roleBadgeAdminFg: "#b8860b",
   roleBadgeConsultBg: "rgba(107,79,173,0.2)",
   roleBadgeConsultFg: "#7b5ea7",
-  roleBadgeSellerBg:  "rgba(39,174,96,0.2)",
-  roleBadgeSellerFg:  "#1e8449",
-  logoutFg:       "#c0392b",
-  logoutBg:       "rgba(192,57,43,0.08)",
-  gradientGold:   "linear-gradient(135deg, #c17f24, #d4932a)",
-  gradientDark:   "linear-gradient(135deg, #181824 0%, #1e1e30 100%)",
+  roleBadgeSellerBg: "rgba(39,174,96,0.2)",
+  roleBadgeSellerFg: "#1e8449",
+  logoutFg: "#c0392b",
+  logoutBg: "rgba(192,57,43,0.08)",
+  gradientGold: "linear-gradient(135deg, #c17f24, #d4932a)",
+  gradientDark: "linear-gradient(135deg, #181824 0%, #1e1e30 100%)",
 };
 
 // Cores modernas (Admin — dinâmicas via CSS vars do CompanyThemeProvider)
 const MODERN_COLORS = {
-  sidebar:        "var(--sidebar)",
-  sidebarFg:      "var(--sidebar-foreground)",
-  sidebarAccent:  "var(--sidebar-accent)",
-  sidebarBorder:  "var(--sidebar-border)",
-  primary:        "var(--primary)",
-  primaryFg:      "var(--primary-foreground)",
-  bg:             "var(--background)",
-  mutedFg:        "var(--muted-foreground)",
-  textHint:       "var(--muted-foreground)",
-  textFaint:      "var(--muted-foreground)",
-  roleBadgeAdminBg:   "rgba(var(--primary-rgb, 124,58,237), 0.2)",
-  roleBadgeAdminFg:   "var(--primary)",
+  sidebar: "var(--sidebar)",
+  sidebarFg: "var(--sidebar-foreground)",
+  sidebarAccent: "var(--sidebar-accent)",
+  sidebarBorder: "var(--sidebar-border)",
+  primary: "var(--primary)",
+  primaryFg: "var(--primary-foreground)",
+  bg: "var(--background)",
+  mutedFg: "var(--muted-foreground)",
+  textHint: "var(--muted-foreground)",
+  textFaint: "var(--muted-foreground)",
+  roleBadgeAdminBg: "rgba(var(--primary-rgb, 124,58,237), 0.2)",
+  roleBadgeAdminFg: "var(--primary)",
   roleBadgeConsultBg: "rgba(var(--accent-rgb, 107,79,173), 0.2)",
   roleBadgeConsultFg: "var(--accent)",
-  roleBadgeSellerBg:  "rgba(var(--success-rgb, 39,174,96), 0.2)",
-  roleBadgeSellerFg:  "var(--success)",
-  logoutFg:       "var(--destructive)",
-  logoutBg:       "rgba(var(--destructive-rgb, 192,57,43), 0.08)",
-  gradientGold:   "linear-gradient(135deg, var(--primary), var(--primary-darker, var(--primary)))",
-  gradientDark:   "linear-gradient(135deg, var(--background-start, var(--background)), var(--background-end, var(--background)))",
+  roleBadgeSellerBg: "rgba(var(--success-rgb, 39,174,96), 0.2)",
+  roleBadgeSellerFg: "var(--success)",
+  logoutFg: "var(--destructive)",
+  logoutBg: "rgba(var(--destructive-rgb, 192,57,43), 0.08)",
+  gradientGold:
+    "linear-gradient(135deg, var(--primary), var(--primary-darker, var(--primary)))",
+  gradientDark:
+    "linear-gradient(135deg, var(--background-start, var(--background)), var(--background-end, var(--background)))",
 };
 
 const sellerMenuItems = [
@@ -101,7 +119,13 @@ function getActiveItem(menuItems: typeof adminMenuItems, location: string) {
   return null;
 }
 
-function ThemeToggle({ size = "sm", colors }: { size?: "sm" | "md", colors: typeof MODERN_COLORS }) {
+function ThemeToggle({
+  size = "sm",
+  colors,
+}: {
+  size?: "sm" | "md";
+  colors: typeof MODERN_COLORS;
+}) {
   const { resolvedTheme, toggleTheme } = useTheme();
   const iconSize = size === "sm" ? "w-4 h-4" : "w-5 h-5";
   const btnSize = size === "sm" ? "w-8 h-8" : "w-10 h-10";
@@ -154,10 +178,18 @@ const menuContainerVariants = {
 
 const menuItemVariants = {
   hidden: { opacity: 0, x: -12 },
-  show: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
+  show: {
+    opacity: 1,
+    x: 0,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 },
+  },
 };
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { loading, user } = useAuth();
   const isAdmin = user?.role === "admin";
   const C = isAdmin ? MODERN_COLORS : CLASSIC_COLORS;
@@ -166,26 +198,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen"
-        style={{ background: C.gradientDark }}>
-        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full rounded-3xl shadow-2xl border border-[var(--border)]"
-          style={{ background: isAdmin ? "var(--card)" : "#ffffff" }}>
-          <div className="w-16 h-16 rounded-full flex items-center justify-center"
-            style={{ background: C.gradientGold }}>
+      <div
+        className="flex items-center justify-center min-h-screen"
+        style={{ background: C.gradientDark }}
+      >
+        <div
+          className="flex flex-col items-center gap-6 p-8 max-w-md w-full rounded-3xl shadow-2xl border border-[var(--border)]"
+          style={{ background: isAdmin ? "var(--card)" : "#ffffff" }}
+        >
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ background: C.gradientGold }}
+          >
             <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-              <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" opacity="0.9" />
+              <path
+                d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z"
+                fill="white"
+                opacity="0.9"
+              />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-center" style={{ fontFamily: "'Playfair Display', serif", color: isAdmin ? "var(--foreground)" : "#111111" }}>
+          <h1
+            className="text-2xl font-bold text-center"
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              color: isAdmin ? "var(--foreground)" : "#111111",
+            }}
+          >
             Acesso Necessário
           </h1>
           <p className="text-sm text-center" style={{ color: C.textHint }}>
             Faça login para acessar o sistema
           </p>
           <button
-            onClick={() => { window.location.href = "/"; }}
+            onClick={() => {
+              window.location.href = "/";
+            }}
             className="w-full py-4 rounded-xl text-base font-semibold text-white"
-            style={{ background: C.gradientGold }}>
+            style={{ background: C.gradientGold }}
+          >
             Entrar no Sistema
           </button>
         </div>
@@ -204,7 +255,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => { window.location.href = "/"; },
+    onSuccess: () => {
+      window.location.href = "/";
+    },
   });
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -213,11 +266,20 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
   const isConsultora = user?.role === "consultora";
   const C = isAdmin ? MODERN_COLORS : CLASSIC_COLORS;
-  const menuItems = isAdmin ? adminMenuItems : isConsultora ? consultoraMenuItems : sellerMenuItems;
+  const menuItems = isAdmin
+    ? adminMenuItems
+    : isConsultora
+      ? consultoraMenuItems
+      : sellerMenuItems;
   const activeMenuItem = getActiveItem(menuItems, location);
 
   const displayName = user?.name || user?.email || "Usuário";
-  const initials = displayName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   const navigate = (path: string) => {
     setLocation(path);
@@ -253,11 +315,22 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
-        <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 shadow-sm"
-          style={{ background: C.sidebar, borderBottom: `1px solid ${C.sidebarBorder}` }}>
+        <header
+          className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 shadow-sm"
+          style={{
+            background: C.sidebar,
+            borderBottom: `1px solid ${C.sidebarBorder}`,
+          }}
+        >
           <div className="flex items-center gap-3">
             <PulseStar className="text-amber-500" />
-            <span className="font-semibold text-sm" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>
+            <span
+              className="font-semibold text-sm"
+              style={{
+                color: C.sidebarFg,
+                fontFamily: "'Playfair Display', serif",
+              }}
+            >
               {activeMenuItem?.label ?? "Mundo Da Magia"}
             </span>
           </div>
@@ -272,7 +345,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => setMenuOpen(true)}
               className="w-10 h-10 flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px]"
               style={{ color: C.mutedFg }}
-              aria-label="Abrir menu">
+              aria-label="Abrir menu"
+            >
               <Menu className="w-6 h-6" />
             </button>
           </div>
@@ -296,26 +370,68 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                <div className="flex items-center justify-between p-4 border-b"
-                  style={{ borderColor: C.sidebarBorder }}>
+                <div
+                  className="flex items-center justify-between p-4 border-b"
+                  style={{ borderColor: C.sidebarBorder }}
+                >
                   <div className="flex items-center gap-3">
                     <PulseStar className="text-amber-500" />
-                    <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>Mundo Da Magia</span>
+                    <span
+                      className="font-bold text-lg"
+                      style={{
+                        color: C.sidebarFg,
+                        fontFamily: "'Playfair Display', serif",
+                      }}
+                    >
+                      Mundo Da Magia
+                    </span>
                   </div>
-                  <button onClick={() => setMenuOpen(false)} className="p-2" style={{ color: C.sidebarFg }}><X className="w-6 h-6" /></button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="p-2"
+                    style={{ color: C.sidebarFg }}
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
 
                 {/* Perfil */}
-                <div className="flex flex-col items-center p-6 border-b" style={{ borderColor: C.sidebarBorder }}>
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-bold mb-3"
-                    style={{ background: C.gradientGold }}>{initials}</div>
-                  <p className="font-bold text-lg" style={{ color: C.sidebarFg }}>{displayName}</p>
-                  <div className="mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                <div
+                  className="flex flex-col items-center p-6 border-b"
+                  style={{ borderColor: C.sidebarBorder }}
+                >
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-bold mb-3"
+                    style={{ background: C.gradientGold }}
+                  >
+                    {initials}
+                  </div>
+                  <p
+                    className="font-bold text-lg"
+                    style={{ color: C.sidebarFg }}
+                  >
+                    {displayName}
+                  </p>
+                  <div
+                    className="mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                     style={{
-                      background: isAdmin ? "rgba(var(--primary-rgb, 124,58,237), 0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)",
-                      color: isAdmin ? "var(--primary)" : isConsultora ? "#7b5ea7" : "#27ae60"
-                    }}>
-                    {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
+                      background: isAdmin
+                        ? "rgba(var(--primary-rgb, 124,58,237), 0.2)"
+                        : isConsultora
+                          ? "rgba(107,79,173,0.2)"
+                          : "rgba(39,174,96,0.2)",
+                      color: isAdmin
+                        ? "var(--primary)"
+                        : isConsultora
+                          ? "#7b5ea7"
+                          : "#27ae60",
+                    }}
+                  >
+                    {isAdmin
+                      ? "Admin"
+                      : isConsultora
+                        ? "Consultora"
+                        : "Vendedor"}
                   </div>
                 </div>
 
@@ -327,7 +443,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     initial="hidden"
                     animate="show"
                   >
-                    {menuItems.map((item) => {
+                    {menuItems.map(item => {
                       const isActive = activeMenuItem?.path === item.path;
                       return (
                         <motion.button
@@ -336,7 +452,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                           onClick={() => navigate(item.path)}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium relative overflow-hidden"
                           style={{
-                            background: isActive ? "var(--sidebar-accent)" : "transparent",
+                            background: isActive
+                              ? "var(--sidebar-accent)"
+                              : "transparent",
                             color: isActive ? "var(--primary)" : C.sidebarFg,
                             opacity: isActive ? 1 : 0.7,
                             transition: "all 0.2s ease",
@@ -349,7 +467,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                               layoutId="mobile-active-bar"
                               className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
                               style={{ background: "var(--primary)" }}
-                              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 25,
+                              }}
                             />
                           )}
                           <item.icon className="w-5 h-5 transition-colors duration-200" />
@@ -360,7 +482,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   </motion.nav>
                 ) : (
                   <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {menuItems.map((item) => {
+                    {menuItems.map(item => {
                       const isActive = activeMenuItem?.path === item.path;
                       return (
                         <button
@@ -368,9 +490,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                           onClick={() => navigate(item.path)}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
                           style={{
-                            background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                            background: isActive
+                              ? "rgba(255,255,255,0.1)"
+                              : "transparent",
                             color: isActive ? "#ffffff" : C.sidebarFg,
-                            opacity: isActive ? 1 : 0.7
+                            opacity: isActive ? 1 : 0.7,
                           }}
                         >
                           <item.icon className="w-5 h-5" />
@@ -381,11 +505,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   </nav>
                 )}
 
-                <div className="p-4 border-t" style={{ borderColor: C.sidebarBorder }}>
+                <div
+                  className="p-4 border-t"
+                  style={{ borderColor: C.sidebarBorder }}
+                >
                   <button
                     onClick={() => logoutMutation.mutate()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-colors"
-                    style={{ background: C.logoutBg, color: C.logoutFg }}>
+                    style={{ background: C.logoutBg, color: C.logoutFg }}
+                  >
                     <LogOut className="w-4 h-4" /> Sair
                   </button>
                 </div>
@@ -407,7 +535,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 {children}
               </motion.div>
             </AnimatePresence>
-          ) : children}
+          ) : (
+            children
+          )}
         </main>
       </div>
     );
@@ -416,11 +546,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // ─── DESKTOP ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen" style={{ background: C.bg }}>
-      <aside className="w-64 shrink-0 flex flex-col border-r shadow-lg sticky top-0 h-screen"
-        style={{ background: C.sidebar, borderColor: C.sidebarBorder }}>
-
+      <aside
+        className="w-64 shrink-0 flex flex-col border-r shadow-lg sticky top-0 h-screen"
+        style={{ background: C.sidebar, borderColor: C.sidebarBorder }}
+      >
         {/* Logo / Empresa */}
-        <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
+        <div
+          className="flex items-center gap-3 p-4 border-b"
+          style={{ borderColor: C.sidebarBorder }}
+        >
           {isAdmin ? (
             <motion.div
               className="text-amber-500"
@@ -431,27 +565,60 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           ) : (
             <PulseStar className="text-amber-500" />
           )}
-          <span className="font-bold text-lg" style={{ color: C.sidebarFg, fontFamily: "'Playfair Display', serif" }}>Mundo Da Magia</span>
+          <span
+            className="font-bold text-lg"
+            style={{
+              color: C.sidebarFg,
+              fontFamily: "'Playfair Display', serif",
+            }}
+          >
+            Mundo Da Magia
+          </span>
         </div>
 
         {/* Perfil + Badge */}
-        <div className="flex flex-col items-center p-4 border-b" style={{ borderColor: C.sidebarBorder }}>
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2"
-            style={{ background: C.gradientGold }}>{initials}</div>
-          <p className="font-bold text-sm text-center" style={{ color: C.sidebarFg }}>{displayName}</p>
-          <div className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+        <div
+          className="flex flex-col items-center p-4 border-b"
+          style={{ borderColor: C.sidebarBorder }}
+        >
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2"
+            style={{ background: C.gradientGold }}
+          >
+            {initials}
+          </div>
+          <p
+            className="font-bold text-sm text-center"
+            style={{ color: C.sidebarFg }}
+          >
+            {displayName}
+          </p>
+          <div
+            className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
             style={{
-              background: isAdmin ? "rgba(var(--primary-rgb, 124,58,237), 0.2)" : isConsultora ? "rgba(107,79,173,0.2)" : "rgba(39,174,96,0.2)",
-              color: isAdmin ? "var(--primary)" : isConsultora ? "#7b5ea7" : "#27ae60",
+              background: isAdmin
+                ? "rgba(var(--primary-rgb, 124,58,237), 0.2)"
+                : isConsultora
+                  ? "rgba(107,79,173,0.2)"
+                  : "rgba(39,174,96,0.2)",
+              color: isAdmin
+                ? "var(--primary)"
+                : isConsultora
+                  ? "#7b5ea7"
+                  : "#27ae60",
               transition: "all 0.3s ease",
-            }}>
+            }}
+          >
             {isAdmin ? "Admin" : isConsultora ? "Consultora" : "Vendedor"}
           </div>
         </div>
 
         {/* Separador sutil */}
         {isAdmin && (
-          <div className="mx-4 my-1 h-px" style={{ background: C.sidebarBorder }} />
+          <div
+            className="mx-4 my-1 h-px"
+            style={{ background: C.sidebarBorder }}
+          />
         )}
 
         {/* Menu items */}
@@ -462,7 +629,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             initial="hidden"
             animate="show"
           >
-            {menuItems.map((item) => {
+            {menuItems.map(item => {
               const isActive = activeMenuItem?.path === item.path;
               return (
                 <motion.button
@@ -471,7 +638,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   onClick={() => setLocation(item.path)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium relative overflow-hidden group"
                   style={{
-                    background: isActive ? "var(--sidebar-accent)" : "transparent",
+                    background: isActive
+                      ? "var(--sidebar-accent)"
+                      : "transparent",
                     color: isActive ? "var(--primary)" : C.sidebarFg,
                     opacity: isActive ? 1 : 0.7,
                     transition: "all 0.2s ease",
@@ -484,7 +653,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                       layoutId="desktop-active-bar"
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
                       style={{ background: "var(--primary)" }}
-                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 25,
+                      }}
                     />
                   )}
                   <item.icon
@@ -498,7 +671,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </motion.nav>
         ) : (
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-            {menuItems.map((item) => {
+            {menuItems.map(item => {
               const isActive = activeMenuItem?.path === item.path;
               return (
                 <button
@@ -506,9 +679,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   onClick={() => setLocation(item.path)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
                   style={{
-                    background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                    background: isActive
+                      ? "rgba(255,255,255,0.1)"
+                      : "transparent",
                     color: isActive ? "#ffffff" : C.sidebarFg,
-                    opacity: isActive ? 1 : 0.7
+                    opacity: isActive ? 1 : 0.7,
                   }}
                 >
                   <item.icon className="w-4 h-4" />
@@ -520,17 +695,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Footer: Theme toggle + Notificações + Logout */}
-        <div className="p-4 border-t flex flex-col gap-2" style={{ borderColor: C.sidebarBorder }}>
+        <div
+          className="p-4 border-t flex flex-col gap-2"
+          style={{ borderColor: C.sidebarBorder }}
+        >
           {(isAdmin || isConsultora) && (
             <div className="flex items-center justify-center gap-2 mb-2">
               {isAdmin && <ThemeToggle size="sm" colors={C} />}
-              <div style={{ color: C.mutedFg }}><PushNotificationButton /></div>
+              <div style={{ color: C.mutedFg }}>
+                <PushNotificationButton />
+              </div>
             </div>
           )}
           <button
             onClick={() => logoutMutation.mutate()}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
-            style={{ background: C.logoutBg, color: C.logoutFg }}>
+            style={{ background: C.logoutBg, color: C.logoutFg }}
+          >
             <LogOut className="w-4 h-4" /> Sair
           </button>
         </div>
@@ -550,7 +731,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               {children}
             </motion.div>
           </AnimatePresence>
-        ) : children}
+        ) : (
+          children
+        )}
       </main>
     </div>
   );

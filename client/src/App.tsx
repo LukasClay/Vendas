@@ -28,22 +28,40 @@ const ConsultasPage = lazy(() => import("./pages/Consultas"));
 // Minimal loading fallback — just a blank screen, avoids flash
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen"
-      style={{ background: "oklch(0.97 0.005 65)" }}>
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-        style={{ borderColor: "oklch(0.60 0.13 65)", borderTopColor: "transparent" }} />
+    <div
+      className="flex items-center justify-center min-h-screen"
+      style={{ background: "oklch(0.97 0.005 65)" }}
+    >
+      <div
+        className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+        style={{
+          borderColor: "oklch(0.60 0.13 65)",
+          borderTopColor: "transparent",
+        }}
+      />
     </div>
   );
 }
 
 // Route guard: redirects unauthenticated users to login
-function AuthGuard({ children, adminOnly = false, consultoraOnly = false }: { children: React.ReactNode; adminOnly?: boolean; consultoraOnly?: boolean }) {
+function AuthGuard({
+  children,
+  adminOnly = false,
+  consultoraOnly = false,
+}: {
+  children: React.ReactNode;
+  adminOnly?: boolean;
+  consultoraOnly?: boolean;
+}) {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { navigate("/login"); return; }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
     if (adminOnly && user.role !== "admin") {
       if (user.role === "consultora") navigate("/consultora");
       else navigate("/venda");
@@ -57,7 +75,8 @@ function AuthGuard({ children, adminOnly = false, consultoraOnly = false }: { ch
   if (loading) return null;
   if (!user) return null;
   if (adminOnly && user.role !== "admin") return null;
-  if (consultoraOnly && user.role !== "consultora" && user.role !== "admin") return null;
+  if (consultoraOnly && user.role !== "consultora" && user.role !== "admin")
+    return null;
 
   return <>{children}</>;
 }
@@ -69,10 +88,17 @@ function HomeRedirect() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { navigate("/login"); return; }
-    if (user.role === "admin") { navigate("/admin"); }
-    else if (user.role === "consultora") { navigate("/consultora"); }
-    else { navigate("/venda"); }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (user.role === "admin") {
+      navigate("/admin");
+    } else if (user.role === "consultora") {
+      navigate("/consultora");
+    } else {
+      navigate("/venda");
+    }
   }, [user, loading, navigate]);
 
   return null;
@@ -87,62 +113,98 @@ function Router() {
 
         {/* Seller routes */}
         <Route path="/venda">
-          <AuthGuard><NovaVenda /></AuthGuard>
+          <AuthGuard>
+            <NovaVenda />
+          </AuthGuard>
         </Route>
         <Route path="/minhas-vendas">
-          <AuthGuard><MinhasVendas /></AuthGuard>
+          <AuthGuard>
+            <MinhasVendas />
+          </AuthGuard>
         </Route>
 
         {/* Consultora routes */}
         <Route path="/consultora">
-          <AuthGuard consultoraOnly><ConsultoraPage /></AuthGuard>
+          <AuthGuard consultoraOnly>
+            <ConsultoraPage />
+          </AuthGuard>
         </Route>
         <Route path="/consultora/venda">
-          <AuthGuard consultoraOnly><NovaVenda /></AuthGuard>
+          <AuthGuard consultoraOnly>
+            <NovaVenda />
+          </AuthGuard>
         </Route>
         <Route path="/consultora/minhas-vendas">
-          <AuthGuard consultoraOnly><MinhasVendas /></AuthGuard>
+          <AuthGuard consultoraOnly>
+            <MinhasVendas />
+          </AuthGuard>
         </Route>
         <Route path="/consultora/consultas">
-          <AuthGuard consultoraOnly><ConsultasPage /></AuthGuard>
+          <AuthGuard consultoraOnly>
+            <ConsultasPage />
+          </AuthGuard>
         </Route>
 
         {/* Admin routes */}
         <Route path="/admin">
-          <AuthGuard adminOnly><AdminDashboard /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminDashboard />
+          </AuthGuard>
         </Route>
         <Route path="/admin/relatorios">
-          <AuthGuard adminOnly><AdminRelatorios /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminRelatorios />
+          </AuthGuard>
         </Route>
         <Route path="/admin/vendas">
-          <AuthGuard adminOnly><AdminVendas /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminVendas />
+          </AuthGuard>
         </Route>
         <Route path="/admin/produtos">
-          <AuthGuard adminOnly><AdminProdutos /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminProdutos />
+          </AuthGuard>
         </Route>
         <Route path="/admin/vendedores">
-          <AuthGuard adminOnly><AdminVendedores /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminVendedores />
+          </AuthGuard>
         </Route>
         <Route path="/admin/configuracoes">
-          <AuthGuard adminOnly><AdminConfiguracoes /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminConfiguracoes />
+          </AuthGuard>
         </Route>
         <Route path="/admin/consultas">
-          <AuthGuard adminOnly><AdminConsultas /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminConsultas />
+          </AuthGuard>
         </Route>
         <Route path="/admin/trabalhos">
-          <AuthGuard adminOnly><AdminTrabalhos /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminTrabalhos />
+          </AuthGuard>
         </Route>
         <Route path="/admin/nova-venda">
-          <AuthGuard adminOnly><NovaVenda /></AuthGuard>
+          <AuthGuard adminOnly>
+            <NovaVenda />
+          </AuthGuard>
         </Route>
         <Route path="/admin/alertas">
-          <AuthGuard adminOnly><AdminAlertas /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminAlertas />
+          </AuthGuard>
         </Route>
         <Route path="/admin/lixeira">
-          <AuthGuard adminOnly><AdminLixeira /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminLixeira />
+          </AuthGuard>
         </Route>
         <Route path="/admin/seguranca">
-          <AuthGuard adminOnly><AdminSeguranca /></AuthGuard>
+          <AuthGuard adminOnly>
+            <AdminSeguranca />
+          </AuthGuard>
         </Route>
 
         <Route path="/404" component={NotFound} />

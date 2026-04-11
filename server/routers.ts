@@ -26,7 +26,8 @@ export const appRouter = router({
     logout: protectedProcedure.mutation(async ({ ctx }) => {
       const db = await getDb();
       if (db) {
-        await db.update(users)
+        await db
+          .update(users)
           .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
           .where(eq(users.id, ctx.user.id));
       }

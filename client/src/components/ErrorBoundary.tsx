@@ -54,7 +54,8 @@ class ErrorBoundary extends Component<Props, State> {
 
             <h2 className="text-xl mb-4">Ocorreu um erro inesperado.</h2>
             <p className="text-sm text-muted-foreground mb-6 text-center">
-              Isso pode ter acontecido por uma atualização recente do sistema. Tente recarregar a página.
+              Isso pode ter acontecido por uma atualização recente do sistema.
+              Tente recarregar a página.
             </p>
 
             <button

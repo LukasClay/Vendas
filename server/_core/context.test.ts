@@ -52,7 +52,7 @@ describe("createContext", () => {
 
     expect(mocks.authenticateRequest).toHaveBeenCalledWith(
       expect.anything(),
-      "session-token",
+      "session-token"
     );
     expect(ctx.user).toBe(user);
   });

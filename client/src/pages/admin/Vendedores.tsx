@@ -19,10 +19,25 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
 
-type NewEmployeeForm = { name: string; username: string; password: string; phone: string };
-type EditEmployeeForm = { name: string; username: string; role: "user" | "consultora" | "admin"; active: boolean };
+type NewEmployeeForm = {
+  name: string;
+  username: string;
+  password: string;
+  phone: string;
+};
+type EditEmployeeForm = {
+  name: string;
+  username: string;
+  role: "user" | "consultora" | "admin";
+  active: boolean;
+};
 type ResetForm = { newPassword: string };
-type LocalLoginHealth = "ok" | "missing_username" | "missing_password_hash" | "inactive" | "deleted";
+type LocalLoginHealth =
+  | "ok"
+  | "missing_username"
+  | "missing_password_hash"
+  | "inactive"
+  | "deleted";
 type AdminUser = {
   id: number;
   openId: string;
@@ -54,11 +69,23 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   admin: { bg: "oklch(0.94 0.02 65)", text: "oklch(0.45 0.10 65)" },
 };
 
-const LOCAL_LOGIN_BADGES: Record<LocalLoginHealth, { label: string; className: string }> = {
+const LOCAL_LOGIN_BADGES: Record<
+  LocalLoginHealth,
+  { label: string; className: string }
+> = {
   ok: { label: "Login OK", className: "bg-emerald-500/10 text-emerald-600" },
-  missing_username: { label: "Sem usuário", className: "bg-amber-500/10 text-amber-600" },
-  missing_password_hash: { label: "Sem senha", className: "bg-red-500/10 text-red-500" },
-  inactive: { label: "Desativado", className: "bg-slate-500/10 text-slate-500" },
+  missing_username: {
+    label: "Sem usuário",
+    className: "bg-amber-500/10 text-amber-600",
+  },
+  missing_password_hash: {
+    label: "Sem senha",
+    className: "bg-red-500/10 text-red-500",
+  },
+  inactive: {
+    label: "Desativado",
+    className: "bg-slate-500/10 text-slate-500",
+  },
   deleted: { label: "Excluído", className: "bg-slate-500/10 text-slate-500" },
 };
 
@@ -78,11 +105,18 @@ function UserCard({
   const utils = trpc.useUtils();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<EditEmployeeForm>({ name: "", username: "", role: "user", active: true });
+  const [editForm, setEditForm] = useState<EditEmployeeForm>({
+    name: "",
+    username: "",
+    role: "user",
+    active: true,
+  });
   const [isResetting, setIsResetting] = useState(false);
   const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"deactivate" | "reactivate" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    "deactivate" | "reactivate" | null
+  >(null);
 
   const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
     onSuccess: () => {
@@ -90,7 +124,7 @@ function UserCard({
       utils.users.listAll.invalidate();
       setIsEditing(false);
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const resetPassword = trpc.ownAuth.resetPassword.useMutation({
@@ -100,7 +134,7 @@ function UserCard({
       setIsResetting(false);
       setResetForm({ newPassword: "" });
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const startEditing = () => {
@@ -130,7 +164,8 @@ function UserCard({
   const localLoginBadge = LOCAL_LOGIN_BADGES[user.localLoginHealth];
   const showLocalLoginMessage = user.localLoginHealth !== "ok";
   const isResetPasswordTooShort =
-    resetForm.newPassword.length > 0 && resetForm.newPassword.length < MIN_PASSWORD_LENGTH;
+    resetForm.newPassword.length > 0 &&
+    resetForm.newPassword.length < MIN_PASSWORD_LENGTH;
 
   return (
     <div
@@ -158,7 +193,9 @@ function UserCard({
             <input
               type="text"
               value={editForm.name}
-              onChange={(e) => setEditForm((form) => ({ ...form, name: e.target.value }))}
+              onChange={e =>
+                setEditForm(form => ({ ...form, name: e.target.value }))
+              }
               placeholder="Nome completo"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={inputStyle}
@@ -166,14 +203,21 @@ function UserCard({
             <input
               type="text"
               value={editForm.username}
-              onChange={(e) => setEditForm((form) => ({ ...form, username: e.target.value }))}
+              onChange={e =>
+                setEditForm(form => ({ ...form, username: e.target.value }))
+              }
               placeholder="nome_usuario"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={inputStyle}
             />
             <select
               value={editForm.role}
-              onChange={(e) => setEditForm((form) => ({ ...form, role: e.target.value as EditEmployeeForm["role"] }))}
+              onChange={e =>
+                setEditForm(form => ({
+                  ...form,
+                  role: e.target.value as EditEmployeeForm["role"],
+                }))
+              }
               className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
               style={inputStyle}
             >
@@ -187,7 +231,11 @@ function UserCard({
                 disabled={updateUserMutation.isPending}
                 className="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold text-white bg-[var(--primary)] active:scale-95 disabled:opacity-50"
               >
-                {updateUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                {updateUserMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Salvar"
+                )}
               </button>
               <button
                 onClick={() => setIsEditing(false)}
@@ -200,33 +248,47 @@ function UserCard({
         ) : (
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-bold text-base" style={{ color: "var(--foreground)" }}>
+              <p
+                className="font-bold text-base"
+                style={{ color: "var(--foreground)" }}
+              >
                 {user.displayName || user.name || "Sem nome"}
               </p>
               <span
                 className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
                 style={{
                   background: isDark
-                    ? (user.role === "admin"
-                        ? "rgba(202, 138, 4, 0.15)"
-                        : user.role === "consultora"
-                          ? "rgba(139, 92, 246, 0.15)"
-                          : "rgba(59, 130, 246, 0.15)")
+                    ? user.role === "admin"
+                      ? "rgba(202, 138, 4, 0.15)"
+                      : user.role === "consultora"
+                        ? "rgba(139, 92, 246, 0.15)"
+                        : "rgba(59, 130, 246, 0.15)"
                     : (ROLE_COLORS[user.role] ?? ROLE_COLORS.user).bg,
                   color: isDark
-                    ? (user.role === "admin" ? "#eab308" : user.role === "consultora" ? "#a78bfa" : "#60a5fa")
+                    ? user.role === "admin"
+                      ? "#eab308"
+                      : user.role === "consultora"
+                        ? "#a78bfa"
+                        : "#60a5fa"
                     : (ROLE_COLORS[user.role] ?? ROLE_COLORS.user).text,
                 }}
               >
                 {ROLE_LABELS[user.role] || user.role}
               </span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${localLoginBadge.className}`}>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${localLoginBadge.className}`}
+              >
                 {localLoginBadge.label}
               </span>
             </div>
-            <p className="text-xs mt-0.5 text-[var(--muted-foreground)]">@{user.username || "sem-usuario"}</p>
+            <p className="text-xs mt-0.5 text-[var(--muted-foreground)]">
+              @{user.username || "sem-usuario"}
+            </p>
             {showLocalLoginMessage && (
-              <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 {user.localLoginMessage}
               </p>
             )}
@@ -254,7 +316,9 @@ function UserCard({
             {user.active ? (
               confirmAction === "deactivate" ? (
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-bold text-red-500">Desativar?</span>
+                  <span className="text-[10px] font-bold text-red-500">
+                    Desativar?
+                  </span>
                   <button
                     onClick={() => {
                       onDeactivate(user.id);
@@ -281,7 +345,9 @@ function UserCard({
               )
             ) : confirmAction === "reactivate" ? (
               <div className="flex items-center gap-1">
-                <span className="text-[10px] font-bold text-green-500">Reativar?</span>
+                <span className="text-[10px] font-bold text-green-500">
+                  Reativar?
+                </span>
                 <button
                   onClick={() => {
                     onReactivate(user.id);
@@ -319,12 +385,14 @@ function UserCard({
             className="overflow-hidden"
           >
             <div className="mt-4 p-4 rounded-xl border border-[var(--border)] bg-[var(--secondary)] space-y-4">
-              <p className="text-sm font-bold text-[var(--foreground)]">Redefinir Senha</p>
+              <p className="text-sm font-bold text-[var(--foreground)]">
+                Redefinir Senha
+              </p>
               <div className="relative">
                 <input
                   type={showResetPassword ? "text" : "password"}
                   value={resetForm.newPassword}
-                  onChange={(e) => setResetForm({ newPassword: e.target.value })}
+                  onChange={e => setResetForm({ newPassword: e.target.value })}
                   placeholder="Nova senha (mín. 8 caracteres)"
                   className="w-full px-3 py-2 pr-10 rounded-lg outline-none text-sm"
                   style={inputStyle}
@@ -334,19 +402,37 @@ function UserCard({
                   onClick={() => setShowResetPassword(!showResetPassword)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--muted-foreground)]"
                 >
-                  {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showResetPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               {isResetPasswordTooShort && (
-                <p className="text-xs text-red-500">A senha deve ter no mínimo 8 caracteres.</p>
+                <p className="text-xs text-red-500">
+                  A senha deve ter no mínimo 8 caracteres.
+                </p>
               )}
               <div className="flex gap-2">
                 <button
-                  onClick={() => resetPassword.mutate({ userId: user.id, newPassword: resetForm.newPassword })}
-                  disabled={resetForm.newPassword.length < MIN_PASSWORD_LENGTH || resetPassword.isPending}
+                  onClick={() =>
+                    resetPassword.mutate({
+                      userId: user.id,
+                      newPassword: resetForm.newPassword,
+                    })
+                  }
+                  disabled={
+                    resetForm.newPassword.length < MIN_PASSWORD_LENGTH ||
+                    resetPassword.isPending
+                  }
                   className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 disabled:opacity-50"
                 >
-                  {resetPassword.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
+                  {resetPassword.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Confirmar"
+                  )}
                 </button>
                 <button
                   onClick={() => setIsResetting(false)}
@@ -369,9 +455,18 @@ export default function Vendedores() {
   const users = (usersQuery.data ?? []) as AdminUser[];
   const { isLoading, refetch } = usersQuery;
   const [isAdding, setIsAdding] = useState(false);
-  const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">("user");
-  const [newForm, setNewForm] = useState<NewEmployeeForm>({ name: "", username: "", password: "", phone: "" });
-  const [activeTab, setActiveTab] = useState<"active" | "deactivated">("active");
+  const [createRole, setCreateRole] = useState<"user" | "consultora" | "admin">(
+    "user"
+  );
+  const [newForm, setNewForm] = useState<NewEmployeeForm>({
+    name: "",
+    username: "",
+    password: "",
+    phone: "",
+  });
+  const [activeTab, setActiveTab] = useState<"active" | "deactivated">(
+    "active"
+  );
 
   const createEmployee = trpc.ownAuth.createSeller.useMutation({
     onSuccess: () => {
@@ -381,14 +476,14 @@ export default function Vendedores() {
       setIsAdding(false);
       setNewForm({ name: "", username: "", password: "", phone: "" });
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const updateUserMutation = trpc.ownAuth.updateUser.useMutation({
     onSuccess: () => {
       refetch();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const deactivateMutation = {
@@ -400,7 +495,7 @@ export default function Vendedores() {
             toast.success("Acesso desativado");
             refetch();
           },
-        },
+        }
       ),
   };
 
@@ -413,19 +508,23 @@ export default function Vendedores() {
             toast.success("Acesso reativado");
             refetch();
           },
-        },
+        }
       ),
   };
 
-  const activeUsers = users.filter((user) => user.active);
-  const deactivatedUsers = users.filter((user) => !user.active);
-  const loginRiskCount = activeUsers.filter((user) => user.localLoginHealth !== "ok").length;
-  const createPasswordTooShort = newForm.password.length > 0 && newForm.password.length < MIN_PASSWORD_LENGTH;
+  const activeUsers = users.filter(user => user.active);
+  const deactivatedUsers = users.filter(user => !user.active);
+  const loginRiskCount = activeUsers.filter(
+    user => user.localLoginHealth !== "ok"
+  ).length;
+  const createPasswordTooShort =
+    newForm.password.length > 0 &&
+    newForm.password.length < MIN_PASSWORD_LENGTH;
 
   const groupByRole = (list: AdminUser[]) => ({
-    admins: list.filter((user) => user.role === "admin"),
-    consultoras: list.filter((user) => user.role === "consultora"),
-    employees: list.filter((user) => user.role === "user"),
+    admins: list.filter(user => user.role === "admin"),
+    consultoras: list.filter(user => user.role === "consultora"),
+    employees: list.filter(user => user.role === "user"),
   });
 
   const activeGroups = groupByRole(activeUsers);
@@ -437,15 +536,22 @@ export default function Vendedores() {
     color: "var(--foreground)",
   };
 
-  const renderUserGroup = (title: string, userList: AdminUser[], isDeactivatedTab: boolean) => {
+  const renderUserGroup = (
+    title: string,
+    userList: AdminUser[],
+    isDeactivatedTab: boolean
+  ) => {
     if (userList.length === 0) return null;
     return (
       <StaggerItem key={title}>
-        <h2 className="text-lg font-bold mb-3" style={{ color: "var(--foreground)" }}>
+        <h2
+          className="text-lg font-bold mb-3"
+          style={{ color: "var(--foreground)" }}
+        >
           {title}
         </h2>
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xl divide-y divide-[var(--border)]">
-          {userList.map((user) => (
+          {userList.map(user => (
             <UserCard
               key={user.id}
               user={user}
@@ -467,18 +573,31 @@ export default function Vendedores() {
             <div>
               <h1
                 className="text-2xl font-bold"
-                style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}
+                style={{
+                  color: "var(--foreground)",
+                  fontFamily: "'Playfair Display', serif",
+                }}
               >
                 Funcionários
               </h1>
-              <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+              <p
+                className="text-sm mt-1"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 Gerencie os acessos do sistema
               </p>
               <p
                 className="text-sm mt-2 font-medium"
-                style={{ color: loginRiskCount > 0 ? "oklch(0.58 0.18 25)" : "oklch(0.45 0.12 145)" }}
+                style={{
+                  color:
+                    loginRiskCount > 0
+                      ? "oklch(0.58 0.18 25)"
+                      : "oklch(0.45 0.12 145)",
+                }}
               >
-                {loginRiskCount === 0 ? "0 contas com risco de login" : `${loginRiskCount} contas com risco de login`}
+                {loginRiskCount === 0
+                  ? "0 contas com risco de login"
+                  : `${loginRiskCount} contas com risco de login`}
               </p>
             </div>
             <motion.button
@@ -539,7 +658,10 @@ export default function Vendedores() {
               className="p-6 rounded-2xl shadow-xl border border-[var(--border)] bg-[var(--card)] space-y-4"
             >
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-bold text-lg" style={{ color: "var(--foreground)" }}>
+                <h2
+                  className="font-bold text-lg"
+                  style={{ color: "var(--foreground)" }}
+                >
                   Cadastrar Novo
                 </h2>
                 <button
@@ -551,10 +673,16 @@ export default function Vendedores() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Cargo *</label>
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">
+                    Cargo *
+                  </label>
                   <select
                     value={createRole}
-                    onChange={(e) => setCreateRole(e.target.value as "user" | "consultora" | "admin")}
+                    onChange={e =>
+                      setCreateRole(
+                        e.target.value as "user" | "consultora" | "admin"
+                      )
+                    }
                     className="w-full px-4 py-2.5 rounded-xl outline-none cursor-pointer"
                     style={inputStyle}
                   >
@@ -564,32 +692,50 @@ export default function Vendedores() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Nome Completo</label>
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">
+                    Nome Completo
+                  </label>
                   <input
                     type="text"
                     value={newForm.name}
-                    onChange={(e) => setNewForm((form) => ({ ...form, name: e.target.value }))}
+                    onChange={e =>
+                      setNewForm(form => ({ ...form, name: e.target.value }))
+                    }
                     className="w-full px-4 py-2.5 rounded-xl outline-none"
                     style={inputStyle}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Nome de Usuário</label>
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">
+                    Nome de Usuário
+                  </label>
                   <input
                     type="text"
                     value={newForm.username}
-                    onChange={(e) => setNewForm((form) => ({ ...form, username: e.target.value }))}
+                    onChange={e =>
+                      setNewForm(form => ({
+                        ...form,
+                        username: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-2.5 rounded-xl outline-none"
                     style={inputStyle}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Senha</label>
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">
+                    Senha
+                  </label>
                   <div className="relative">
                     <input
                       type={showResetPassword ? "text" : "password"}
                       value={newForm.password}
-                      onChange={(e) => setNewForm((form) => ({ ...form, password: e.target.value }))}
+                      onChange={e =>
+                        setNewForm(form => ({
+                          ...form,
+                          password: e.target.value,
+                        }))
+                      }
                       className="w-full px-4 py-2.5 pr-10 rounded-xl outline-none"
                       placeholder="Mínimo 8 caracteres"
                       style={inputStyle}
@@ -599,19 +745,29 @@ export default function Vendedores() {
                       onClick={() => setShowResetPassword(!showResetPassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--muted-foreground)]"
                     >
-                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showResetPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   {createPasswordTooShort && (
-                    <p className="text-xs text-red-500">A senha deve ter no mínimo 8 caracteres.</p>
+                    <p className="text-xs text-red-500">
+                      A senha deve ter no mínimo 8 caracteres.
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">Telefone (opcional)</label>
+                  <label className="text-xs font-bold ml-1 text-[var(--muted-foreground)]">
+                    Telefone (opcional)
+                  </label>
                   <input
                     type="tel"
                     value={newForm.phone}
-                    onChange={(e) => setNewForm((form) => ({ ...form, phone: e.target.value }))}
+                    onChange={e =>
+                      setNewForm(form => ({ ...form, phone: e.target.value }))
+                    }
                     className="w-full px-4 py-2.5 rounded-xl outline-none"
                     style={inputStyle}
                   />
@@ -619,7 +775,9 @@ export default function Vendedores() {
               </div>
               <div className="flex justify-end pt-2">
                 <button
-                  onClick={() => createEmployee.mutate({ ...newForm, role: createRole })}
+                  onClick={() =>
+                    createEmployee.mutate({ ...newForm, role: createRole })
+                  }
                   disabled={
                     createEmployee.isPending ||
                     newForm.name.length < 3 ||
@@ -628,7 +786,11 @@ export default function Vendedores() {
                   }
                   className="px-6 py-3 rounded-xl font-bold text-white bg-[var(--primary)] shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
-                  {createEmployee.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  {createEmployee.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Plus className="w-5 h-5" />
+                  )}
                   Criar {ROLE_LABELS[createRole]}
                 </button>
               </div>
@@ -652,7 +814,9 @@ export default function Vendedores() {
               <StaggerItem>
                 <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
                   <Users className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
-                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário ativo.</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                    Nenhum funcionário ativo.
+                  </p>
                 </div>
               </StaggerItem>
             )}
@@ -664,18 +828,38 @@ export default function Vendedores() {
                 <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/20">
                   <UserX className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
                   <div className="text-center">
-                    <p className="text-sm font-medium text-[var(--muted-foreground)]">Nenhum funcionário desativado.</p>
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1 opacity-60">Funcionários desativados aparecerão aqui.</p>
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                      Nenhum funcionário desativado.
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-1 opacity-60">
+                      Funcionários desativados aparecerão aqui.
+                    </p>
                   </div>
                 </div>
               </StaggerItem>
             ) : (
               <>
-                {renderUserGroup("Administradores", deactivatedGroups.admins, true)}
-                {deactivatedGroups.consultoras.length > 0 && <div className="mt-6" />}
-                {renderUserGroup("Consultoras", deactivatedGroups.consultoras, true)}
-                {deactivatedGroups.employees.length > 0 && <div className="mt-6" />}
-                {renderUserGroup("Funcionários", deactivatedGroups.employees, true)}
+                {renderUserGroup(
+                  "Administradores",
+                  deactivatedGroups.admins,
+                  true
+                )}
+                {deactivatedGroups.consultoras.length > 0 && (
+                  <div className="mt-6" />
+                )}
+                {renderUserGroup(
+                  "Consultoras",
+                  deactivatedGroups.consultoras,
+                  true
+                )}
+                {deactivatedGroups.employees.length > 0 && (
+                  <div className="mt-6" />
+                )}
+                {renderUserGroup(
+                  "Funcionários",
+                  deactivatedGroups.employees,
+                  true
+                )}
               </>
             )}
           </StaggerList>

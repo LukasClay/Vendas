@@ -28,7 +28,8 @@ describe("getLocalLoginHealth", () => {
     expect(result).toEqual({
       canUseLocalLogin: false,
       localLoginHealth: "missing_username",
-      localLoginMessage: "Conta ativa sem nome de usuário. Edite o funcionário.",
+      localLoginMessage:
+        "Conta ativa sem nome de usuário. Edite o funcionário.",
     });
   });
 

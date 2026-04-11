@@ -30,7 +30,9 @@ function hasText(value: string | null | undefined): boolean {
   return Boolean(value?.trim());
 }
 
-export function getLocalLoginHealth(input: LocalLoginHealthInput): LocalLoginHealthResult {
+export function getLocalLoginHealth(
+  input: LocalLoginHealthInput
+): LocalLoginHealthResult {
   let localLoginHealth: LocalLoginHealth;
 
   if (input.deletedAt) {

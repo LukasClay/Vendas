@@ -18,28 +18,37 @@ async function checkAndNotify() {
 
   try {
     // Buscar trabalhos Para Escrever e Pendentes
-    const activeSales = await (db.select({
-      id: sales.id,
-      clientName: sales.clientName,
-      productName: sales.productName,
-      saleDate: sales.saleDate,
-      workStatus: sales.workStatus,
-    })
+    const activeSales = await (db
+      .select({
+        id: sales.id,
+        clientName: sales.clientName,
+        productName: sales.productName,
+        saleDate: sales.saleDate,
+        workStatus: sales.workStatus,
+      })
       .from(sales)
-      .where(and(
-        inArray(sales.workStatus, ["para_escrever", "pendente"]),
-        isNull(sales.deletedAt) // Garante que não enviará alerta de vendas deletadas
-      )) as any);
+      .where(
+        and(
+          inArray(sales.workStatus, ["para_escrever", "pendente"]),
+          isNull(sales.deletedAt) // Garante que não enviará alerta de vendas deletadas
+        )
+      ) as any);
 
     const urgent: string[] = [];
     const overdue: string[] = [];
 
     for (const sale of activeSales) {
-      const { daysRemaining, isOverdue, isUrgent } = calcBusinessDaysFromSale(sale.saleDate);
+      const { daysRemaining, isOverdue, isUrgent } = calcBusinessDaysFromSale(
+        sale.saleDate
+      );
       if (isOverdue) {
-        overdue.push(`• ${sale.clientName} — ${sale.productName} (${Math.abs(daysRemaining)}d atrasado)`);
+        overdue.push(
+          `• ${sale.clientName} — ${sale.productName} (${Math.abs(daysRemaining)}d atrasado)`
+        );
       } else if (isUrgent) {
-        urgent.push(`• ${sale.clientName} — ${sale.productName} (${daysRemaining}d restante${daysRemaining !== 1 ? "s" : ""})`);
+        urgent.push(
+          `• ${sale.clientName} — ${sale.productName} (${daysRemaining}d restante${daysRemaining !== 1 ? "s" : ""})`
+        );
       }
     }
 
@@ -104,6 +113,8 @@ function scheduleNext() {
 }
 
 export function startAlertsJob() {
-  console.log(`[AlertsJob] Iniciado — disparos às ${TRIGGER_HOURS.map(h => `${h}h`).join(" e ")}`);
+  console.log(
+    `[AlertsJob] Iniciado — disparos às ${TRIGGER_HOURS.map(h => `${h}h`).join(" e ")}`
+  );
   scheduleNext();
 }

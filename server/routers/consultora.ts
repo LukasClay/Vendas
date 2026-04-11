@@ -2,36 +2,55 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import { sales, users, consultationSlots } from "../../drizzle/schema";
-import { and, asc, count, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
-import { calcBusinessDaysFromSale, calcDeadline } from "../../shared/businessDays";
+import {
+  calcBusinessDaysFromSale,
+  calcDeadline,
+} from "../../shared/businessDays";
 import { createAuditLog } from "../db";
 
 // Apenas consultoras e admins podem acessar estes endpoints
 const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "consultora" && ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito à consultora." });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Acesso restrito à consultora.",
+    });
   }
   return next({ ctx });
 });
 
 export const consultoraRouter = router({
-
-  statusCounts: consultoraProcedure
-    .query(async () => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      // GROUP BY no banco é muito mais eficiente que SELECT * + contar em JS
-      const rows = await db.select({ workStatus: sales.workStatus, total: count() })
-        .from(sales)
-        .where(and(ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
-        .groupBy(sales.workStatus);
-      const counts = { para_escrever: 0, pendente: 0, feito: 0 };
-      for (const row of rows) {
-        if (row.workStatus in counts) counts[row.workStatus as keyof typeof counts] = Number(row.total);
-      }
-      return counts;
-    }),
+  statusCounts: consultoraProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    // GROUP BY no banco é muito mais eficiente que SELECT * + contar em JS
+    const rows = await db
+      .select({ workStatus: sales.workStatus, total: count() })
+      .from(sales)
+      .where(
+        and(ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt))
+      )
+      .groupBy(sales.workStatus);
+    const counts = { para_escrever: 0, pendente: 0, feito: 0 };
+    for (const row of rows) {
+      if (row.workStatus in counts)
+        counts[row.workStatus as keyof typeof counts] = Number(row.total);
+    }
+    return counts;
+  }),
 
   // Aba 1: Para Escrever
   toWrite: consultoraProcedure
@@ -40,37 +59,48 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
+      const conditions = [
+        eq(sales.workStatus, "para_escrever"),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
       if (input?.search) {
-        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
+        const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         conditions.push(
           or(
-            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
+            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
           )!
         );
       }
 
-      const rows = await (db.select({
-        id: sales.id,
-        clientName: sales.clientName,
-        clientBirthDate: sales.clientBirthDate,
-        clientPhone: sales.clientPhone,
-        productName: sales.productName,
-        productCategory: sales.productCategory,
-        saleDate: sales.saleDate,
-        notes: sales.notes,
-        createdAt: sales.createdAt,
-        sellerName: sales.sellerName,
-        photo1Url: sales.photo1Url,
-        photo2Url: sales.photo2Url,
-      }).from(sales) as any)
+      const rows = await (
+        db
+          .select({
+            id: sales.id,
+            clientName: sales.clientName,
+            clientBirthDate: sales.clientBirthDate,
+            clientPhone: sales.clientPhone,
+            productName: sales.productName,
+            productCategory: sales.productCategory,
+            saleDate: sales.saleDate,
+            notes: sales.notes,
+            createdAt: sales.createdAt,
+            sellerName: sales.sellerName,
+            photo1Url: sales.photo1Url,
+            photo2Url: sales.photo2Url,
+          })
+          .from(sales) as any
+      )
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt))
         .limit(500);
 
       return rows.map((s: any) => {
-        const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate);
+        const saleDateStr =
+          s.saleDate instanceof Date
+            ? s.saleDate.toISOString().split("T")[0]
+            : String(s.saleDate);
         const urgency = calcBusinessDaysFromSale(saleDateStr);
         return {
           id: s.id,
@@ -101,37 +131,50 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
+      const conditions = [
+        eq(sales.workStatus, "pendente"),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
       if (input?.search) {
-        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
+        const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         conditions.push(
           or(
-            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
+            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
           )!
         );
       }
 
-      const rows = await (db.select({
-        id: sales.id,
-        clientName: sales.clientName,
-        clientBirthDate: sales.clientBirthDate,
-        clientPhone: sales.clientPhone,
-        productName: sales.productName,
-        productCategory: sales.productCategory,
-        saleDate: sales.saleDate,
-        notes: sales.notes,
-        writtenAt: sales.writtenAt,
-        sellerName: sales.sellerName,
-        photo1Url: sales.photo1Url,
-        photo2Url: sales.photo2Url,
-      }).from(sales) as any)
+      const rows = await (
+        db
+          .select({
+            id: sales.id,
+            clientName: sales.clientName,
+            clientBirthDate: sales.clientBirthDate,
+            clientPhone: sales.clientPhone,
+            productName: sales.productName,
+            productCategory: sales.productCategory,
+            saleDate: sales.saleDate,
+            notes: sales.notes,
+            writtenAt: sales.writtenAt,
+            sellerName: sales.sellerName,
+            photo1Url: sales.photo1Url,
+            photo2Url: sales.photo2Url,
+          })
+          .from(sales) as any
+      )
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate))
         .limit(500);
 
-      return rows.map((s: any) => {
-          const urgency = calcBusinessDaysFromSale(s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate));
+      return rows
+        .map((s: any) => {
+          const urgency = calcBusinessDaysFromSale(
+            s.saleDate instanceof Date
+              ? s.saleDate.toISOString().split("T")[0]
+              : String(s.saleDate)
+          );
           return {
             id: s.id,
             clientName: s.clientName,
@@ -151,7 +194,8 @@ export const consultoraRouter = router({
             isUrgent: urgency.isUrgent,
             urgencyScore: urgency.urgencyScore,
           };
-        }).sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
+        })
+        .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
     }),
 
   // Aba 3: Feitos (mais recentes no topo para fácil reversão)
@@ -161,29 +205,37 @@ export const consultoraRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const conditions = [eq(sales.workStatus, "feito"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)];
+      const conditions = [
+        eq(sales.workStatus, "feito"),
+        ne(sales.productName, "Consulta Cartas"),
+        isNull(sales.deletedAt),
+      ];
       if (input?.search) {
-        const escaped = input.search.replace(/[%_\\]/g, '\\$&');
+        const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         conditions.push(
           or(
-            sql`${sales.productName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${'%' + escaped + '%'} ESCAPE '\\'`
+            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
+            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
           )!
         );
       }
 
-      const rows = await (db.select({
-        id: sales.id,
-        clientName: sales.clientName,
-        clientBirthDate: sales.clientBirthDate,
-        clientPhone: sales.clientPhone,
-        productName: sales.productName,
-        productCategory: sales.productCategory,
-        saleDate: sales.saleDate,
-        notes: sales.notes,
-        completedAt: sales.completedAt,
-        sellerName: sales.sellerName,
-      }).from(sales) as any)
+      const rows = await (
+        db
+          .select({
+            id: sales.id,
+            clientName: sales.clientName,
+            clientBirthDate: sales.clientBirthDate,
+            clientPhone: sales.clientPhone,
+            productName: sales.productName,
+            productCategory: sales.productCategory,
+            saleDate: sales.saleDate,
+            notes: sales.notes,
+            completedAt: sales.completedAt,
+            sellerName: sales.sellerName,
+          })
+          .from(sales) as any
+      )
         .where(and(...conditions))
         .orderBy(desc(sales.completedAt)) // mais recentes no topo
         .limit(500);
@@ -210,9 +262,12 @@ export const consultoraRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sales)
+      await db
+        .update(sales)
         .set({ workStatus: "pendente", writtenAt: new Date() })
-        .where(and(eq(sales.id, input.id), eq(sales.workStatus, "para_escrever")));
+        .where(
+          and(eq(sales.id, input.id), eq(sales.workStatus, "para_escrever"))
+        );
       return { success: true };
     }),
 
@@ -222,7 +277,8 @@ export const consultoraRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sales)
+      await db
+        .update(sales)
         .set({ workStatus: "feito", completedAt: new Date() })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
       return { success: true };
@@ -234,7 +290,8 @@ export const consultoraRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sales)
+      await db
+        .update(sales)
         .set({ workStatus: "pendente", completedAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "feito")));
       return { success: true };
@@ -246,7 +303,8 @@ export const consultoraRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sales)
+      await db
+        .update(sales)
         .set({ workStatus: "para_escrever", writtenAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
       return { success: true };
@@ -254,11 +312,18 @@ export const consultoraRouter = router({
 
   // ADM: alterar vendedor de um trabalho
   updateSeller: adminProcedure
-    .input(z.object({ saleId: z.number(), sellerId: z.number(), sellerName: z.string() }))
+    .input(
+      z.object({
+        saleId: z.number(),
+        sellerId: z.number(),
+        sellerName: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(sales)
+      await db
+        .update(sales)
         .set({ sellerId: input.sellerId, sellerName: input.sellerName })
         .where(eq(sales.id, input.saleId));
       return { success: true };
@@ -268,11 +333,20 @@ export const consultoraRouter = router({
   listActiveSellers: adminProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    const rows = await db.select({ id: users.id, name: users.name, displayName: users.displayName, role: users.role })
+    const rows = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        displayName: users.displayName,
+        role: users.role,
+      })
       .from(users)
       .where(and(eq(users.active, true), isNull(users.deletedAt)))
       .orderBy(asc(users.name));
-    return rows.map(u => ({ id: u.id, name: u.displayName || u.name || u.role }));
+    return rows.map(u => ({
+      id: u.id,
+      name: u.displayName || u.name || u.role,
+    }));
   }),
 
   // Histórico de compras do cliente (sem valores)
@@ -283,26 +357,45 @@ export const consultoraRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       // Trabalhos normais (excluindo Consulta Cartas)
-      const rows = await db.select({
-        id: sales.id,
-        productName: sales.productName,
-        saleDate: sales.saleDate,
-        workStatus: sales.workStatus,
-      }).from(sales)
-        .where(and(eq(sales.clientName, input.clientName), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
+      const rows = await db
+        .select({
+          id: sales.id,
+          productName: sales.productName,
+          saleDate: sales.saleDate,
+          workStatus: sales.workStatus,
+        })
+        .from(sales)
+        .where(
+          and(
+            eq(sales.clientName, input.clientName),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
+        )
         .orderBy(desc(sales.saleDate))
         .limit(50);
 
       // Consultas Cartas desta cliente (via consultation_slots) — correspondência exata
-      const consultaRows = await db.select({
-        id: consultationSlots.id,
-        consultationDate: consultationSlots.consultationDate,
-        consultationTime: consultationSlots.consultationTime,
-        saleDate: sales.saleDate,
-      }).from(consultationSlots)
+      const consultaRows = await db
+        .select({
+          id: consultationSlots.id,
+          consultationDate: consultationSlots.consultationDate,
+          consultationTime: consultationSlots.consultationTime,
+          saleDate: sales.saleDate,
+        })
+        .from(consultationSlots)
         .leftJoin(sales, eq(consultationSlots.saleId, sales.id))
-        .where(and(eq(sales.clientName, input.clientName), eq(consultationSlots.sold, true), isNull(sales.deletedAt)))
-        .orderBy(desc(consultationSlots.consultationDate), desc(consultationSlots.consultationTime))
+        .where(
+          and(
+            eq(sales.clientName, input.clientName),
+            eq(consultationSlots.sold, true),
+            isNull(sales.deletedAt)
+          )
+        )
+        .orderBy(
+          desc(consultationSlots.consultationDate),
+          desc(consultationSlots.consultationTime)
+        )
         .limit(20);
 
       return {
@@ -318,31 +411,58 @@ export const consultoraRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const [toWriteRows, pendingRows] = await Promise.all([
-      (db.select({
-        id: sales.id,
-        clientName: sales.clientName,
-        productName: sales.productName,
-        productCategory: sales.productCategory,
-        saleDate: sales.saleDate,
-        sellerName: sales.sellerName,
-      }).from(sales) as any)
-        .where(and(eq(sales.workStatus, "para_escrever"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
+      (
+        db
+          .select({
+            id: sales.id,
+            clientName: sales.clientName,
+            productName: sales.productName,
+            productCategory: sales.productCategory,
+            saleDate: sales.saleDate,
+            sellerName: sales.sellerName,
+          })
+          .from(sales) as any
+      )
+        .where(
+          and(
+            eq(sales.workStatus, "para_escrever"),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
+        )
         .orderBy(asc(sales.saleDate)),
-      (db.select({
-        id: sales.id,
-        clientName: sales.clientName,
-        productName: sales.productName,
-        productCategory: sales.productCategory,
-        saleDate: sales.saleDate,
-        sellerName: sales.sellerName,
-      }).from(sales) as any)
-        .where(and(eq(sales.workStatus, "pendente"), ne(sales.productName, "Consulta Cartas"), isNull(sales.deletedAt)))
+      (
+        db
+          .select({
+            id: sales.id,
+            clientName: sales.clientName,
+            productName: sales.productName,
+            productCategory: sales.productCategory,
+            saleDate: sales.saleDate,
+            sellerName: sales.sellerName,
+          })
+          .from(sales) as any
+      )
+        .where(
+          and(
+            eq(sales.workStatus, "pendente"),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
+        )
         .orderBy(asc(sales.saleDate)),
     ]);
     const mapUrgency = (s: any) => {
-      const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split('T')[0] : String(s.saleDate);
+      const saleDateStr =
+        s.saleDate instanceof Date
+          ? s.saleDate.toISOString().split("T")[0]
+          : String(s.saleDate);
       const urgency = calcBusinessDaysFromSale(saleDateStr);
-      return { ...s, productCategory: s.productCategory ?? "individual", ...urgency };
+      return {
+        ...s,
+        productCategory: s.productCategory ?? "individual",
+        ...urgency,
+      };
     };
     return {
       toWrite: toWriteRows.map(mapUrgency),
@@ -351,22 +471,29 @@ export const consultoraRouter = router({
   }),
 
   // Aba Alertas: trabalhos urgentes e atrasados (Para Escrever + Pendentes)
-   alerts: consultoraProcedure.query(async () => {
+  alerts: consultoraProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    const rows = await (db.select({
-      id: sales.id,
-      clientName: sales.clientName,
-      clientPhone: sales.clientPhone,
-      productName: sales.productName,
-      productCategory: sales.productCategory,
-      saleDate: sales.saleDate,
-      workStatus: sales.workStatus,
-      sellerName: sales.sellerName,
-    }).from(sales) as any)
+    const rows = await (
+      db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          clientPhone: sales.clientPhone,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          workStatus: sales.workStatus,
+          sellerName: sales.sellerName,
+        })
+        .from(sales) as any
+    )
       .where(
         and(
-          or(eq(sales.workStatus, "para_escrever"), eq(sales.workStatus, "pendente")),
+          or(
+            eq(sales.workStatus, "para_escrever"),
+            eq(sales.workStatus, "pendente")
+          ),
           ne(sales.productName, "Consulta Cartas"),
           isNull(sales.deletedAt)
         )
@@ -375,7 +502,10 @@ export const consultoraRouter = router({
       .limit(500);
 
     const withUrgency = rows.map((s: any) => {
-      const saleDateStr = s.saleDate instanceof Date ? s.saleDate.toISOString().split("T")[0] : String(s.saleDate);
+      const saleDateStr =
+        s.saleDate instanceof Date
+          ? s.saleDate.toISOString().split("T")[0]
+          : String(s.saleDate);
       const urgency = calcBusinessDaysFromSale(saleDateStr);
       return {
         id: s.id,
@@ -403,10 +533,14 @@ export const consultoraRouter = router({
 
   // Lista produtos distintos com contagem para um status (e categoria opcional)
   distinctProducts: adminProcedure
-    .input(z.object({
-      workStatus: z.enum(["para_escrever", "pendente", "feito"]),
-      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
-    }))
+    .input(
+      z.object({
+        workStatus: z.enum(["para_escrever", "pendente", "feito"]),
+        productCategory: z
+          .enum(["individual", "promocao", "coletivo"])
+          .optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -424,16 +558,23 @@ export const consultoraRouter = router({
         .where(and(...conditions))
         .groupBy(sales.productName)
         .orderBy(asc(sales.productName));
-      return rows.map(r => ({ productName: r.productName, count: Number(r.total) }));
+      return rows.map(r => ({
+        productName: r.productName,
+        count: Number(r.total),
+      }));
     }),
 
   // Preview: contagem real de trabalhos que serão movidos
   bulkUpdatePreview: adminProcedure
-    .input(z.object({
-      fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
-      productNames: z.array(z.string()).min(1),
-      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
-    }))
+    .input(
+      z.object({
+        fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
+        productNames: z.array(z.string()).min(1),
+        productCategory: z
+          .enum(["individual", "promocao", "coletivo"])
+          .optional(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -446,21 +587,31 @@ export const consultoraRouter = router({
       if (input.productCategory) {
         conditions.push(eq(sales.productCategory, input.productCategory));
       }
-      const [row] = await db.select({ total: count() }).from(sales).where(and(...conditions));
+      const [row] = await db
+        .select({ total: count() })
+        .from(sales)
+        .where(and(...conditions));
       return { count: Number(row?.total ?? 0) };
     }),
 
   // Mover trabalhos em massa
   bulkUpdateStatus: adminProcedure
-    .input(z.object({
-      fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
-      toStatus: z.enum(["para_escrever", "pendente", "feito"]),
-      productNames: z.array(z.string()).min(1),
-      productCategory: z.enum(["individual", "promocao", "coletivo"]).optional(),
-    }))
+    .input(
+      z.object({
+        fromStatus: z.enum(["para_escrever", "pendente", "feito"]),
+        toStatus: z.enum(["para_escrever", "pendente", "feito"]),
+        productNames: z.array(z.string()).min(1),
+        productCategory: z
+          .enum(["individual", "promocao", "coletivo"])
+          .optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       if (input.fromStatus === input.toStatus) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Status de origem e destino devem ser diferentes." });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Status de origem e destino devem ser diferentes.",
+        });
       }
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -476,7 +627,10 @@ export const consultoraRouter = router({
       }
 
       // Contagem antes do update
-      const [countRow] = await db.select({ total: count() }).from(sales).where(and(...conditions));
+      const [countRow] = await db
+        .select({ total: count() })
+        .from(sales)
+        .where(and(...conditions));
       const total = Number(countRow?.total ?? 0);
       if (total === 0) {
         return { success: true, updatedCount: 0 };
@@ -499,7 +653,10 @@ export const consultoraRouter = router({
         setData.completedAt = now;
       }
 
-      await db.update(sales).set(setData).where(and(...conditions));
+      await db
+        .update(sales)
+        .set(setData)
+        .where(and(...conditions));
 
       // Audit log
       const statusLabels: Record<string, string> = {
@@ -507,7 +664,8 @@ export const consultoraRouter = router({
         pendente: "Pendente",
         feito: "Feito",
       };
-      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      const adminName =
+        ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
         userId: ctx.user.id,
         userName: adminName,
@@ -525,5 +683,4 @@ export const consultoraRouter = router({
 
       return { success: true, updatedCount: total };
     }),
-
 });

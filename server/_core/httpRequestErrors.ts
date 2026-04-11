@@ -23,10 +23,7 @@ function truncate(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 }
 
-function readHeader(
-  headers: Request["headers"],
-  name: string,
-): string | null {
+function readHeader(headers: Request["headers"], name: string): string | null {
   const value = headers[name];
   if (typeof value === "string") return value;
   if (Array.isArray(value)) return value[0] ?? null;
@@ -84,7 +81,10 @@ export function formatHttpRequestContext(req: Request): string {
   return `method=${method} path=${path} ip=${ip} contentType="${contentType}" userAgent="${userAgent}" uptime=${uptimeSeconds}s`;
 }
 
-export function logKnownHttpError(req: Request, error: unknown): KnownHttpError | null {
+export function logKnownHttpError(
+  req: Request,
+  error: unknown
+): KnownHttpError | null {
   const knownError = classifyKnownHttpError(error);
   if (!knownError) return null;
 

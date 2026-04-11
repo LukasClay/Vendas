@@ -26,10 +26,11 @@ export async function createContext(
   }
 
   // Captura IP real (considerando proxy do Railway) e User-Agent
-  const ipAddress = opts.req.ip
-    || (opts.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-    || opts.req.socket?.remoteAddress
-    || null;
+  const ipAddress =
+    opts.req.ip ||
+    (opts.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    opts.req.socket?.remoteAddress ||
+    null;
   const userAgent = (opts.req.headers["user-agent"] as string) || null;
 
   return {

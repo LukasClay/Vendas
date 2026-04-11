@@ -111,7 +111,8 @@ export function AnimatedCard({
     <motion.div
       whileHover={{
         y: -2,
-        boxShadow: "0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -5px rgba(0,0,0,0.05)",
+        boxShadow:
+          "0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -5px rgba(0,0,0,0.05)",
         transition: { duration: 0.2, ease: "easeOut" },
       }}
       whileTap={{ scale: 0.98 }}
@@ -269,7 +270,9 @@ export function SkeletonPulse({
 // ========== Skeleton Card (para cards inteiros) ==========
 export function SkeletonCard({ className = "" }: { className?: string }) {
   return (
-    <div className={`rounded-2xl p-4 shadow-xl border border-[var(--border)] bg-[var(--card)] animate-pulse ${className}`}>
+    <div
+      className={`rounded-2xl p-4 shadow-xl border border-[var(--border)] bg-[var(--card)] animate-pulse ${className}`}
+    >
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 rounded-lg bg-[var(--secondary)]" />
         <div className="h-3 w-20 rounded bg-[var(--secondary)]" />

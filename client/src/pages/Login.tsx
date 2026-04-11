@@ -32,22 +32,28 @@ export default function Login() {
     }
   }, [user, loading, navigate]);
 
-  const { register, handleSubmit, formState: { errors }, control } = useForm<LoginForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
+  } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "", rememberMe: true },
   });
 
   const loginMutation = trpc.ownAuth.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setLoginError(null);
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
         if (data.role === "admin") window.location.href = "/admin";
-        else if (data.role === "consultora") window.location.href = "/consultora";
+        else if (data.role === "consultora")
+          window.location.href = "/consultora";
         else window.location.href = "/venda";
       }, 300);
     },
-    onError: (err) => {
+    onError: err => {
       const msg = err.message || "Usuário ou senha incorretos.";
       setLoginError(msg);
       toast.error(msg);
@@ -59,47 +65,96 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: "linear-gradient(135deg, oklch(0.12 0.02 260) 0%, oklch(0.18 0.04 260) 50%, oklch(0.14 0.03 50) 100%)" }}
+      style={{
+        background:
+          "linear-gradient(135deg, oklch(0.12 0.02 260) 0%, oklch(0.18 0.04 260) 50%, oklch(0.14 0.03 50) 100%)",
+      }}
     >
       {/* Decorative orbs */}
-      <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-        style={{ background: "radial-gradient(circle, oklch(0.60 0.13 65), transparent)" }} />
-      <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-5 pointer-events-none"
-        style={{ background: "radial-gradient(circle, oklch(0.60 0.13 65), transparent)" }} />
+      <div
+        className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-10 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.60 0.13 65), transparent)",
+        }}
+      />
+      <div
+        className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-5 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.60 0.13 65), transparent)",
+        }}
+      />
 
       <div className="w-full max-w-md relative z-10">
-        <div className="rounded-3xl p-8 shadow-2xl" style={{ background: "white" }}>
-
+        <div
+          className="rounded-3xl p-8 shadow-2xl"
+          style={{ background: "white" }}
+        >
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
-              style={{ background: "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))" }}>
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(0.60 0.13 65), oklch(0.68 0.14 70))",
+              }}
+            >
               <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-                <path d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z" fill="white" opacity="0.95" />
+                <path
+                  d="M20 4L24 14H36L26 21L30 32L20 25L10 32L14 21L4 14H16L20 4Z"
+                  fill="white"
+                  opacity="0.95"
+                />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-center"
-              style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.15 0.02 260)" }}>
+            <h1
+              className="text-2xl font-bold text-center"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                color: "oklch(0.15 0.02 260)",
+              }}
+            >
               Mundo Da Magia LTDA
             </h1>
-            <p className="text-sm mt-1 text-center" style={{ color: "oklch(0.52 0.015 260)" }}>
+            <p
+              className="text-sm mt-1 text-center"
+              style={{ color: "oklch(0.52 0.015 260)" }}
+            >
               Entre com seu usuário e senha para acessar
             </p>
           </div>
 
           {/* Divider */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px" style={{ background: "oklch(0.90 0.010 65)" }} />
-            <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.60 0.13 65)" }} />
-            <div className="flex-1 h-px" style={{ background: "oklch(0.90 0.010 65)" }} />
+            <div
+              className="flex-1 h-px"
+              style={{ background: "oklch(0.90 0.010 65)" }}
+            />
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: "oklch(0.60 0.13 65)" }}
+            />
+            <div
+              className="flex-1 h-px"
+              style={{ background: "oklch(0.90 0.010 65)" }}
+            />
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit((d: LoginForm) => { setLoginError(null); loginMutation.mutate(d); })} className="space-y-5">
-
+          <form
+            onSubmit={handleSubmit((d: LoginForm) => {
+              setLoginError(null);
+              loginMutation.mutate(d);
+            })}
+            className="space-y-5"
+          >
             {/* Username */}
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: "oklch(0.25 0.02 260)" }}>
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "oklch(0.25 0.02 260)" }}
+              >
                 Usuário
               </label>
               <input
@@ -117,16 +172,27 @@ export default function Login() {
                   color: "oklch(0.15 0.02 260)",
                   fontSize: "16px",
                 }}
-                onChange={(e) => { register("username").onChange(e); setLoginError(null); }}
+                onChange={e => {
+                  register("username").onChange(e);
+                  setLoginError(null);
+                }}
               />
               {errors.username && (
-                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.username.message}</p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "oklch(0.55 0.20 25)" }}
+                >
+                  {errors.username.message}
+                </p>
               )}
             </div>
 
             {/* Senha */}
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: "oklch(0.25 0.02 260)" }}>
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: "oklch(0.25 0.02 260)" }}
+              >
                 Senha
               </label>
               <div className="relative">
@@ -142,7 +208,10 @@ export default function Login() {
                     color: "oklch(0.15 0.02 260)",
                     fontSize: "16px",
                   }}
-                  onChange={(e) => { register("password").onChange(e); setLoginError(null); }}
+                  onChange={e => {
+                    register("password").onChange(e);
+                    setLoginError(null);
+                  }}
                 />
                 <button
                   type="button"
@@ -150,11 +219,20 @@ export default function Login() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
                   style={{ color: "oklch(0.52 0.015 260)" }}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.20 25)" }}>{errors.password.message}</p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "oklch(0.55 0.20 25)" }}
+                >
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -172,15 +250,24 @@ export default function Login() {
                   />
                 )}
               />
-              <label htmlFor="rememberMe" className="text-sm cursor-pointer select-none text-gray-600">
+              <label
+                htmlFor="rememberMe"
+                className="text-sm cursor-pointer select-none text-gray-600"
+              >
                 Lembrar de mim por 1 ano
               </label>
             </div>
 
             {/* Mensagem de erro inline */}
             {loginError && (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
-                style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", color: "#b91c1c" }}>
+              <div
+                className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                style={{
+                  background: "#fef2f2",
+                  border: "1.5px solid #fca5a5",
+                  color: "#b91c1c",
+                }}
+              >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <p className="text-sm font-medium">{loginError}</p>
               </div>
@@ -214,7 +301,10 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-center text-xs mt-6" style={{ color: "oklch(0.65 0.01 260)" }}>
+          <p
+            className="text-center text-xs mt-6"
+            style={{ color: "oklch(0.65 0.01 260)" }}
+          >
             Acesso restrito a usuários autorizados
           </p>
         </div>

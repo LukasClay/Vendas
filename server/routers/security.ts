@@ -1,7 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
-import { createAuditLog, deleteUserSession, deleteUserSessionsByUser, getAllUserSessions, getAuditLogs, getDb } from "../db";
+import {
+  createAuditLog,
+  deleteUserSession,
+  deleteUserSessionsByUser,
+  getAllUserSessions,
+  getAuditLogs,
+  getDb,
+} from "../db";
 import { users } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
@@ -14,14 +21,17 @@ const MASTER_PASSWORD_HASH =
 
 function verifyMasterPassword(password: string): boolean {
   const hash = crypto.createHash("sha256").update(password).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(MASTER_PASSWORD_HASH));
+  return crypto.timingSafeEqual(
+    Buffer.from(hash),
+    Buffer.from(MASTER_PASSWORD_HASH)
+  );
 }
 
 export const securityRouter = router({
   // Lista todas as sessões ativas com dados do usuário
   getActiveSessions: adminProcedure.query(async () => {
     const sessions = await getAllUserSessions();
-    return sessions.map((s) => ({
+    return sessions.map(s => ({
       id: s.session.id,
       userId: s.session.userId,
       userName: s.userName,
@@ -36,12 +46,16 @@ export const securityRouter = router({
 
   // Lista audit logs com paginação e filtros
   getAuditLogs: adminProcedure
-    .input(z.object({
-      userId: z.number().optional(),
-      action: z.string().optional(),
-      limit: z.number().min(1).max(500).default(50),
-      offset: z.number().min(0).default(0),
-    }).optional())
+    .input(
+      z
+        .object({
+          userId: z.number().optional(),
+          action: z.string().optional(),
+          limit: z.number().min(1).max(500).default(50),
+          offset: z.number().min(0).default(0),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       return getAuditLogs({
         userId: input?.userId,
@@ -53,10 +67,12 @@ export const securityRouter = router({
 
   // Desconecta uma sessão individual (requer senha mestre)
   disconnectSession: adminProcedure
-    .input(z.object({
-      sessionId: z.number(),
-      masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
-    }))
+    .input(
+      z.object({
+        sessionId: z.number(),
+        masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       if (!verifyMasterPassword(input.masterPassword)) {
         throw new TRPCError({
@@ -66,11 +82,14 @@ export const securityRouter = router({
       }
 
       const allSessions = await getAllUserSessions();
-      const targetSession = allSessions.find(s => s.session.id === input.sessionId);
+      const targetSession = allSessions.find(
+        s => s.session.id === input.sessionId
+      );
       if (targetSession?.session.userId) {
         const db = await getDb();
         if (db) {
-          await db.update(users)
+          await db
+            .update(users)
             .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
             .where(eq(users.id, targetSession.session.userId));
         }
@@ -78,14 +97,15 @@ export const securityRouter = router({
 
       await deleteUserSession(input.sessionId);
 
-      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      const adminName =
+        ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
         userId: ctx.user.id,
         userName: adminName,
         action: "Desconectou Sessão",
-        details: JSON.stringify({ 
+        details: JSON.stringify({
           sessionId: input.sessionId,
-          targetUserId: targetSession?.session.userId || null 
+          targetUserId: targetSession?.session.userId || null,
         }),
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
@@ -96,10 +116,12 @@ export const securityRouter = router({
 
   // Desconecta TODAS as sessões de um usuário (requer senha mestre)
   disconnectUser: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
-    }))
+    .input(
+      z.object({
+        userId: z.number(),
+        masterPassword: z.string().min(1, "Senha mestre é obrigatória"),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       if (!verifyMasterPassword(input.masterPassword)) {
         throw new TRPCError({
@@ -111,7 +133,8 @@ export const securityRouter = router({
       // Incrementa sessionVersion para invalidar todos os JWTs do usuário
       const db = await getDb();
       if (db) {
-        await db.update(users)
+        await db
+          .update(users)
           .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
           .where(eq(users.id, input.userId));
       }
@@ -119,7 +142,8 @@ export const securityRouter = router({
       // Remove todas as sessões do usuário
       await deleteUserSessionsByUser(input.userId);
 
-      const adminName = ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
+      const adminName =
+        ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
         userId: ctx.user.id,
         userName: adminName,
@@ -131,5 +155,4 @@ export const securityRouter = router({
 
       return { success: true };
     }),
-
 });

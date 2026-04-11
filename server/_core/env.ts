@@ -5,7 +5,7 @@ export const ENV = {
     if (!secret || secret.length < 16) {
       throw new Error(
         "FATAL: JWT_SECRET não definido ou muito curto (mínimo 16 caracteres). " +
-        "Defina a variável de ambiente antes de iniciar o servidor."
+          "Defina a variável de ambiente antes de iniciar o servidor."
       );
     }
     return secret;
