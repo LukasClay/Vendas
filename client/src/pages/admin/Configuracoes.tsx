@@ -149,7 +149,7 @@ export default function AdminConfiguracoes() {
               </div>
               <div className="space-y-3">
                 {[
-                  ["Sistema", "Gestão de Vendas Espirituais"],
+                  ["Sistema", "MagiSys"],
                   ["Versão", "2.6.0"],
                   ["Banco de Dados", "PostgreSQL"],
                   ["Armazenamento", "10GB/mês"],
