@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getDb } from "../db";
+import type { TrpcContext } from "../_core/context";
+import { getDb, getSaleById } from "../db";
 import { sales, users, consultationSlots } from "../../drizzle/schema";
 import {
   and,
@@ -31,6 +32,52 @@ const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+export type ConsultoraPhotoSlot = 1 | 2;
+
+function assertConsultoraDownloadAccess(
+  user: TrpcContext["user"]
+): asserts user is NonNullable<TrpcContext["user"]> {
+  if (!user || (user.role !== "consultora" && user.role !== "admin")) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Acesso restrito à consultora.",
+    });
+  }
+}
+
+function getPhotoFileExtension(key: string): string {
+  const match = key.match(/\.[a-z0-9]+$/i);
+  return match?.[0] ?? "";
+}
+
+export async function resolveConsultoraPhotoDownload(
+  user: TrpcContext["user"],
+  input: { saleId: number; slot: ConsultoraPhotoSlot }
+) {
+  assertConsultoraDownloadAccess(user);
+
+  const sale = await getSaleById(input.saleId);
+  if (!sale) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Venda não encontrada.",
+    });
+  }
+
+  const key = input.slot === 1 ? sale.photo1Key : sale.photo2Key;
+  if (!key) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Foto não encontrada.",
+    });
+  }
+
+  return {
+    key,
+    filename: `foto-cliente-${sale.id}-${input.slot}${getPhotoFileExtension(key)}`,
+  };
+}
 
 export const consultoraRouter = router({
   statusCounts: consultoraProcedure.query(async () => {

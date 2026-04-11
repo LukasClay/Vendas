@@ -28,8 +28,27 @@ import {
   Download,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
+import {
+  buildConsultoraPhotoDownloadUrl,
+  type ConsultoraPhotoSlot,
+} from "@/lib/consultoraPhotoDownload";
 
 type Tab = "para_escrever" | "pendente" | "feito" | "alertas";
+
+type ClientPhoto = {
+  url: string;
+  slot: ConsultoraPhotoSlot;
+};
+
+function getClientPhotos(
+  photo1Url?: string | null,
+  photo2Url?: string | null
+): ClientPhoto[] {
+  return [
+    photo1Url ? { url: photo1Url, slot: 1 } : null,
+    photo2Url ? { url: photo2Url, slot: 2 } : null,
+  ].filter((photo): photo is ClientPhoto => photo !== null);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatBirthDate(d: Date | string | null | undefined): string {
@@ -351,17 +370,19 @@ function ToWriteCard({
                   Fotos do Cliente
                 </p>
                 <div className="flex gap-3">
-                  {[item.photo1Url, item.photo2Url]
-                    .filter(Boolean)
-                    .map((url, i) => (
-                      <div key={i} className="relative">
+                  {getClientPhotos(item.photo1Url, item.photo2Url).map(
+                    photo => (
+                      <div key={photo.slot} className="relative">
                         <img
-                          src={url!}
-                          alt={`Foto ${i + 1}`}
+                          src={photo.url}
+                          alt={`Foto ${photo.slot}`}
                           className="w-20 h-28 object-cover rounded-xl shadow-sm"
                         />
                         <a
-                          href={url!}
+                          href={buildConsultoraPhotoDownloadUrl(
+                            item.id,
+                            photo.slot
+                          )}
                           download
                           className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
                           style={{ background: "rgba(0,0,0,0.6)" }}
@@ -370,7 +391,8 @@ function ToWriteCard({
                           <Download className="w-3.5 h-3.5 text-white" />
                         </a>
                       </div>
-                    ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -840,17 +862,19 @@ function PendingCard({
                   Fotos do Cliente
                 </p>
                 <div className="flex gap-3">
-                  {[item.photo1Url, item.photo2Url]
-                    .filter(Boolean)
-                    .map((url, i) => (
-                      <div key={i} className="relative">
+                  {getClientPhotos(item.photo1Url, item.photo2Url).map(
+                    photo => (
+                      <div key={photo.slot} className="relative">
                         <img
-                          src={url!}
-                          alt={`Foto ${i + 1}`}
+                          src={photo.url}
+                          alt={`Foto ${photo.slot}`}
                           className="w-20 h-28 object-cover rounded-xl shadow-sm"
                         />
                         <a
-                          href={url!}
+                          href={buildConsultoraPhotoDownloadUrl(
+                            item.id,
+                            photo.slot
+                          )}
                           download
                           className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
                           style={{ background: "rgba(0,0,0,0.6)" }}
@@ -859,7 +883,8 @@ function PendingCard({
                           <Download className="w-3.5 h-3.5 text-white" />
                         </a>
                       </div>
-                    ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -1159,16 +1184,14 @@ function DoneCard({
             </p>
             {(item.photo1Url || item.photo2Url) && (
               <div className="flex gap-2 mt-2">
-                {[item.photo1Url, item.photo2Url]
-                  .filter(Boolean)
-                  .map((url, i) => (
-                    <img
-                      key={i}
-                      src={url!}
-                      alt={`Foto ${i + 1}`}
-                      className="w-12 h-16 object-cover rounded-lg border border-[#c0e8d0]"
-                    />
-                  ))}
+                {getClientPhotos(item.photo1Url, item.photo2Url).map(photo => (
+                  <img
+                    key={photo.slot}
+                    src={photo.url}
+                    alt={`Foto ${photo.slot}`}
+                    className="w-12 h-16 object-cover rounded-lg border border-[#c0e8d0]"
+                  />
+                ))}
               </div>
             )}
           </div>

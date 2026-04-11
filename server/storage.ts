@@ -9,6 +9,20 @@
 
 import { ENV } from "./_core/env";
 
+export class StorageObjectNotFoundError extends Error {
+  constructor(key: string) {
+    super(`Storage object not found: ${key}`);
+    this.name = "StorageObjectNotFoundError";
+  }
+}
+
+export type StorageDownloadResult = {
+  key: string;
+  body: Buffer;
+  contentType: string | null;
+  contentLength: number | null;
+};
+
 // ─── Manus Proxy ─────────────────────────────────────────────────────────────
 
 function getManusConfig() {
@@ -62,7 +76,69 @@ async function manusGet(relKey: string): Promise<{ key: string; url: string }> {
     method: "GET",
     headers: { Authorization: `Bearer ${config.apiKey}` },
   });
+  if (response.status === 404) {
+    throw new StorageObjectNotFoundError(key);
+  }
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(
+      `Storage download URL failed (${response.status}): ${message}`
+    );
+  }
   return { key, url: (await response.json()).url };
+}
+
+function parseContentLength(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function bodyToBuffer(body: unknown): Promise<Buffer> {
+  if (!body) return Buffer.alloc(0);
+  if (Buffer.isBuffer(body)) return body;
+  if (body instanceof Uint8Array) return Buffer.from(body);
+  if (typeof body === "string") return Buffer.from(body);
+  if (typeof (body as any).transformToByteArray === "function") {
+    const bytes = await (body as any).transformToByteArray();
+    return Buffer.from(bytes);
+  }
+  if (typeof (body as any).arrayBuffer === "function") {
+    const arrayBuffer = await (body as any).arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+  if (typeof (body as any)?.[Symbol.asyncIterator] === "function") {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body as AsyncIterable<
+      Uint8Array | Buffer | string
+    >) {
+      chunks.push(
+        typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk)
+      );
+    }
+    return Buffer.concat(chunks);
+  }
+  throw new Error("Unsupported storage body format.");
+}
+
+async function manusDownload(relKey: string): Promise<StorageDownloadResult> {
+  const { key, url } = await manusGet(relKey);
+  const response = await fetch(url);
+  if (response.status === 404) {
+    throw new StorageObjectNotFoundError(key);
+  }
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(`Storage download failed (${response.status}): ${message}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return {
+    key,
+    body: Buffer.from(arrayBuffer),
+    contentType: response.headers.get("content-type"),
+    contentLength: parseContentLength(response.headers.get("content-length")),
+  };
 }
 
 // ─── S3/R2 Direto ────────────────────────────────────────────────────────────
@@ -83,6 +159,7 @@ function getS3Config() {
 let _s3Client: any = null;
 let _PutObjectCommand: any = null;
 let _DeleteObjectCommand: any = null;
+let _GetObjectCommand: any = null;
 
 async function getS3Client() {
   if (_s3Client) {
@@ -90,6 +167,7 @@ async function getS3Client() {
       client: _s3Client,
       PutObjectCommand: _PutObjectCommand,
       DeleteObjectCommand: _DeleteObjectCommand,
+      GetObjectCommand: _GetObjectCommand,
     };
   }
   try {
@@ -105,10 +183,12 @@ async function getS3Client() {
     });
     _PutObjectCommand = s3module.PutObjectCommand;
     _DeleteObjectCommand = s3module.DeleteObjectCommand;
+    _GetObjectCommand = s3module.GetObjectCommand;
     return {
       client: _s3Client,
       PutObjectCommand: _PutObjectCommand,
       DeleteObjectCommand: _DeleteObjectCommand,
+      GetObjectCommand: _GetObjectCommand,
     };
   } catch {
     throw new Error(
@@ -154,6 +234,39 @@ async function s3Get(relKey: string): Promise<{ key: string; url: string }> {
   return { key, url: `${publicBase.replace(/\/+$/, "")}/${key}` };
 }
 
+async function s3Download(relKey: string): Promise<StorageDownloadResult> {
+  const { client, GetObjectCommand } = await getS3Client();
+  const config = getS3Config()!;
+  const key = normalizeKey(relKey);
+
+  try {
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: key,
+      })
+    );
+
+    return {
+      key,
+      body: await bodyToBuffer(response.Body),
+      contentType: response.ContentType ?? null,
+      contentLength:
+        typeof response.ContentLength === "number"
+          ? response.ContentLength
+          : null,
+    };
+  } catch (error: any) {
+    if (
+      error?.name === "NoSuchKey" ||
+      error?.$metadata?.httpStatusCode === 404
+    ) {
+      throw new StorageObjectNotFoundError(key);
+    }
+    throw error;
+  }
+}
+
 async function s3Delete(relKey: string): Promise<void> {
   const { client, DeleteObjectCommand } = await getS3Client();
   const config = getS3Config()!;
@@ -193,4 +306,12 @@ export async function storageGet(
 export async function storageDelete(relKey: string): Promise<void> {
   if (getManusConfig()) return;
   if (getS3Config()) return s3Delete(relKey);
+}
+
+export async function storageDownload(
+  relKey: string
+): Promise<StorageDownloadResult> {
+  if (getManusConfig()) return manusDownload(relKey);
+  if (getS3Config()) return s3Download(relKey);
+  throw new Error("Nenhum serviço de storage configurado.");
 }
