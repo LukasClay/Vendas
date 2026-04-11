@@ -411,15 +411,25 @@ export default function Consultas() {
 
   // Queries separadas para cada aba
   const { data: slots = [], isLoading: loadingAll } =
-    trpc.consultationSlots.listAll.useQuery();
+    trpc.consultationSlots.listAll.useQuery(undefined, {
+      refetchOnMount: "always",
+    });
   const { data: pendentes = [], isLoading: loadingPendentes } =
-    trpc.consultationSlots.listPending.useQuery();
+    trpc.consultationSlots.listPending.useQuery(undefined, {
+      refetchOnMount: "always",
+    });
   const { data: realizadas = [], isLoading: loadingRealizadas } =
-    trpc.consultationSlots.listDone.useQuery();
+    trpc.consultationSlots.listDone.useQuery(undefined, {
+      refetchOnMount: "always",
+    });
   const { data: canceladas = [], isLoading: loadingCanceladas } =
-    trpc.consultationSlots.listCancelled.useQuery();
+    trpc.consultationSlots.listCancelled.useQuery(undefined, {
+      refetchOnMount: "always",
+    });
   const { data: refunds = [], isLoading: loadingRefunds } =
-    trpc.consultationSlots.listRefunds.useQuery();
+    trpc.consultationSlots.listRefunds.useQuery(undefined, {
+      refetchOnMount: "always",
+    });
 
   const invalidateAll = () => {
     utils.consultationSlots.listAll.invalidate();

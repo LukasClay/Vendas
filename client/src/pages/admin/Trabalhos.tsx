@@ -144,13 +144,18 @@ function SellerEditInline({
   const [editing, setEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const utils = trpc.useUtils();
+  const invalidateWorkQueries = () => {
+    utils.consultora.toWrite.invalidate();
+    utils.consultora.pending.invalidate();
+    utils.consultora.done.invalidate();
+    utils.consultora.statusCounts.invalidate();
+    utils.consultora.alerts.invalidate();
+  };
 
   const updateSeller = trpc.consultora.updateSeller.useMutation({
     onSuccess: () => {
       toast.success("Vendedor atualizado!");
-      utils.consultora.toWrite.invalidate();
-      utils.consultora.pending.invalidate();
-      utils.consultora.done.invalidate();
+      invalidateWorkQueries();
       setEditing(false);
       setSelectedId("");
       onUpdated();
@@ -789,6 +794,14 @@ function BulkActionPanel() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const utils = trpc.useUtils();
+  const invalidateWorkQueries = () => {
+    utils.consultora.toWrite.invalidate();
+    utils.consultora.pending.invalidate();
+    utils.consultora.done.invalidate();
+    utils.consultora.statusCounts.invalidate();
+    utils.consultora.distinctProducts.invalidate();
+    utils.consultora.alerts.invalidate();
+  };
 
   const [open, setOpen] = useState(false);
   const [fromStatus, setFromStatus] = useState<
@@ -876,11 +889,7 @@ function BulkActionPanel() {
       toast.success(
         `${data.updatedCount} trabalhos movidos para ${STATUS_LABELS[toStatus] ?? toStatus}!`
       );
-      utils.consultora.toWrite.invalidate();
-      utils.consultora.pending.invalidate();
-      utils.consultora.done.invalidate();
-      utils.consultora.statusCounts.invalidate();
-      utils.consultora.distinctProducts.invalidate();
+      invalidateWorkQueries();
       setConfirmOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -1370,12 +1379,19 @@ export default function Trabalhos() {
     trpc.consultora.pending.useQuery(queryInput);
   const { data: done = [], isLoading: load3 } =
     trpc.consultora.done.useQuery(queryInput);
+  const invalidateWorkQueries = () => {
+    utils.consultora.toWrite.invalidate();
+    utils.consultora.pending.invalidate();
+    utils.consultora.done.invalidate();
+    utils.consultora.statusCounts.invalidate();
+    utils.consultora.distinctProducts.invalidate();
+    utils.consultora.alerts.invalidate();
+  };
 
   const markWritten = trpc.consultora.markWritten.useMutation({
     onSuccess: () => {
       toast.success("Movido para Pendentes!");
-      utils.consultora.toWrite.invalidate();
-      utils.consultora.pending.invalidate();
+      invalidateWorkQueries();
     },
     onError: e => toast.error(e.message),
   });
@@ -1383,8 +1399,7 @@ export default function Trabalhos() {
   const markDone = trpc.consultora.markDone.useMutation({
     onSuccess: () => {
       toast.success("Trabalho concluído!");
-      utils.consultora.pending.invalidate();
-      utils.consultora.done.invalidate();
+      invalidateWorkQueries();
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -1392,8 +1407,7 @@ export default function Trabalhos() {
   const restoreToPending = trpc.consultora.undoDone.useMutation({
     onSuccess: () => {
       toast.success("Restaurado para Pendentes!");
-      utils.consultora.done.invalidate();
-      utils.consultora.pending.invalidate();
+      invalidateWorkQueries();
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -1401,8 +1415,7 @@ export default function Trabalhos() {
   const undoWritten = trpc.consultora.undoWritten.useMutation({
     onSuccess: () => {
       toast.success("Voltou para 'Para Escrever'!");
-      utils.consultora.pending.invalidate();
-      utils.consultora.toWrite.invalidate();
+      invalidateWorkQueries();
     },
     onError: (e: any) => toast.error(e.message),
   });

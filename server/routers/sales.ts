@@ -19,7 +19,12 @@ import {
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { storageDelete, storagePut } from "../storage";
 import { nanoid } from "nanoid";
-import { consultationSlots, sales, products } from "../../drizzle/schema";
+import {
+  consultationSlots,
+  sales,
+  products,
+  users,
+} from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
 import { TYPES_WITH_PHOTOS } from "../../shared/const";
@@ -105,9 +110,21 @@ export const salesRouter = router({
       let photo2Url: string | null = null;
       let photo2Key: string | null = null;
 
-      const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(
-        input.productCategory
-      );
+      const isPhotoType =
+        (TYPES_WITH_PHOTOS as readonly string[]).includes(
+          input.productCategory
+        ) && input.productName !== "Consulta Cartas";
+
+      if (
+        input.productName === "Consulta Cartas" &&
+        (Boolean(input.photo1Base64 && input.photo1Mime) ||
+          Boolean(input.photo2Base64 && input.photo2Mime))
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Consulta Cartas não permite fotos do cliente.",
+        });
+      }
 
       if (isPhotoType) {
         if (input.photo1Base64 && input.photo1Mime) {
@@ -368,7 +385,11 @@ export const salesRouter = router({
         Boolean(fields.removePhoto2) ||
         Boolean(fields.photo1Base64 && fields.photo1Mime) ||
         Boolean(fields.photo2Base64 && fields.photo2Mime);
-      const existingSale = shouldLoadExistingFiles
+      const shouldLoadExistingSale =
+        shouldLoadExistingFiles ||
+        fields.workStatus === "feito" ||
+        fields.sellerId !== undefined;
+      const existingSale = shouldLoadExistingSale
         ? await getSaleById(id)
         : undefined;
       const keysToDeleteAfterUpdate: string[] = [];
@@ -397,7 +418,46 @@ export const salesRouter = router({
         if (fields.saleDate !== undefined) data.saleDate = fields.saleDate;
         if (fields.amount !== undefined) data.amount = String(fields.amount);
         if (fields.notes !== undefined) data.notes = fields.notes;
-        if (fields.sellerId !== undefined) data.sellerId = fields.sellerId;
+        if (fields.sellerId !== undefined) {
+          const db = await getDb();
+          if (!db) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Banco indisponível.",
+            });
+          }
+
+          const sellerRows = await withRetry(() =>
+            db
+              .select({
+                id: users.id,
+                name: users.name,
+                displayName: users.displayName,
+                username: users.username,
+                email: users.email,
+              })
+              .from(users)
+              .where(
+                and(eq(users.id, fields.sellerId!), isNull(users.deletedAt))
+              )
+              .limit(1)
+          );
+          const nextSeller = sellerRows[0];
+          if (!nextSeller) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Vendedor não encontrado.",
+            });
+          }
+
+          data.sellerId = fields.sellerId;
+          data.sellerName =
+            nextSeller.displayName ||
+            nextSeller.name ||
+            nextSeller.username ||
+            nextSeller.email ||
+            `Usuário #${fields.sellerId}`;
+        }
         if (fields.company !== undefined) data.company = fields.company;
 
         // Atualização do status do trabalho com timestamps
@@ -410,10 +470,23 @@ export const salesRouter = router({
             data.writtenAt = new Date();
             data.completedAt = null;
           } else if (fields.workStatus === "feito") {
-            const existingSale = await getSaleById(id);
             if (!existingSale?.writtenAt) data.writtenAt = new Date();
             data.completedAt = new Date();
           }
+        }
+
+        const nextProductName = fields.productName ?? existingSale?.productName;
+        const canUploadPhotos = nextProductName !== "Consulta Cartas";
+
+        if (
+          !canUploadPhotos &&
+          (Boolean(fields.photo1Base64 && fields.photo1Mime) ||
+            Boolean(fields.photo2Base64 && fields.photo2Mime))
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Consulta Cartas não permite fotos do cliente.",
+          });
         }
 
         // Upload de novo comprovante se fornecido

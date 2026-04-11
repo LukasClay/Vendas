@@ -356,6 +356,7 @@ function EditSaleModal({
 
   // Reagendamento de consulta (só para "Consulta Cartas")
   const isConsultaCartas = editForm.productName === "Consulta Cartas";
+  const canUploadClientPhotos = !isConsultaCartas;
   const availableSlots = trpc.consultationSlots.listAvailable.useQuery(
     undefined,
     { enabled: isConsultaCartas }
@@ -366,6 +367,11 @@ function EditSaleModal({
       toast.success("Consulta reagendada com sucesso!");
       utils.consultationSlots.listAvailable.invalidate();
       utils.consultationSlots.listAll.invalidate();
+      utils.consultationSlots.listPending.invalidate();
+      utils.consultationSlots.listDone.invalidate();
+      utils.consultationSlots.listCancelled.invalidate();
+      utils.consultationSlots.listRefunds.invalidate();
+      utils.sales.list.invalidate();
     },
     onError: err => toast.error(err.message),
   });
@@ -393,6 +399,12 @@ function EditSaleModal({
   const [removePhoto2, setRemovePhoto2] = useState(false);
   const photoInputRef1 = useRef<HTMLInputElement>(null);
   const photoInputRef2 = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (canUploadClientPhotos) return;
+    setPhotoFile1(null);
+    setPhotoFile2(null);
+  }, [canUploadClientPhotos]);
 
   const handlePhotoChange = (f: File | null, which: 1 | 2) => {
     if (!f) return;
@@ -442,6 +454,11 @@ function EditSaleModal({
       }
       toast.success("Venda atualizada com sucesso!");
       utils.sales.list.invalidate();
+      utils.consultora.toWrite.invalidate();
+      utils.consultora.pending.invalidate();
+      utils.consultora.done.invalidate();
+      utils.consultora.statusCounts.invalidate();
+      utils.consultora.alerts.invalidate();
       onClose();
     },
     onError: err => toast.error(err.message),
@@ -477,11 +494,11 @@ function EditSaleModal({
     let photo2Base64: string | undefined;
     let photo2Mime: string | undefined;
 
-    if (photoFile1) {
+    if (canUploadClientPhotos && photoFile1) {
       photo1Base64 = await readFileAsBase64(photoFile1);
       photo1Mime = photoFile1.type;
     }
-    if (photoFile2) {
+    if (canUploadClientPhotos && photoFile2) {
       photo2Base64 = await readFileAsBase64(photoFile2);
       photo2Mime = photoFile2.type;
     }
@@ -880,167 +897,182 @@ function EditSaleModal({
               />
             </div>
 
-            {/* ── Fotos do Cliente (ADM pode adicionar a qualquer categoria) ── */}
-            <div className="sm:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
-                Fotos do Cliente
-              </label>
-              <div className="flex gap-3 flex-wrap">
-                {/* Foto 1 */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-[var(--muted-foreground)]">
-                    Foto 1
-                  </span>
-                  {photoFile1 ? (
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(photoFile1)}
-                        alt="Nova foto 1"
-                        className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPhotoFile1(null)}
-                        className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : !removePhoto1 && sale.photo1Url ? (
-                    <div className="relative">
-                      <a
-                        href={sale.photo1Url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
-                      >
+            {/* ── Fotos do Cliente ── */}
+            {(canUploadClientPhotos ||
+              sale.photo1Url ||
+              sale.photo2Url ||
+              photoFile1 ||
+              photoFile2) && (
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
+                  Fotos do Cliente
+                </label>
+                {!canUploadClientPhotos && (
+                  <p className="text-xs mb-3 text-[var(--muted-foreground)]">
+                    Consulta Cartas não permite adicionar fotos do cliente.
+                  </p>
+                )}
+                <div className="flex gap-3 flex-wrap">
+                  {/* Foto 1 */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                      Foto 1
+                    </span>
+                    {photoFile1 ? (
+                      <div className="relative">
                         <img
-                          src={sale.photo1Url}
-                          alt="Foto 1"
-                          className="w-24 h-32 object-cover"
+                          src={URL.createObjectURL(photoFile1)}
+                          alt="Nova foto 1"
+                          className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
                         />
-                      </a>
-                      <div className="flex gap-1 mt-1">
                         <button
                           type="button"
-                          onClick={() => photoInputRef1.current?.click()}
-                          className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                          onClick={() => setPhotoFile1(null)}
+                          className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md"
                         >
-                          Trocar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRemovePhoto1(true)}
-                          className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500"
-                        >
-                          Remover
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRemovePhoto1(false);
-                        photoInputRef1.current?.click();
-                      }}
-                      className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]"
-                    >
-                      <ImagePlus className="w-5 h-5" />
-                      <span className="text-[9px]">
-                        {removePhoto1 ? "Restaurar" : "Adicionar"}
-                      </span>
-                    </button>
-                  )}
-                  <input
-                    ref={photoInputRef1}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={e =>
-                      handlePhotoChange(e.target.files?.[0] ?? null, 1)
-                    }
-                  />
-                </div>
+                    ) : !removePhoto1 && sale.photo1Url ? (
+                      <div className="relative">
+                        <a
+                          href={sale.photo1Url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
+                        >
+                          <img
+                            src={sale.photo1Url}
+                            alt="Foto 1"
+                            className="w-24 h-32 object-cover"
+                          />
+                        </a>
+                        <div className="flex gap-1 mt-1">
+                          {canUploadClientPhotos && (
+                            <button
+                              type="button"
+                              onClick={() => photoInputRef1.current?.click()}
+                              className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                            >
+                              Trocar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setRemovePhoto1(true)}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ) : canUploadClientPhotos ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRemovePhoto1(false);
+                          photoInputRef1.current?.click();
+                        }}
+                        className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                      >
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-[9px]">
+                          {removePhoto1 ? "Restaurar" : "Adicionar"}
+                        </span>
+                      </button>
+                    ) : null}
+                    <input
+                      ref={photoInputRef1}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={e =>
+                        handlePhotoChange(e.target.files?.[0] ?? null, 1)
+                      }
+                    />
+                  </div>
 
-                {/* Foto 2 */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-[var(--muted-foreground)]">
-                    Foto 2
-                  </span>
-                  {photoFile2 ? (
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(photoFile2)}
-                        alt="Nova foto 2"
-                        className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPhotoFile2(null)}
-                        className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : !removePhoto2 && sale.photo2Url ? (
-                    <div className="relative">
-                      <a
-                        href={sale.photo2Url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
-                      >
+                  {/* Foto 2 */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                      Foto 2
+                    </span>
+                    {photoFile2 ? (
+                      <div className="relative">
                         <img
-                          src={sale.photo2Url}
-                          alt="Foto 2"
-                          className="w-24 h-32 object-cover"
+                          src={URL.createObjectURL(photoFile2)}
+                          alt="Nova foto 2"
+                          className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
                         />
-                      </a>
-                      <div className="flex gap-1 mt-1">
                         <button
                           type="button"
-                          onClick={() => photoInputRef2.current?.click()}
-                          className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                          onClick={() => setPhotoFile2(null)}
+                          className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md"
                         >
-                          Trocar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRemovePhoto2(true)}
-                          className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500"
-                        >
-                          Remover
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRemovePhoto2(false);
-                        photoInputRef2.current?.click();
-                      }}
-                      className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]"
-                    >
-                      <ImagePlus className="w-5 h-5" />
-                      <span className="text-[9px]">
-                        {removePhoto2 ? "Restaurar" : "Adicionar"}
-                      </span>
-                    </button>
-                  )}
-                  <input
-                    ref={photoInputRef2}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={e =>
-                      handlePhotoChange(e.target.files?.[0] ?? null, 2)
-                    }
-                  />
+                    ) : !removePhoto2 && sale.photo2Url ? (
+                      <div className="relative">
+                        <a
+                          href={sale.photo2Url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
+                        >
+                          <img
+                            src={sale.photo2Url}
+                            alt="Foto 2"
+                            className="w-24 h-32 object-cover"
+                          />
+                        </a>
+                        <div className="flex gap-1 mt-1">
+                          {canUploadClientPhotos && (
+                            <button
+                              type="button"
+                              onClick={() => photoInputRef2.current?.click()}
+                              className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                            >
+                              Trocar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setRemovePhoto2(true)}
+                            className="flex-1 text-[9px] px-1.5 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ) : canUploadClientPhotos ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRemovePhoto2(false);
+                          photoInputRef2.current?.click();
+                        }}
+                        className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                      >
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-[9px]">
+                          {removePhoto2 ? "Restaurar" : "Adicionar"}
+                        </span>
+                      </button>
+                    ) : null}
+                    <input
+                      ref={photoInputRef2}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={e =>
+                        handlePhotoChange(e.target.files?.[0] ?? null, 2)
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* ── Reagendamento de Consulta ── */}
             {isConsultaCartas && (

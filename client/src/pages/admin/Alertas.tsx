@@ -89,6 +89,7 @@ export default function AdminAlertas() {
     isFetching,
   } = trpc.consultora.alerts.useQuery(undefined, {
     staleTime: 3 * 60 * 1000,
+    refetchOnMount: "always",
   });
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";

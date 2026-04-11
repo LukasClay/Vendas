@@ -138,6 +138,9 @@ export default function NovaVenda() {
   );
 
   const isConsultaCartas = form.productName === CONSULTA_CARTAS;
+  const canUploadClientPhotos =
+    !isConsultaCartas &&
+    (TYPES_WITH_PHOTOS as readonly string[]).includes(form.productCategory);
 
   // Busca slots disponíveis apenas quando Consulta Cartas estiver selecionado
   const { data: availableSlots = [], isLoading: loadingSlots } =
@@ -390,15 +393,12 @@ export default function NovaVenda() {
         reader.readAsDataURL(f);
       });
 
-    const isPhotoType = (TYPES_WITH_PHOTOS as readonly string[]).includes(
-      form.productCategory
-    );
     let photo1Base64: string | undefined;
     let photo1Mime: string | undefined;
     let photo2Base64: string | undefined;
     let photo2Mime: string | undefined;
 
-    if (isPhotoType) {
+    if (canUploadClientPhotos) {
       if (photo1) {
         photo1Base64 = await toBase64(photo1);
         photo1Mime = photo1.type;
@@ -433,6 +433,14 @@ export default function NovaVenda() {
       photo2Mime,
     });
   };
+
+  useEffect(() => {
+    if (canUploadClientPhotos) return;
+    setPhoto1(null);
+    setPhoto1Preview(null);
+    setPhoto2(null);
+    setPhoto2Preview(null);
+  }, [canUploadClientPhotos]);
 
   const resetForm = () => {
     setForm({
@@ -1401,9 +1409,7 @@ export default function NovaVenda() {
           </div>
 
           {/* ── Card 4: Fotos do Cliente (apenas Individual) ── */}
-          {(TYPES_WITH_PHOTOS as readonly string[]).includes(
-            form.productCategory
-          ) && (
+          {canUploadClientPhotos && (
             <div className={cardClass} style={cardStyle}>
               <h2
                 className="text-sm font-semibold mb-4 flex items-center gap-2"

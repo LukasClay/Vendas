@@ -1097,6 +1097,8 @@ function DoneCard({
     saleDate: Date | string | null;
     completedAt: Date | string | null;
     sellerName?: string | null;
+    photo1Url?: string | null;
+    photo2Url?: string | null;
   };
   onUndo: (id: number) => void;
 }) {
@@ -1155,6 +1157,20 @@ function DoneCard({
             <p className="text-xs mt-0.5" style={{ color: "#8888a0" }}>
               Feito em {formatDate(item.completedAt)}
             </p>
+            {(item.photo1Url || item.photo2Url) && (
+              <div className="flex gap-2 mt-2">
+                {[item.photo1Url, item.photo2Url]
+                  .filter(Boolean)
+                  .map((url, i) => (
+                    <img
+                      key={i}
+                      src={url!}
+                      alt={`Foto ${i + 1}`}
+                      className="w-12 h-16 object-cover rounded-lg border border-[#c0e8d0]"
+                    />
+                  ))}
+              </div>
+            )}
           </div>
           {!confirming ? (
             <button
@@ -1214,19 +1230,23 @@ export default function ConsultoraPage() {
 
   const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, {
     staleTime: 2 * 60 * 1000,
+    refetchOnMount: "always",
   });
 
   const { data: toWriteItems = [], isLoading: loadingWrite } =
     trpc.consultora.toWrite.useQuery(queryInput, {
       enabled: activeTab === "para_escrever",
+      refetchOnMount: "always",
     });
   const { data: pendingItems = [], isLoading: loadingPending } =
     trpc.consultora.pending.useQuery(queryInput, {
       enabled: activeTab === "pendente",
+      refetchOnMount: "always",
     });
   const { data: doneItems = [], isLoading: loadingDone } =
     trpc.consultora.done.useQuery(queryInput, {
       enabled: activeTab === "feito",
+      refetchOnMount: "always",
     });
   const {
     data: alertItems = [],
@@ -1236,6 +1256,7 @@ export default function ConsultoraPage() {
   } = trpc.consultora.alerts.useQuery(undefined, {
     enabled: activeTab === "alertas",
     staleTime: 3 * 60 * 1000,
+    refetchOnMount: "always",
   });
 
   const invalidateAll = () => {
@@ -1243,6 +1264,7 @@ export default function ConsultoraPage() {
     utils.consultora.pending.invalidate();
     utils.consultora.done.invalidate();
     utils.consultora.statusCounts.invalidate();
+    utils.consultora.alerts.invalidate();
   };
 
   const markWritten = trpc.consultora.markWritten.useMutation({

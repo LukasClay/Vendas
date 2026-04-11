@@ -4,6 +4,7 @@ import type { TrpcContext } from "./_core/context";
 const mocks = vi.hoisted(() => ({
   createAuditLog: vi.fn(),
   getSaleById: vi.fn(),
+  getDb: vi.fn(),
   updateSale: vi.fn(),
   storagePut: vi.fn(),
   storageDelete: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("./db", async () => {
     ...actual,
     createAuditLog: mocks.createAuditLog,
     getSaleById: mocks.getSaleById,
+    getDb: mocks.getDb,
     updateSale: mocks.updateSale,
   };
 });
@@ -72,6 +74,7 @@ describe("sales.update storage cleanup", () => {
       url: "https://cdn.test/uploaded-file",
     });
     mocks.storageDelete.mockResolvedValue(undefined);
+    mocks.getDb.mockResolvedValue(null);
   });
 
   it("deleta a key antiga somente depois de atualizar a venda ao trocar a foto", async () => {
@@ -175,5 +178,26 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.storageDelete).not.toHaveBeenCalledWith(
       "fotos/old-photo-2.jpg"
     );
+  });
+
+  it("rejeita upload de foto para Consulta Cartas", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      productName: "Consulta Cartas",
+      photo1Key: null,
+      photo2Key: null,
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 14,
+        photo1Base64: Buffer.from("new-photo").toString("base64"),
+        photo1Mime: "image/jpeg",
+      })
+    ).rejects.toThrow("Consulta Cartas não permite fotos do cliente.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.updateSale).not.toHaveBeenCalled();
   });
 });

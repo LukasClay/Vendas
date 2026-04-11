@@ -233,6 +233,8 @@ export const consultoraRouter = router({
             notes: sales.notes,
             completedAt: sales.completedAt,
             sellerName: sales.sellerName,
+            photo1Url: sales.photo1Url,
+            photo2Url: sales.photo2Url,
           })
           .from(sales) as any
       )
@@ -251,6 +253,8 @@ export const consultoraRouter = router({
         notes: s.notes,
         completedAt: s.completedAt,
         sellerName: s.sellerName,
+        photo1Url: s.photo1Url ?? null,
+        photo2Url: s.photo2Url ?? null,
       }));
     }),
 
