@@ -1323,13 +1323,17 @@ export default function ConsultoraPage() {
     onError: e => toast.error(e.message),
   });
 
-  // Derivar tipos únicos da aba ativa
+  const isWorkTab = activeTab !== "alertas";
+
+  // Derivar filtros somente para abas de trabalho
   const activeItems =
     activeTab === "para_escrever"
       ? toWriteItems
       : activeTab === "pendente"
         ? pendingItems
-        : doneItems;
+        : activeTab === "feito"
+          ? doneItems
+          : [];
   // Sub-filtro por categoria
   const categoryFilteredItems = selectedCategory
     ? (activeItems as any[]).filter(
@@ -1342,8 +1346,22 @@ export default function ConsultoraPage() {
   const photoCount = (categoryFilteredItems as any[]).filter(
     hasClientPhotos
   ).length;
-  const shouldShowPhotoFilter =
-    activeTab !== "alertas" && (onlyWithPhotos || photoCount > 0);
+  const hasCategoryOptions = (activeItems as any[]).some(
+    i => (i.productCategory ?? "individual") !== "individual"
+  );
+  const hasSelectedTypeOption =
+    selectedType === null ||
+    (photoFilteredItems as Array<{ productName: string }>).some(
+      i => i.productName === selectedType
+    );
+  const hasSelectedCategoryOption =
+    selectedCategory === null ||
+    (activeItems as any[]).some(
+      i => (i.productCategory ?? "individual") === selectedCategory
+    );
+  const shouldShowCategoryFilter =
+    isWorkTab && (selectedCategory !== null || hasCategoryOptions);
+  const shouldShowPhotoFilter = isWorkTab && (onlyWithPhotos || photoCount > 0);
   const uniqueTypes = Array.from(
     new Set(
       (photoFilteredItems as Array<{ productName: string }>).map(
@@ -1351,6 +1369,39 @@ export default function ConsultoraPage() {
       )
     )
   ).sort();
+  const shouldShowTypeFilter =
+    isWorkTab && (selectedType !== null || uniqueTypes.length > 1);
+
+  useEffect(() => {
+    if (!isWorkTab) {
+      if (selectedCategory !== null) setSelectedCategory(null);
+      if (selectedType !== null) setSelectedType(null);
+      if (onlyWithPhotos) setOnlyWithPhotos(false);
+      return;
+    }
+
+    if (!hasSelectedCategoryOption) {
+      setSelectedCategory(null);
+      return;
+    }
+
+    if (onlyWithPhotos && photoCount === 0) {
+      setOnlyWithPhotos(false);
+      return;
+    }
+
+    if (!hasSelectedTypeOption) {
+      setSelectedType(null);
+    }
+  }, [
+    hasSelectedCategoryOption,
+    hasSelectedTypeOption,
+    isWorkTab,
+    onlyWithPhotos,
+    photoCount,
+    selectedCategory,
+    selectedType,
+  ]);
 
   // Filtrar por tipo e categoria
   const applyFilters = (items: any[]) => {
@@ -1423,6 +1474,8 @@ export default function ConsultoraPage() {
     setActiveTab(tab);
     setSearch("");
     setSelectedType(null);
+    setSelectedCategory(null);
+    setOnlyWithPhotos(false);
   }
 
   return (
@@ -1493,43 +1546,40 @@ export default function ConsultoraPage() {
         </div>
 
         {/* Sub-filtro por categoria */}
-        {!isLoading &&
-          (activeItems as any[]).some(
-            i => (i.productCategory ?? "individual") !== "individual"
-          ) && (
-            <div className="flex gap-2 flex-wrap mb-2">
-              {[
-                { key: null, label: "Todos" },
-                { key: "individual", label: "Individuais" },
-                { key: "promocao", label: "⭐ Promoção" },
-                { key: "coletivo", label: "👥 Coletivos" },
-              ].map(cat => {
-                const count = cat.key
-                  ? (activeItems as any[]).filter(
-                      i => (i.productCategory ?? "individual") === cat.key
-                    ).length
-                  : activeItems.length;
-                if (cat.key && count === 0) return null;
-                return (
-                  <button
-                    key={String(cat.key)}
-                    onClick={() => {
-                      setSelectedCategory(cat.key);
-                      setSelectedType(null);
-                    }}
-                    className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
-                    style={
-                      selectedCategory === cat.key
-                        ? { background: "#4040b0", color: "white" }
-                        : { background: "#e8e8f8", color: "#4040b0" }
-                    }
-                  >
-                    {cat.label} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          )}
+        {!isLoading && shouldShowCategoryFilter && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {[
+              { key: null, label: "Todos" },
+              { key: "individual", label: "Individuais" },
+              { key: "promocao", label: "⭐ Promoção" },
+              { key: "coletivo", label: "👥 Coletivos" },
+            ].map(cat => {
+              const count = cat.key
+                ? (activeItems as any[]).filter(
+                    i => (i.productCategory ?? "individual") === cat.key
+                  ).length
+                : activeItems.length;
+              if (cat.key && count === 0) return null;
+              return (
+                <button
+                  key={String(cat.key)}
+                  onClick={() => {
+                    setSelectedCategory(cat.key);
+                    setSelectedType(null);
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={
+                    selectedCategory === cat.key
+                      ? { background: "#4040b0", color: "white" }
+                      : { background: "#e8e8f8", color: "#4040b0" }
+                  }
+                >
+                  {cat.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {shouldShowPhotoFilter && (
           <div className="flex gap-2 flex-wrap mb-3">
@@ -1551,7 +1601,7 @@ export default function ConsultoraPage() {
         )}
 
         {/* Filtro por tipo de trabalho (chips dinâmicos) */}
-        {!isLoading && uniqueTypes.length > 1 && (
+        {!isLoading && shouldShowTypeFilter && (
           <div className="flex gap-2 flex-wrap mb-3">
             <button
               onClick={() => setSelectedType(null)}
