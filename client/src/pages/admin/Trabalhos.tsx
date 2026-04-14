@@ -181,8 +181,9 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
     </button>
   );
 
-  const isOverdue = item.isOverdue ?? false;
-  const isUrgent = item.isUrgent ?? false;
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
+  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
   const daysRemaining = item.daysRemaining ?? 7;
   
   const borderColor = isOverdue 
@@ -197,9 +198,11 @@ function ToWriteCard({ item, onMarkWritten, sellers }: {
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
-            </div>
+            {hasDeadline && (
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
+              </div>
+            )}
             <div className="flex items-center gap-2 flex-wrap" >
               <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />
@@ -304,14 +307,30 @@ function PendingCard({ item, onMarkDone, onUndoWritten, sellers }: {
     </button>
   );
 
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? item.isOverdue : false;
+  const isUrgent = hasDeadline ? item.isUrgent : false;
+
   return (
-    <div className="rounded-2xl overflow-hidden border transition-all shadow-sm" style={{ background: "var(--card)", borderColor: item.isOverdue ? (isDark ? "#f87171" : "#f0a0a0") : item.isUrgent ? (isDark ? "#fbbf24" : "#f0d090") : "var(--border)" }}>
+    <div
+      className="rounded-2xl overflow-hidden border transition-all shadow-sm"
+      style={{
+        background: "var(--card)",
+        borderColor: isOverdue
+          ? (isDark ? "#f87171" : "#f0a0a0")
+          : isUrgent
+            ? (isDark ? "#fbbf24" : "#f0d090")
+            : "var(--border)",
+      }}
+    >
       <div className="px-4 pt-4 pb-3 cursor-pointer select-none" onClick={() => setExpanded(e => !e)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
-            </div>
+            {hasDeadline && (
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <UrgencyBadge daysRemaining={item.daysRemaining} isOverdue={item.isOverdue} />
+              </div>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-base" style={{ color: "var(--foreground)" }}>{item.clientName}</span>
               <SellerEditInline saleId={item.id} currentSellerName={item.sellerName} sellers={sellers} onUpdated={() => {}} />

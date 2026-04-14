@@ -6,7 +6,7 @@
 import { getDb } from "../db";
 import { sales } from "../../drizzle/schema";
 import { and, inArray, isNull } from "drizzle-orm";
-import { calcBusinessDaysFromSale } from "../../shared/businessDays";
+import { getSaleUrgency } from "../../shared/businessDays";
 import { sendPushToRoles } from "../webpush";
 
 // Horários de disparo (hora local do servidor, formato 24h)
@@ -18,13 +18,15 @@ async function checkAndNotify() {
 
   try {
     // Buscar trabalhos Para Escrever e Pendentes
-    const activeSales = await (db.select({
-      id: sales.id,
-      clientName: sales.clientName,
-      productName: sales.productName,
-      saleDate: sales.saleDate,
-      workStatus: sales.workStatus,
-    })
+    const activeSales = await (db
+      .select({
+        id: sales.id,
+        clientName: sales.clientName,
+        productName: sales.productName,
+        productCategory: sales.productCategory,
+        saleDate: sales.saleDate,
+        workStatus: sales.workStatus,
+      })
       .from(sales)
       .where(and(
         inArray(sales.workStatus, ["para_escrever", "pendente"]),
@@ -35,7 +37,12 @@ async function checkAndNotify() {
     const overdue: string[] = [];
 
     for (const sale of activeSales) {
-      const { daysRemaining, isOverdue, isUrgent } = calcBusinessDaysFromSale(sale.saleDate);
+      // Coletivos não têm prazo automático: getSaleUrgency retorna
+      // isOverdue/isUrgent = false e eles são ignorados naturalmente aqui.
+      const { daysRemaining, isOverdue, isUrgent } = getSaleUrgency(
+        sale.saleDate,
+        sale.productCategory
+      );
       if (isOverdue) {
         overdue.push(`• ${sale.clientName} — ${sale.productName} (${Math.abs(daysRemaining)}d atrasado)`);
       } else if (isUrgent) {
