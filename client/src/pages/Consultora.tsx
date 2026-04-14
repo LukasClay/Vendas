@@ -152,6 +152,7 @@ function ToWriteCard({
     saleDate: Date | string | null;
     notes: string | null;
     sellerName?: string | null;
+    hasDeadline?: boolean;
     daysRemaining?: number;
     isOverdue?: boolean;
     isUrgent?: boolean;
@@ -187,8 +188,9 @@ function ToWriteCard({
     </button>
   );
 
-  const isOverdue = item.isOverdue ?? false;
-  const isUrgent = item.isUrgent ?? false;
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
+  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
   const daysRemaining = item.daysRemaining ?? 7;
   const borderColor = isOverdue ? "#e88080" : isUrgent ? "#e8b060" : "#ddd5c4";
   const avatarBg = isOverdue
@@ -256,7 +258,12 @@ function ToWriteCard({
             >
               {formatDate(item.saleDate)}
             </span>
-            <UrgencyBadge daysRemaining={daysRemaining} isOverdue={isOverdue} />
+            {hasDeadline && (
+              <UrgencyBadge
+                daysRemaining={daysRemaining}
+                isOverdue={isOverdue}
+              />
+            )}
           </div>
         </div>
         <div className="shrink-0">
@@ -639,6 +646,7 @@ function PendingCard({
     productCategory?: string | null;
     saleDate: Date | string | null;
     notes: string | null;
+    hasDeadline?: boolean;
     daysRemaining: number;
     isOverdue: boolean;
     isUrgent: boolean;
@@ -675,16 +683,11 @@ function PendingCard({
     </button>
   );
 
-  const cardBg = item.isOverdue
-    ? "#fff5f5"
-    : item.isUrgent
-      ? "#fffbf0"
-      : "white";
-  const borderColor = item.isOverdue
-    ? "#f0a0a0"
-    : item.isUrgent
-      ? "#f0d090"
-      : "#ddd5c4";
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? item.isOverdue : false;
+  const isUrgent = hasDeadline ? item.isUrgent : false;
+  const cardBg = isOverdue ? "#fff5f5" : isUrgent ? "#fffbf0" : "white";
+  const borderColor = isOverdue ? "#f0a0a0" : isUrgent ? "#f0d090" : "#ddd5c4";
 
   return (
     <div
@@ -698,9 +701,9 @@ function PendingCard({
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm mt-0.5"
           style={{
-            background: item.isOverdue
+            background: isOverdue
               ? "#c0392b"
-              : item.isUrgent
+              : isUrgent
                 ? "#d4850a"
                 : "linear-gradient(135deg, #c17f24, #d4932a)",
           }}
@@ -708,12 +711,14 @@ function PendingCard({
           {item.clientName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <UrgencyBadge
-              daysRemaining={item.daysRemaining}
-              isOverdue={item.isOverdue}
-            />
-          </div>
+          {hasDeadline && (
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <UrgencyBadge
+                daysRemaining={item.daysRemaining}
+                isOverdue={item.isOverdue}
+              />
+            </div>
+          )}
           <p
             className="font-semibold text-sm truncate"
             style={{ color: "#1a1a2e" }}
