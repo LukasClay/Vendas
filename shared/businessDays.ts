@@ -140,3 +140,61 @@ export function calcBusinessDaysFromSale(
 
   return { daysRemaining, deadline, isOverdue, isUrgent, urgencyScore };
 }
+
+/**
+ * Categorias de produtos sem prazo automático.
+ * Trabalhos `coletivo` são executados em datas específicas (marcadas no mês),
+ * por isso não recebem o prazo global de dias úteis a partir da venda.
+ */
+const CATEGORIES_WITHOUT_DEADLINE = new Set(["coletivo"]);
+
+/**
+ * Retorna true quando a categoria segue a regra de prazo automático
+ * (7 dias úteis a partir do dia seguinte à venda).
+ */
+export function hasAutomaticDeadline(
+  productCategory: string | null | undefined
+): boolean {
+  if (!productCategory) return true;
+  return !CATEGORIES_WITHOUT_DEADLINE.has(productCategory);
+}
+
+export type SaleUrgency = {
+  /** `true` quando a categoria aplica o prazo automático. */
+  hasDeadline: boolean;
+  /** Dias úteis restantes (negativo = atrasado). `0` quando `hasDeadline = false`. */
+  daysRemaining: number;
+  /** Data limite calculada. `null` quando `hasDeadline = false`. */
+  deadline: Date | null;
+  isOverdue: boolean;
+  isUrgent: boolean;
+  /**
+   * Score para ordenação. Itens sem prazo automático recebem
+   * `Number.NEGATIVE_INFINITY`, ficando no final da ordenação por urgência
+   * sem gerar falsa prioridade.
+   */
+  urgencyScore: number;
+};
+
+/**
+ * Calcula a urgência respeitando a categoria do produto.
+ * Centraliza a regra para evitar condicionais espalhadas nos consumidores.
+ */
+export function getSaleUrgency(
+  saleDateStr: string,
+  productCategory: string | null | undefined,
+  businessDays = 7
+): SaleUrgency {
+  if (!hasAutomaticDeadline(productCategory)) {
+    return {
+      hasDeadline: false,
+      daysRemaining: 0,
+      deadline: null,
+      isOverdue: false,
+      isUrgent: false,
+      urgencyScore: Number.NEGATIVE_INFINITY,
+    };
+  }
+  const urgency = calcBusinessDaysFromSale(saleDateStr, businessDays);
+  return { hasDeadline: true, ...urgency };
+}
