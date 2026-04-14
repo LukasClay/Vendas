@@ -273,8 +273,9 @@ function ToWriteCard({
     </button>
   );
 
-  const isOverdue = item.isOverdue ?? false;
-  const isUrgent = item.isUrgent ?? false;
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
+  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
   const daysRemaining = item.daysRemaining ?? 7;
 
   const borderColor = isOverdue
@@ -298,12 +299,14 @@ function ToWriteCard({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <UrgencyBadge
-                daysRemaining={daysRemaining}
-                isOverdue={isOverdue}
-              />
-            </div>
+            {hasDeadline && (
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <UrgencyBadge
+                  daysRemaining={daysRemaining}
+                  isOverdue={isOverdue}
+                />
+              </div>
+            )}
             <span
               className="font-bold text-base"
               style={{ color: "var(--foreground)" }}
@@ -481,16 +484,20 @@ function PendingCard({
     </button>
   );
 
+  const hasDeadline = item.hasDeadline ?? true;
+  const isOverdue = hasDeadline ? item.isOverdue : false;
+  const isUrgent = hasDeadline ? item.isUrgent : false;
+
   return (
     <div
       className="rounded-2xl overflow-hidden border transition-all shadow-sm"
       style={{
         background: "var(--card)",
-        borderColor: item.isOverdue
+        borderColor: isOverdue
           ? isDark
             ? "#f87171"
             : "#f0a0a0"
-          : item.isUrgent
+          : isUrgent
             ? isDark
               ? "#fbbf24"
               : "#f0d090"
@@ -503,12 +510,14 @@ function PendingCard({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <UrgencyBadge
-                daysRemaining={item.daysRemaining}
-                isOverdue={item.isOverdue}
-              />
-            </div>
+            {hasDeadline && (
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <UrgencyBadge
+                  daysRemaining={item.daysRemaining}
+                  isOverdue={item.isOverdue}
+                />
+              </div>
+            )}
             <span
               className="font-bold text-base"
               style={{ color: "var(--foreground)" }}
