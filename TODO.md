@@ -39,6 +39,16 @@
 - Entregue código limpo, componentizado e tipado (TypeScript, sem erros de compilação).
 - Para alterações grandes: faça um plano, explique o impacto e **peça aprovação antes de implementar**.
 
+### 5. Sincronização com GitHub Antes de Revisar ou Alterar
+
+Antes de revisar, comparar ou implementar mudanças:
+
+1. Rodar `git fetch origin main`
+2. Garantir que a `main` local esteja atualizada com `git pull --ff-only origin main`
+3. Comparar branches/PRs contra `origin/main` atual
+4. Para avaliar escopo de PR/branch, usar `git diff origin/main...HEAD` e `git log --left-right origin/main...HEAD`
+5. Não usar `git diff origin/main..HEAD` para julgar escopo de PR em branch divergente
+
 ---
 
 ## 📌 Regra de Versionamento (para qualquer IA ou dev que alterar o código)
