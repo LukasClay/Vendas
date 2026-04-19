@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import type { ProductCategory } from "@shared/types";
 import {
   CheckCircle2,
   Clock,
@@ -148,7 +149,7 @@ function ToWriteCard({
     clientBirthDate: Date | string | null;
     clientPhone: string | null;
     productName: string;
-    productCategory?: string | null;
+    productCategory?: ProductCategory | null;
     saleDate: Date | string | null;
     notes: string | null;
     sellerName?: string | null;
@@ -643,7 +644,7 @@ function PendingCard({
     clientBirthDate: Date | string | null;
     clientPhone: string | null;
     productName: string;
-    productCategory?: string | null;
+    productCategory?: ProductCategory | null;
     saleDate: Date | string | null;
     notes: string | null;
     hasDeadline?: boolean;
@@ -1130,7 +1131,7 @@ function DoneCard({
     id: number;
     clientName: string;
     productName: string;
-    productCategory?: string | null;
+    productCategory?: ProductCategory | null;
     saleDate: Date | string | null;
     completedAt: Date | string | null;
     sellerName?: string | null;

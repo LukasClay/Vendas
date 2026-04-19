@@ -39,12 +39,10 @@ async function checkAndNotify() {
     const overdue: string[] = [];
 
     for (const sale of activeSales) {
-      // Coletivos não têm prazo automático: getSaleUrgency retorna
-      // isOverdue/isUrgent = false e eles são ignorados naturalmente aqui.
-      const { daysRemaining, isOverdue, isUrgent } = getSaleUrgency(
-        sale.saleDate,
-        sale.productCategory
-      );
+      const urgency = getSaleUrgency(sale.saleDate, sale.productCategory);
+      // Coletivos (hasDeadline=false) não geram alerta nem push automático.
+      if (!urgency.hasDeadline) continue;
+      const { daysRemaining, isOverdue, isUrgent } = urgency;
       if (isOverdue) {
         overdue.push(
           `• ${sale.clientName} — ${sale.productName} (${Math.abs(daysRemaining)}d atrasado)`

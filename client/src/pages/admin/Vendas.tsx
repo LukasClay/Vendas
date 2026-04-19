@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
+import type { ProductCategory } from "@shared/types";
 import {
   FileText,
   ExternalLink,
@@ -299,10 +300,7 @@ function EditSaleModal({
     clientBirthDate: toInputDate(sale.clientBirthDate),
     clientPhone: sale.clientPhone ?? "",
     productName: sale.productName ?? "",
-    productCategory: (sale.productCategory ?? "individual") as
-      | "individual"
-      | "promocao"
-      | "coletivo",
+    productCategory: (sale.productCategory ?? "individual") as ProductCategory,
     saleDate: toInputDate(sale.saleDate),
     amount: sale.amount ? String(Number(sale.amount)) : "",
     notes: sale.notes ?? "",

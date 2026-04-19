@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import type { ProductCategory } from "@shared/types";
 import {
   CheckCircle2,
   Clock,
@@ -682,7 +683,7 @@ function DoneCard({
     id: number;
     clientName: string;
     productName: string;
-    productCategory?: string | null;
+    productCategory?: ProductCategory | null;
     saleDate: Date | string | null;
     completedAt: Date | string | null;
     sellerName?: string | null;
@@ -826,11 +827,7 @@ function BulkActionPanel() {
   const distinctInput = useMemo(
     () => ({
       workStatus: fromStatus as "para_escrever" | "pendente" | "feito",
-      productCategory: category as
-        | "individual"
-        | "promocao"
-        | "coletivo"
-        | undefined,
+      productCategory: category as ProductCategory | undefined,
     }),
     [fromStatus, category]
   );
@@ -879,11 +876,7 @@ function BulkActionPanel() {
     () => ({
       fromStatus: fromStatus as "para_escrever" | "pendente" | "feito",
       productNames: Array.from(selectedProducts),
-      productCategory: category as
-        | "individual"
-        | "promocao"
-        | "coletivo"
-        | undefined,
+      productCategory: category as ProductCategory | undefined,
     }),
     [fromStatus, selectedProducts, category]
   );
@@ -909,11 +902,7 @@ function BulkActionPanel() {
       fromStatus: fromStatus as "para_escrever" | "pendente" | "feito",
       toStatus: toStatus as "para_escrever" | "pendente" | "feito",
       productNames: Array.from(selectedProducts),
-      productCategory: category as
-        | "individual"
-        | "promocao"
-        | "coletivo"
-        | undefined,
+      productCategory: category as ProductCategory | undefined,
     });
   };
 

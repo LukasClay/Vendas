@@ -3,6 +3,8 @@
  * reconhecidos no Brasil (fixos + móveis baseados na Páscoa).
  */
 
+import type { ProductCategory } from "./types";
+
 /** Calcula a Páscoa pelo algoritmo de Butcher/Anonymous Gregorian */
 function easterDate(year: number): Date {
   const a = year % 19;
@@ -142,59 +144,64 @@ export function calcBusinessDaysFromSale(
 }
 
 /**
- * Categorias de produtos sem prazo automático.
+ * Categoria da venda sem prazo automático.
  * Trabalhos `coletivo` são executados em datas específicas (marcadas no mês),
  * por isso não recebem o prazo global de dias úteis a partir da venda.
  */
-const CATEGORIES_WITHOUT_DEADLINE = new Set(["coletivo"]);
-
-/**
- * Retorna true quando a categoria segue a regra de prazo automático
- * (7 dias úteis a partir do dia seguinte à venda).
- */
 export function hasAutomaticDeadline(
-  productCategory: string | null | undefined
+  productCategory: ProductCategory | null | undefined
 ): boolean {
-  if (!productCategory) return true;
-  return !CATEGORIES_WITHOUT_DEADLINE.has(productCategory);
+  return productCategory !== "coletivo";
 }
 
-export type SaleUrgency = {
-  /** `true` quando a categoria aplica o prazo automático. */
-  hasDeadline: boolean;
-  /** Dias úteis restantes (negativo = atrasado). `0` quando `hasDeadline = false`. */
-  daysRemaining: number;
-  /** Data limite calculada. `null` quando `hasDeadline = false`. */
-  deadline: Date | null;
-  isOverdue: boolean;
-  isUrgent: boolean;
-  /**
-   * Score para ordenação. Itens sem prazo automático recebem
-   * `Number.NEGATIVE_INFINITY`, ficando no final da ordenação por urgência
-   * sem gerar falsa prioridade.
-   */
-  urgencyScore: number;
-};
+/**
+ * Resultado de urgência como união discriminada.
+ * Quando `hasDeadline = false` (ex.: coletivo), os campos de prazo não existem,
+ * forçando o consumidor a tratar o caso sem prazo explicitamente.
+ */
+export type SaleUrgency =
+  | {
+      hasDeadline: false;
+      /**
+       * Score para ordenação. Itens sem prazo recebem `-Infinity`,
+       * ficando no final da ordenação por urgência sem gerar falsa prioridade.
+       */
+      urgencyScore: number;
+    }
+  | {
+      hasDeadline: true;
+      /** Dias úteis restantes (negativo = atrasado). */
+      daysRemaining: number;
+      /** Data limite calculada. */
+      deadline: Date;
+      isOverdue: boolean;
+      isUrgent: boolean;
+      urgencyScore: number;
+    };
+
+function toSaleDateStr(saleDate: Date | string): string {
+  return saleDate instanceof Date
+    ? saleDate.toISOString().split("T")[0]
+    : String(saleDate);
+}
 
 /**
  * Calcula a urgência respeitando a categoria do produto.
  * Centraliza a regra para evitar condicionais espalhadas nos consumidores.
+ *
+ * Aceita `Date | string` em `saleDate` para eliminar normalização nos callers.
  */
 export function getSaleUrgency(
-  saleDateStr: string,
-  productCategory: string | null | undefined,
+  saleDate: Date | string,
+  productCategory: ProductCategory | null | undefined,
   businessDays = 7
 ): SaleUrgency {
   if (!hasAutomaticDeadline(productCategory)) {
-    return {
-      hasDeadline: false,
-      daysRemaining: 0,
-      deadline: null,
-      isOverdue: false,
-      isUrgent: false,
-      urgencyScore: Number.NEGATIVE_INFINITY,
-    };
+    return { hasDeadline: false, urgencyScore: Number.NEGATIVE_INFINITY };
   }
-  const urgency = calcBusinessDaysFromSale(saleDateStr, businessDays);
+  const urgency = calcBusinessDaysFromSale(
+    toSaleDateStr(saleDate),
+    businessDays
+  );
   return { hasDeadline: true, ...urgency };
 }
