@@ -36,12 +36,13 @@ import {
 import { useTheme } from "@/contexts/ThemeContext";
 import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
 import { Building2 } from "lucide-react";
+import type { ProductCategory } from "@shared/types";
 
 interface WorkItem {
   id: number;
   clientName: string;
   productName: string;
-  productCategory?: string | null;
+  productCategory?: ProductCategory | null;
   hasDeadline?: boolean;
   deadline?: string | Date | null;
   isOverdue?: boolean;

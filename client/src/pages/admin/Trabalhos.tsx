@@ -486,8 +486,8 @@ function PendingCard({
   );
 
   const hasDeadline = item.hasDeadline ?? true;
-  const isOverdue = hasDeadline ? item.isOverdue : false;
-  const isUrgent = hasDeadline ? item.isUrgent : false;
+  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
+  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
 
   return (
     <div
