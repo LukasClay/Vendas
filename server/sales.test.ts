@@ -4,7 +4,10 @@ import type { TrpcContext } from "./_core/context";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createContext(role: "user" | "admin" = "user", id = 1): TrpcContext {
+function createContext(
+  role: "user" | "admin" | "consultora" = "user",
+  id = 1
+): TrpcContext {
   const user: AuthenticatedUser = {
     id,
     openId: `user-${id}`,
@@ -179,5 +182,79 @@ describe("consultora.listActiveSellers (admin only)", () => {
     const caller = appRouter.createCaller(ctx);
     const result = await caller.consultora.listActiveSellers();
     expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// Endpoints de prazo/urgência: cobertura de contrato de autorização.
+// O shape `SaleUrgency` (hasDeadline discriminado) já é coberto por
+// `shared/businessDays.test.ts`; aqui validamos apenas que os endpoints
+// rejeitam usuários comuns e aceitam consultora/admin.
+async function expectPassesAuthorization(promise: Promise<unknown>) {
+  try {
+    await promise;
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    expect(code).not.toBe("FORBIDDEN");
+  }
+}
+
+describe("consultora.toWrite (consultora/admin only)", () => {
+  it("throws FORBIDDEN for plain users", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+    await expect(caller.consultora.toWrite()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("passes authorization for consultora users", async () => {
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expectPassesAuthorization(caller.consultora.toWrite());
+  });
+
+  it("passes authorization for admin users", async () => {
+    const caller = appRouter.createCaller(createContext("admin"));
+    await expectPassesAuthorization(caller.consultora.toWrite());
+  });
+});
+
+describe("consultora.pending (consultora/admin only)", () => {
+  it("throws FORBIDDEN for plain users", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+    await expect(caller.consultora.pending()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("passes authorization for consultora users", async () => {
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expectPassesAuthorization(caller.consultora.pending());
+  });
+});
+
+describe("consultora.alerts (consultora/admin only)", () => {
+  it("throws FORBIDDEN for plain users", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+    await expect(caller.consultora.alerts()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("passes authorization for consultora users", async () => {
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expectPassesAuthorization(caller.consultora.alerts());
+  });
+});
+
+describe("consultora.worksSummary (consultora/admin only)", () => {
+  it("throws FORBIDDEN for plain users", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+    await expect(caller.consultora.worksSummary()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("passes authorization for consultora users", async () => {
+    const caller = appRouter.createCaller(createContext("consultora"));
+    await expectPassesAuthorization(caller.consultora.worksSummary());
   });
 });

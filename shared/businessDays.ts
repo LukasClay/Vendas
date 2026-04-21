@@ -3,6 +3,8 @@
  * reconhecidos no Brasil (fixos + móveis baseados na Páscoa).
  */
 
+import type { ProductCategory } from "./types";
+
 /** Calcula a Páscoa pelo algoritmo de Butcher/Anonymous Gregorian */
 function easterDate(year: number): Date {
   const a = year % 19;
@@ -139,4 +141,67 @@ export function calcBusinessDaysFromSale(
     : businessDays - daysRemaining;
 
   return { daysRemaining, deadline, isOverdue, isUrgent, urgencyScore };
+}
+
+/**
+ * Categoria da venda sem prazo automático.
+ * Trabalhos `coletivo` são executados em datas específicas (marcadas no mês),
+ * por isso não recebem o prazo global de dias úteis a partir da venda.
+ */
+export function hasAutomaticDeadline(
+  productCategory: ProductCategory | null | undefined
+): boolean {
+  return productCategory !== "coletivo";
+}
+
+/**
+ * Resultado de urgência como união discriminada.
+ * Quando `hasDeadline = false` (ex.: coletivo), os campos de prazo não existem,
+ * forçando o consumidor a tratar o caso sem prazo explicitamente.
+ */
+export type SaleUrgency =
+  | {
+      hasDeadline: false;
+      /**
+       * Score para ordenação. Itens sem prazo recebem `-Infinity`,
+       * ficando no final da ordenação por urgência sem gerar falsa prioridade.
+       */
+      urgencyScore: number;
+    }
+  | {
+      hasDeadline: true;
+      /** Dias úteis restantes (negativo = atrasado). */
+      daysRemaining: number;
+      /** Data limite calculada. */
+      deadline: Date;
+      isOverdue: boolean;
+      isUrgent: boolean;
+      urgencyScore: number;
+    };
+
+function toSaleDateStr(saleDate: Date | string): string {
+  return saleDate instanceof Date
+    ? saleDate.toISOString().split("T")[0]
+    : String(saleDate);
+}
+
+/**
+ * Calcula a urgência respeitando a categoria do produto.
+ * Centraliza a regra para evitar condicionais espalhadas nos consumidores.
+ *
+ * Aceita `Date | string` em `saleDate` para eliminar normalização nos callers.
+ */
+export function getSaleUrgency(
+  saleDate: Date | string,
+  productCategory: ProductCategory | null | undefined,
+  businessDays = 7
+): SaleUrgency {
+  if (!hasAutomaticDeadline(productCategory)) {
+    return { hasDeadline: false, urgencyScore: Number.NEGATIVE_INFINITY };
+  }
+  const urgency = calcBusinessDaysFromSale(
+    toSaleDateStr(saleDate),
+    businessDays
+  );
+  return { hasDeadline: true, ...urgency };
 }

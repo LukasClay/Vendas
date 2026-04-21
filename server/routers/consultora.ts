@@ -16,10 +16,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
-import {
-  calcBusinessDaysFromSale,
-  calcDeadline,
-} from "../../shared/businessDays";
+import { getSaleUrgency } from "../../shared/businessDays";
+import type { ProductCategory } from "../../shared/types";
 import { createAuditLog } from "../db";
 
 // Apenas consultoras e admins podem acessar estes endpoints
@@ -144,29 +142,22 @@ export const consultoraRouter = router({
         .limit(500);
 
       return rows.map((s: any) => {
-        const saleDateStr =
-          s.saleDate instanceof Date
-            ? s.saleDate.toISOString().split("T")[0]
-            : String(s.saleDate);
-        const urgency = calcBusinessDaysFromSale(saleDateStr);
+        const category: ProductCategory = s.productCategory ?? "individual";
+        const urgency = getSaleUrgency(s.saleDate, category);
         return {
           id: s.id,
           clientName: s.clientName,
           clientBirthDate: s.clientBirthDate,
           clientPhone: s.clientPhone,
           productName: s.productName,
-          productCategory: s.productCategory ?? "individual",
+          productCategory: category,
           saleDate: s.saleDate,
           notes: s.notes,
           createdAt: s.createdAt,
           sellerName: s.sellerName,
           photo1Url: s.photo1Url ?? null,
           photo2Url: s.photo2Url ?? null,
-          daysRemaining: urgency.daysRemaining,
-          deadline: urgency.deadline,
-          isOverdue: urgency.isOverdue,
-          isUrgent: urgency.isUrgent,
-          urgencyScore: urgency.urgencyScore,
+          ...urgency,
         };
       });
     }),
@@ -217,29 +208,22 @@ export const consultoraRouter = router({
 
       return rows
         .map((s: any) => {
-          const urgency = calcBusinessDaysFromSale(
-            s.saleDate instanceof Date
-              ? s.saleDate.toISOString().split("T")[0]
-              : String(s.saleDate)
-          );
+          const category: ProductCategory = s.productCategory ?? "individual";
+          const urgency = getSaleUrgency(s.saleDate, category);
           return {
             id: s.id,
             clientName: s.clientName,
             clientBirthDate: s.clientBirthDate,
             clientPhone: s.clientPhone,
             productName: s.productName,
-            productCategory: s.productCategory ?? "individual",
+            productCategory: category,
             saleDate: s.saleDate,
             notes: s.notes,
             writtenAt: s.writtenAt,
             sellerName: s.sellerName,
             photo1Url: s.photo1Url ?? null,
             photo2Url: s.photo2Url ?? null,
-            daysRemaining: urgency.daysRemaining,
-            deadline: urgency.deadline,
-            isOverdue: urgency.isOverdue,
-            isUrgent: urgency.isUrgent,
-            urgencyScore: urgency.urgencyScore,
+            ...urgency,
           };
         })
         .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
@@ -504,14 +488,11 @@ export const consultoraRouter = router({
         .orderBy(asc(sales.saleDate)),
     ]);
     const mapUrgency = (s: any) => {
-      const saleDateStr =
-        s.saleDate instanceof Date
-          ? s.saleDate.toISOString().split("T")[0]
-          : String(s.saleDate);
-      const urgency = calcBusinessDaysFromSale(saleDateStr);
+      const category: ProductCategory = s.productCategory ?? "individual";
+      const urgency = getSaleUrgency(s.saleDate, category);
       return {
         ...s,
-        productCategory: s.productCategory ?? "individual",
+        productCategory: category,
         ...urgency,
       };
     };
@@ -553,30 +534,27 @@ export const consultoraRouter = router({
       .limit(500);
 
     const withUrgency = rows.map((s: any) => {
-      const saleDateStr =
-        s.saleDate instanceof Date
-          ? s.saleDate.toISOString().split("T")[0]
-          : String(s.saleDate);
-      const urgency = calcBusinessDaysFromSale(saleDateStr);
+      const category: ProductCategory = s.productCategory ?? "individual";
+      const urgency = getSaleUrgency(s.saleDate, category);
       return {
         id: s.id,
         clientName: s.clientName,
         clientPhone: s.clientPhone,
         productName: s.productName,
-        productCategory: s.productCategory ?? "individual",
+        productCategory: category,
         saleDate: s.saleDate,
         workStatus: s.workStatus as "para_escrever" | "pendente",
         sellerName: s.sellerName,
-        daysRemaining: urgency.daysRemaining,
-        deadline: urgency.deadline,
-        isOverdue: urgency.isOverdue,
-        isUrgent: urgency.isUrgent,
-        urgencyScore: urgency.urgencyScore,
+        ...urgency,
       };
     });
 
+    // Itens sem prazo automático (ex.: coletivos) não são alertas:
+    // hasDeadline=false curto-circuita antes de acessar isOverdue/isUrgent.
     return withUrgency
-      .filter((item: any) => item.isOverdue || item.isUrgent)
+      .filter(
+        (item: any) => item.hasDeadline && (item.isOverdue || item.isUrgent)
+      )
       .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
   }),
 

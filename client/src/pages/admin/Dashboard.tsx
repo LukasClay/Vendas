@@ -36,17 +36,20 @@ import {
 import { useTheme } from "@/contexts/ThemeContext";
 import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
 import { Building2 } from "lucide-react";
+import type { ProductCategory } from "@shared/types";
 
 interface WorkItem {
   id: number;
   clientName: string;
   productName: string;
-  deadline?: string | Date;
+  productCategory?: ProductCategory | null;
+  hasDeadline?: boolean;
+  deadline?: string | Date | null;
   isOverdue?: boolean;
   isUrgent?: boolean;
 }
 
-function formatDeadline(deadline: string | Date | undefined): string {
+function formatDeadline(deadline: string | Date | null | undefined): string {
   if (!deadline) return "—";
   const d = deadline instanceof Date ? deadline : new Date(deadline);
   return d.toLocaleDateString("pt-BR");
@@ -131,10 +134,6 @@ export default function AdminDashboard() {
   );
   const pendingWorks: WorkItem[] = (worksSummary?.pending ?? []) as WorkItem[];
   const toWriteWorks: WorkItem[] = (worksSummary?.toWrite ?? []) as WorkItem[];
-
-  const overdueWorks = pendingWorks.filter(w => w.isOverdue);
-  const urgentWorks = pendingWorks.filter(w => w.isUrgent);
-  const onTrackWorks = pendingWorks.filter(w => !w.isOverdue && !w.isUrgent);
 
   // Cores do gráfico que funcionam em ambos os temas
   const chartGridColor = "var(--border)";
@@ -723,25 +722,30 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <ul className="space-y-3">
-                  {toWriteWorks.map(work => (
-                    <li
-                      key={work.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {work.clientName} - {work.productName}
+                  {toWriteWorks.map(work => {
+                    const hasDeadline = work.hasDeadline ?? true;
+                    return (
+                      <li
+                        key={work.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            {work.clientName} - {work.productName}
+                          </p>
+                        </div>
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {hasDeadline
+                            ? `Prazo: ${formatDeadline(work.deadline)}`
+                            : "—"}
                         </p>
-                      </div>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        Prazo: {formatDeadline(work.deadline)}
-                      </p>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </AnimatedCard>
@@ -780,31 +784,38 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <ul className="space-y-3">
-                  {pendingWorks.map(work => (
-                    <li
-                      key={work.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        {work.isOverdue ? (
-                          <AlertTriangle className="w-4 h-4 text-red-500" />
-                        ) : work.isUrgent ? (
-                          <Clock className="w-4 h-4 text-orange-500" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        )}
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {work.clientName} - {work.productName}
+                  {pendingWorks.map(work => {
+                    const hasDeadline = work.hasDeadline ?? true;
+                    return (
+                      <li
+                        key={work.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          {hasDeadline ? (
+                            work.isOverdue ? (
+                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                            ) : work.isUrgent ? (
+                              <Clock className="w-4 h-4 text-orange-500" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            )
+                          ) : null}
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            {work.clientName} - {work.productName}
+                          </p>
+                        </div>
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {hasDeadline
+                            ? `Prazo: ${formatDeadline(work.deadline)}`
+                            : "—"}
                         </p>
-                      </div>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        Prazo: {formatDeadline(work.deadline)}
-                      </p>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </AnimatedCard>
