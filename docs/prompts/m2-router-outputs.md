@@ -10,10 +10,39 @@
 
 Você está trabalhando no projeto **Mundo Da Magia LTDA** (repo
 `LukasClay/Vendas`). É um SaaS de vendas/consultoria com frontend React +
-Vite + tRPC e backend Node + tRPC + Drizzle + Postgres. Antes de qualquer
-alteração, leia `TODO.md` (regras invioláveis — painéis Vendedora e
-Consultora são intocáveis, foco é ADM) e `DIVIDA-TECNICA.md` §1 (o item
-que você vai resolver).
+Vite + tRPC e backend Node + tRPC + Drizzle + Postgres, rodando em
+Postgres com Drizzle ORM.
+
+**Fluxo operacional crítico** (nunca quebrar):
+
+1. Vendedora registra a venda em `/` (painel Vendedora, via
+   `NovaVenda.tsx`).
+2. Consultora recebe o trabalho em `/consultora` (painel Consultora),
+   escreve o texto e marca como feito.
+3. ADM (`/admin`) acompanha tudo — Dashboard, Trabalhos, Vendas,
+   Relatórios, Lixeira.
+
+**Onboarding obrigatório antes de tocar em código** — leia nesta ordem,
+por inteiro, e não pule:
+
+1. **`TODO.md`** — regras invioláveis do projeto. Atenção redobrada em:
+   - §1 (painéis Vendedora e Consultora são intocáveis para mudanças
+     visuais/funcionais — só ADM é área livre).
+   - §14 (`NovaVenda.tsx` intocável; nem abra).
+   - §99 e afins (validação manual mobile 375px antes de merge).
+   - Qualquer item marcado como "inviolável", "nunca", "não tocar".
+2. **`DIVIDA-TECNICA.md`** — especialmente §1 (é o item que você vai
+   resolver). Leia também §2 e §3 para entender por que o projeto
+   mantém esse log.
+3. **`CLAUDE.md`** (se existir na raiz) — convenções específicas que o
+   dono estabeleceu para agentes Claude neste repo.
+4. **`package.json`** — confira o atalho `verify` (roda
+   `typecheck && format:check && test:backend && build`). É o gate
+   obrigatório antes de cada commit.
+
+Só depois de ler os 4 acima, comece a tarefa abaixo. Se algo em
+TODO.md contradisser este prompt, **TODO.md vence** — pare e reporte
+ao dono.
 
 ## Tarefa
 
