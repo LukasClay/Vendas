@@ -135,10 +135,6 @@ export default function AdminDashboard() {
   const pendingWorks: WorkItem[] = (worksSummary?.pending ?? []) as WorkItem[];
   const toWriteWorks: WorkItem[] = (worksSummary?.toWrite ?? []) as WorkItem[];
 
-  const overdueWorks = pendingWorks.filter(w => w.isOverdue);
-  const urgentWorks = pendingWorks.filter(w => w.isUrgent);
-  const onTrackWorks = pendingWorks.filter(w => !w.isOverdue && !w.isUrgent);
-
   // Cores do gráfico que funcionam em ambos os temas
   const chartGridColor = "var(--border)";
   const chartTickColor = "var(--muted-foreground)";
@@ -742,11 +738,11 @@ export default function AdminDashboard() {
                             {work.clientName} - {work.productName}
                           </p>
                         </div>
-                        {hasDeadline && (
-                          <p className="text-xs text-[var(--muted-foreground)]">
-                            Prazo: {formatDeadline(work.deadline)}
-                          </p>
-                        )}
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {hasDeadline
+                            ? `Prazo: ${formatDeadline(work.deadline)}`
+                            : "—"}
+                        </p>
                       </li>
                     );
                   })}
@@ -812,11 +808,11 @@ export default function AdminDashboard() {
                             {work.clientName} - {work.productName}
                           </p>
                         </div>
-                        {hasDeadline && (
-                          <p className="text-xs text-[var(--muted-foreground)]">
-                            Prazo: {formatDeadline(work.deadline)}
-                          </p>
-                        )}
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {hasDeadline
+                            ? `Prazo: ${formatDeadline(work.deadline)}`
+                            : "—"}
+                        </p>
                       </li>
                     );
                   })}

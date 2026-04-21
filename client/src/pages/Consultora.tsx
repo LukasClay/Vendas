@@ -648,9 +648,9 @@ function PendingCard({
     saleDate: Date | string | null;
     notes: string | null;
     hasDeadline?: boolean;
-    daysRemaining: number;
-    isOverdue: boolean;
-    isUrgent: boolean;
+    daysRemaining?: number;
+    isOverdue?: boolean;
+    isUrgent?: boolean;
     sellerName?: string | null;
     photo1Url?: string | null;
     photo2Url?: string | null;
@@ -712,11 +712,11 @@ function PendingCard({
           {item.clientName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          {hasDeadline && (
+          {hasDeadline && item.daysRemaining != null && (
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <UrgencyBadge
                 daysRemaining={item.daysRemaining}
-                isOverdue={item.isOverdue}
+                isOverdue={item.isOverdue ?? false}
               />
             </div>
           )}

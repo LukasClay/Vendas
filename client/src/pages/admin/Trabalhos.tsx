@@ -511,11 +511,11 @@ function PendingCard({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            {hasDeadline && (
+            {hasDeadline && item.daysRemaining != null && (
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <UrgencyBadge
                   daysRemaining={item.daysRemaining}
-                  isOverdue={item.isOverdue}
+                  isOverdue={item.isOverdue ?? false}
                 />
               </div>
             )}
