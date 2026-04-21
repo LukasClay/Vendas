@@ -4,9 +4,79 @@
 > devem ser conhecidas antes de novas mudanças relacionadas. Atualize quando
 > uma dívida for resolvida ou uma nova for identificada.
 
+**Priorização:** itens marcados **[ALTA]** têm ROI claro de qualidade de
+código e devem ser endereçados nas próximas iterações. **[MÉDIA]** e
+**[BAIXA]** ficam no radar até que uma mudança relacionada as torne
+relevantes.
+
 ---
 
-## 1. Cache do Service Worker sem estratégia de cache-busting de app shell
+## 1. [ALTA] Client consome `(item: any)` em vez de `RouterOutputs` do tRPC
+
+**Status:** Ativo — **próximo refactor prioritário**.
+
+**Onde está o código:** `client/src/pages/admin/Trabalhos.tsx`,
+`client/src/pages/admin/Dashboard.tsx`, `client/src/pages/admin/Vendas.tsx`,
+parcialmente em `client/src/pages/Consultora.tsx`.
+
+**Situação atual:** Cards e linhas de tabela aceitam `item: any` /
+`sale: any` / `work: any` como prop. O tipo de retorno dos endpoints
+tRPC (`consultora.toWrite`, `consultora.pending`, `sales.list` etc.) é
+perdido na passagem servidor → cliente → componente. Resultado:
+
+- Refactors no servidor (renomear campo, mudar tipo, remover coluna)
+  não quebram o build do cliente; quebras só aparecem em runtime.
+- IDE não oferece autocomplete nem detecta typos em `item.fooBar`.
+- Foi exatamente essa classe de bug que motivou a tipagem de
+  `productCategory` na Fase 1 deste PR — `WorkItem` em `Dashboard.tsx`
+  declarava `productCategory?: string | null`, divergindo do resto do
+  app que usava `ProductCategory`. Sem tipo compartilhado, só checagem
+  visual de PR pega esse desalinhamento.
+
+**Por que é alta prioridade:**
+
+- Classe de bug real, já observada no próprio código (não hipotética).
+- Refactor isolado, ~1h de trabalho, zero mudança de comportamento.
+- Cada novo endpoint/campo criado sem isso aumenta a dívida.
+
+**Solução recomendada:**
+
+1. Em `client/src/lib/trpc.ts`, adicionar:
+
+   ```ts
+   import type { inferRouterOutputs } from "@trpc/server";
+   import type { AppRouter } from "../../../server/routers";
+
+   export type RouterOutputs = inferRouterOutputs<AppRouter>;
+   ```
+
+2. Substituir `(item: any)` pelos tipos derivados nos principais
+   consumidores:
+   - `admin/Trabalhos.tsx` — `ToWriteCard`, `PendingCard`, `DoneCard`:
+     usar `RouterOutputs["consultora"]["toWrite"][number]`,
+     `RouterOutputs["consultora"]["pending"][number]` etc.
+   - `admin/Dashboard.tsx` — remover a interface local `WorkItem`
+     (linhas 40-49) e usar o tipo derivado de `worksSummary`.
+   - `admin/Vendas.tsx` — ~7 usos de `(sale: any)`.
+   - `Consultora.tsx` — PropTypes inline dos cards podem ser substituídos
+     pelo tipo derivado.
+
+3. Verificar que o bundle do cliente não infla significativamente
+   (`inferRouterOutputs` é puramente type-level, zero runtime). Rodar
+   `pnpm run build` e comparar tamanho do chunk `trpc-query` antes/depois.
+
+**Risco de regressão:** Baixíssimo. A mudança é type-only — TypeScript
+rejeitará qualquer divergência no build, não há mudança de comportamento.
+
+**Prompt prontinho para rodar em sessão separada:**
+`docs/prompts/m2-router-outputs.md`.
+
+**Identificada em:** revisão da branch
+`claude/evaluate-deadline-fix-branches-lEjYW` (abril/2026).
+
+---
+
+## 2. [BAIXA] Cache do Service Worker sem estratégia de cache-busting de app shell
 
 **Status:** Não é risco no estado atual (abril/2026).
 
@@ -38,7 +108,7 @@ chegariam ao usuário até ele limpar o cache do navegador manualmente.
 
 ---
 
-## 2. Vendas legadas com `productCategory` mal-classificado
+## 3. [MÉDIA] Vendas legadas com `productCategory` mal-classificado
 
 **Status:** Impacto visual residual, volume provavelmente pequeno.
 
