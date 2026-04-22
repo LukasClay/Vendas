@@ -48,66 +48,13 @@ cache do navegador manualmente.
 
 ---
 
-## 2. [MÉDIA] Vendas legadas com `productCategory` mal-classificado
-
-**Status:** Impacto visual residual, volume provavelmente pequeno.
-
-**Onde está o código:** `shared/businessDays.ts:getSaleUrgency`,
-`drizzle/schema.ts:sales.productCategory`
-
-**Situação atual:** A coluna `sales.productCategory` tem
-`DEFAULT 'individual'` no schema
-(`drizzle/0000_watery_fat_cobra.sql:71`). Vendas criadas antes de o
-sistema distinguir coletivos, ou vendas criadas por erro de
-categorização humana, podem ter `productCategory = 'individual'`
-quando na realidade são trabalhos coletivos. Essas vendas continuarão
-recebendo prazo automático de 7 dias úteis e aparecendo como vencidas
-/ urgentes mesmo após o fix de coletivos.
-
-> **Atenção ao escopo:** coletivos **corretamente** classificados
-> (`productCategory = 'coletivo'`) já são tratados retroativamente
-> pelo fix de `getSaleUrgency` — não aparecem mais como vencidos.
-> Esta dívida cobre apenas vendas **mal-classificadas**
-> historicamente.
-
-**Por que não foi migrado no PR que introduziu o fix:** Não há como
-um fix de código adivinhar quais vendas antigas foram
-mal-categorizadas. Requer revisão humana caso-a-caso.
-
-**Estratégia recomendada: corrigir caso-a-caso, a partir de agora.**
-
-- **Para identificar candidatos:** listar vendas ativas com prazo
-  antigo que o dono/consultora reconheça como coletivo. SQL de
-  diagnóstico (colunas reais do schema — `saleDate`, `clientName`):
-
-  ```sql
-  SELECT id, "saleDate", "productCategory", "clientName", "productName", "workStatus"
-  FROM sales
-  WHERE "productCategory" = 'individual'
-    AND "workStatus" IN ('para_escrever', 'pendente')
-    AND "deletedAt" IS NULL
-    AND "saleDate" < NOW() - INTERVAL '30 days'
-  ORDER BY "saleDate" DESC;
-  ```
-
-  (ajuste o intervalo conforme o horizonte que fizer sentido; 30 dias
-  é um ponto de partida razoável.)
-
-- **Para corrigir:** editar a venda pelo painel ADM
-  (`/admin` → Vendas → editar venda → trocar `productCategory`) — a
-  UI existente já permite alterar a categoria de vendas existentes.
-
-- **Não é necessária migração automática:** o impacto é apenas visual
-  (aparece prazo onde não deveria). Dados financeiros, fluxo de
-  entrega e cálculos de comissão permanecem corretos
-  independentemente da categoria.
-
-**Identificada em:** revisão da branch
-`claude/evaluate-deadline-fix-branches-lEjYW` (abril/2026).
-
----
-
 ## Histórico de dívidas resolvidas
+
+- **Vendas legadas com `productCategory` mal-classificado (abril/2026)**
+  — triagem humana concluída pelo dono via painel ADM. Coletivos
+  corretamente classificados já eram tratados pelo fix de
+  `getSaleUrgency`; vendas mal-classificadas foram reclassificadas
+  caso-a-caso. Sem mudança de código necessária.
 
 - **M3 · Eliminar `(query as any)`, bugs latentes e `err: any`
   (abril/2026)** — resolvida na branch
