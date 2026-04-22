@@ -92,7 +92,7 @@ describe("sales.update storage cleanup", () => {
       10,
       expect.objectContaining({
         photo1Url: "https://cdn.test/uploaded-file",
-        photo1Key: "fotos/7/fixed-id.png",
+        photo1Key: "fotos/7/fixed-id-legacy-1.png",
       })
     );
     expect(mocks.storageDelete).toHaveBeenCalledWith("fotos/old-photo.jpg");
@@ -139,7 +139,7 @@ describe("sales.update storage cleanup", () => {
     ).rejects.toThrow("db failed");
 
     expect(mocks.storageDelete).toHaveBeenCalledWith(
-      "comprovantes/7/fixed-id.pdf"
+      "comprovantes/7/fixed-id-legacy.pdf"
     );
     expect(mocks.storageDelete).not.toHaveBeenCalledWith(
       "comprovantes/old-proof.pdf"
@@ -171,7 +171,9 @@ describe("sales.update storage cleanup", () => {
     ).rejects.toThrow("upload failed");
 
     expect(mocks.updateSale).not.toHaveBeenCalled();
-    expect(mocks.storageDelete).toHaveBeenCalledWith("fotos/7/fixed-id.jpg");
+    expect(mocks.storageDelete).toHaveBeenCalledWith(
+      "fotos/7/fixed-id-legacy-1.jpg"
+    );
     expect(mocks.storageDelete).not.toHaveBeenCalledWith(
       "fotos/old-photo-1.jpg"
     );
@@ -196,6 +198,118 @@ describe("sales.update storage cleanup", () => {
         photo1Mime: "image/jpeg",
       })
     ).rejects.toThrow("Consulta Cartas não permite fotos do cliente.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+  });
+
+  it("adiciona comprovantes extras e remove anexos extras marcados", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      attachmentUrl: "https://cdn.test/legacy-proof.pdf",
+      attachmentKey: "comprovantes/old-proof.pdf",
+      attachmentExtras: [
+        {
+          id: "keep-proof",
+          url: "https://cdn.test/keep-proof.pdf",
+          key: "comprovantes/keep-proof.pdf",
+          mime: "application/pdf",
+          name: "Comprovante 2",
+        },
+        {
+          id: "remove-proof",
+          url: "https://cdn.test/remove-proof.pdf",
+          key: "comprovantes/remove-proof.pdf",
+          mime: "application/pdf",
+          name: "Comprovante 3",
+        },
+      ],
+    });
+    mocks.storagePut.mockResolvedValue({
+      key: "ignored",
+      url: "https://cdn.test/uploaded-extra-proof",
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await caller.update({
+      id: 15,
+      extraAttachments: [
+        {
+          base64: Buffer.from("extra-proof").toString("base64"),
+          mime: "application/pdf",
+          name: "Comprovante novo",
+        },
+      ],
+      removeAttachmentIds: ["remove-proof"],
+    });
+
+    expect(mocks.updateSale).toHaveBeenCalledWith(
+      15,
+      expect.objectContaining({
+        attachmentExtras: [
+          expect.objectContaining({
+            id: "keep-proof",
+            key: "comprovantes/keep-proof.pdf",
+          }),
+          expect.objectContaining({
+            id: "fixed-id-extra-1",
+            key: "comprovantes/7/fixed-id-extra-1.pdf",
+            name: "Comprovante novo",
+          }),
+        ],
+      })
+    );
+    expect(mocks.storageDelete).toHaveBeenCalledWith(
+      "comprovantes/remove-proof.pdf"
+    );
+  });
+
+  it("rejeita quando o total de comprovantes excede o limite do ADM", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      attachmentUrl: "https://cdn.test/legacy-proof.pdf",
+      attachmentKey: "comprovantes/old-proof.pdf",
+      attachmentExtras: [
+        {
+          id: "proof-2",
+          url: "https://cdn.test/proof-2.pdf",
+          key: "comprovantes/proof-2.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-3",
+          url: "https://cdn.test/proof-3.pdf",
+          key: "comprovantes/proof-3.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-4",
+          url: "https://cdn.test/proof-4.pdf",
+          key: "comprovantes/proof-4.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-5",
+          url: "https://cdn.test/proof-5.pdf",
+          key: "comprovantes/proof-5.pdf",
+          mime: "application/pdf",
+        },
+      ],
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 16,
+        extraAttachments: [
+          {
+            base64: Buffer.from("overflow-proof").toString("base64"),
+            mime: "application/pdf",
+            name: "Comprovante 6",
+          },
+        ],
+      })
+    ).rejects.toThrow("O ADM pode manter no máximo 5 comprovantes por venda.");
 
     expect(mocks.storagePut).not.toHaveBeenCalled();
     expect(mocks.updateSale).not.toHaveBeenCalled();

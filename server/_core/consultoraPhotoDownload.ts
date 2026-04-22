@@ -5,19 +5,12 @@ import { z } from "zod";
 import { createContext } from "./context";
 import {
   resolveConsultoraPhotoDownload,
-  type ConsultoraPhotoSlot,
 } from "../routers/consultora";
 import { StorageObjectNotFoundError, storageDownload } from "../storage";
 
 const paramsSchema = z.object({
   saleId: z.coerce.number().int().positive(),
-  slot: z.coerce
-    .number()
-    .int()
-    .refine(value => value === 1 || value === 2, {
-      message: "Slot de foto inválido.",
-    })
-    .transform(value => value as ConsultoraPhotoSlot),
+  photoId: z.string().min(1).max(128),
 });
 
 function buildAttachmentDisposition(filename: string): string {
@@ -27,7 +20,7 @@ function buildAttachmentDisposition(filename: string): string {
 
 export function registerConsultoraPhotoDownloadRoute(app: Express) {
   app.get(
-    "/api/consultora/photos/:saleId/:slot/download",
+    "/api/consultora/photos/:saleId/:photoId/download",
     async (req, res, next) => {
       try {
         const params = paramsSchema.parse(req.params);

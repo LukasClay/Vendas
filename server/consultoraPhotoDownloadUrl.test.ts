@@ -3,8 +3,8 @@ import { buildConsultoraPhotoDownloadUrl } from "../client/src/lib/consultoraPho
 
 describe("buildConsultoraPhotoDownloadUrl", () => {
   it("gera rota same-origin para o download da foto", () => {
-    expect(buildConsultoraPhotoDownloadUrl(123, 2)).toBe(
-      "/api/consultora/photos/123/2/download"
+    expect(buildConsultoraPhotoDownloadUrl(123, "legacy-photo-2")).toBe(
+      "/api/consultora/photos/123/legacy-photo-2/download"
     );
   });
 });

@@ -457,7 +457,7 @@ export async function ensureSystemProducts() {
   }
 }
 
-export async function ensurePhotoColumns() {
+export async function ensureSaleMediaColumns() {
   const db = await getDb();
   if (!db) return;
   const columns = [
@@ -465,6 +465,8 @@ export async function ensurePhotoColumns() {
     { name: "photo1Key", def: "varchar(512)" },
     { name: "photo2Url", def: "text" },
     { name: "photo2Key", def: "varchar(512)" },
+    { name: "attachmentExtras", def: "jsonb" },
+    { name: "photoExtras", def: "jsonb" },
   ];
   for (const col of columns) {
     try {
@@ -478,7 +480,7 @@ export async function ensurePhotoColumns() {
       );
     }
   }
-  console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
+  console.log("[SaleMediaColumns] Colunas de mídia verificadas/criadas.");
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────

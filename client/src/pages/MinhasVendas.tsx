@@ -8,6 +8,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
+import { getSaleAttachmentFiles } from "@/lib/saleMedia";
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", {
@@ -192,6 +193,9 @@ export default function MinhasVendas() {
                     (e.currentTarget.style.background = "transparent")
                   }
                 >
+                  {(() => {
+                    const attachments = getSaleAttachmentFiles(sale);
+                    return (
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -201,9 +205,10 @@ export default function MinhasVendas() {
                         >
                           {sale.clientName}
                         </p>
-                        {sale.attachmentUrl && (
+                        {attachments.map((attachment, index) => (
                           <a
-                            href={sale.attachmentUrl}
+                            key={attachment.id}
+                            href={attachment.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors"
@@ -213,9 +218,9 @@ export default function MinhasVendas() {
                             }}
                           >
                             <ExternalLink className="w-3 h-3" />
-                            Comprovante
+                            {attachment.name || `Comprovante ${index + 1}`}
                           </a>
-                        )}
+                        ))}
                       </div>
                       <p
                         className="text-sm"
@@ -247,6 +252,8 @@ export default function MinhasVendas() {
                       </p>
                     </div>
                   </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

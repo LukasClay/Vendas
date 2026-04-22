@@ -11,7 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
-import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
+import { ensureSystemProducts, ensureSaleMediaColumns, getDb } from "../db";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
 
@@ -41,8 +41,8 @@ async function startServer() {
   app.set("trust proxy", 1); // Confia no proxy do Railway para pegar o IP real
 
   // Configure body parser with safe size limit for file uploads
-  app.use(express.json({ limit: "10mb" }));
-  app.use(express.urlencoded({ limit: "10mb", extended: true }));
+  app.use(express.json({ limit: "25mb" }));
+  app.use(express.urlencoded({ limit: "25mb", extended: true }));
   // ─── Health Check (Railway zero-downtime deploy) ──────────────────────────
   app.get("/api/health", async (_req, res) => {
     try {
@@ -104,7 +104,7 @@ async function startServer() {
 
   // Garante que produtos do sistema existam no banco antes de aceitar requests
   await ensureSystemProducts();
-  await ensurePhotoColumns();
+  await ensureSaleMediaColumns();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

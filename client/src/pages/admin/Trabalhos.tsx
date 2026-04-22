@@ -25,12 +25,19 @@ import {
   Loader2,
   Settings2,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
+import { buildConsultoraPhotoDownloadUrl } from "@/lib/consultoraPhotoDownload";
+import {
+  getSaleClientPhotos,
+  hasSaleClientPhotos,
+  type SaleClientPhoto,
+} from "@/lib/saleMedia";
 
 type Tab = "para_escrever" | "pendente" | "feito";
 type Seller = { id: number; name: string | null };
@@ -72,6 +79,51 @@ function useCopy() {
     }
   }, []);
   return { copy, copiedKey };
+}
+
+function ClientPhotoGallery({
+  saleId,
+  item,
+}: {
+  saleId: number;
+  item: {
+    clientPhotos?: SaleClientPhoto[] | null;
+    photo1Url?: string | null;
+    photo2Url?: string | null;
+  };
+}) {
+  const photos = getSaleClientPhotos(item);
+  if (photos.length === 0) return null;
+
+  return (
+    <div className="p-3 rounded-xl bg-[var(--secondary)]/50 border border-[var(--border)]">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">
+        Fotos do Cliente
+      </p>
+      <div className="flex gap-3 flex-wrap">
+        {photos.map(photo => (
+          <div
+            key={photo.id}
+            className="relative rounded-xl overflow-hidden border border-[var(--border)] shadow-sm"
+          >
+            <img
+              src={photo.url}
+              alt={`Foto ${photo.id}`}
+              className="w-20 h-28 object-cover"
+            />
+            <a
+              href={buildConsultoraPhotoDownloadUrl(saleId, photo.id)}
+              download
+              className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full bg-black/65 text-white backdrop-blur-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <Download className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function UrgencyBadge({
@@ -410,6 +462,8 @@ function ToWriteCard({
                 </div>
               )}
 
+              <ClientPhotoGallery saleId={item.id} item={item} />
+
               <div className="pt-2">
                 {!confirming ? (
                   <button
@@ -612,6 +666,7 @@ function PendingCard({
                 <CopyBtn text={item.notes} field="notes" />
               </div>
             )}
+            <ClientPhotoGallery saleId={item.id} item={item} />
           </div>
           {!confirming ? (
             <div className="space-y-2">
@@ -733,6 +788,9 @@ function DoneCard({
             Venda: {formatDate(item.saleDate)} · Feito:{" "}
             {formatDate(item.completedAt || item.doneAt)}
           </p>
+          <div className="mt-3">
+            <ClientPhotoGallery saleId={item.id} item={item} />
+          </div>
         </div>
         <span
           className="shrink-0 px-2 py-1 rounded-full text-xs font-semibold"
@@ -1348,6 +1406,7 @@ export default function Trabalhos() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
   // Debounce simples
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1428,13 +1487,60 @@ export default function Trabalhos() {
         i => (i.productCategory ?? "individual") === selectedCategory
       )
     : activeItems;
+  const photoFilteredItems = onlyWithPhotos
+    ? (categoryFilteredItems as any[]).filter(hasSaleClientPhotos)
+    : categoryFilteredItems;
+  const photoCount = (categoryFilteredItems as any[]).filter(
+    hasSaleClientPhotos
+  ).length;
+  const hasCategoryOptions = (activeItems as any[]).some(
+    i => (i.productCategory ?? "individual") !== "individual"
+  );
+  const hasSelectedCategoryOption =
+    selectedCategory === null ||
+    (activeItems as any[]).some(
+      i => (i.productCategory ?? "individual") === selectedCategory
+    );
   const uniqueTypes = Array.from(
     new Set(
-      (categoryFilteredItems as Array<{ productName: string }>).map(
+      (photoFilteredItems as Array<{ productName: string }>).map(
         i => i.productName
       )
     )
   ).sort();
+  const hasSelectedTypeOption =
+    selectedType === null ||
+    (photoFilteredItems as Array<{ productName: string }>).some(
+      i => i.productName === selectedType
+    );
+  const shouldShowCategoryFilter =
+    selectedCategory !== null || hasCategoryOptions;
+  const shouldShowTypeFilter =
+    selectedType !== null || uniqueTypes.length > 1;
+  const shouldShowPhotoFilter = onlyWithPhotos || photoCount > 0;
+
+  useEffect(() => {
+    if (!hasSelectedCategoryOption) {
+      setSelectedCategory(null);
+      return;
+    }
+
+    if (onlyWithPhotos && photoCount === 0) {
+      setOnlyWithPhotos(false);
+      return;
+    }
+
+    if (!hasSelectedTypeOption) {
+      setSelectedType(null);
+    }
+  }, [
+    hasSelectedCategoryOption,
+    hasSelectedTypeOption,
+    onlyWithPhotos,
+    photoCount,
+    selectedCategory,
+    selectedType,
+  ]);
   // Filtrar por tipo e categoria
   const applyFilters = (items: any[]) => {
     let result = items;
@@ -1442,6 +1548,7 @@ export default function Trabalhos() {
       result = result.filter(
         i => (i.productCategory ?? "individual") === selectedCategory
       );
+    if (onlyWithPhotos) result = result.filter(hasSaleClientPhotos);
     if (selectedType)
       result = result.filter(i => i.productName === selectedType);
     return result;
@@ -1455,6 +1562,7 @@ export default function Trabalhos() {
     setDebouncedSearch("");
     setSelectedType(null);
     setSelectedCategory(null);
+    setOnlyWithPhotos(false);
   }
 
   return (
@@ -1542,10 +1650,7 @@ export default function Trabalhos() {
         </div>
 
         {/* Sub-filtro por categoria */}
-        {!isLoading &&
-          (activeItems as any[]).some(
-            i => (i.productCategory ?? "individual") !== "individual"
-          ) && (
+        {!isLoading && shouldShowCategoryFilter && (
             <div className="flex gap-2 flex-wrap">
               {[
                 { key: null, label: "Todos" },
@@ -1583,7 +1688,22 @@ export default function Trabalhos() {
             </div>
           )}
         {/* Filtro por tipo de trabalho (chips dinâmicos) */}
-        {!isLoading && uniqueTypes.length > 1 && (
+        {shouldShowPhotoFilter && (
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setOnlyWithPhotos(v => !v)}
+              className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={
+                onlyWithPhotos
+                  ? { background: "oklch(0.55 0.15 160)", color: "white" }
+                  : { background: "var(--border)", color: "var(--foreground)" }
+              }
+            >
+              Somente com fotos ({photoCount})
+            </button>
+          </div>
+        )}
+        {!isLoading && shouldShowTypeFilter && (
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setSelectedType(null)}
@@ -1594,11 +1714,11 @@ export default function Trabalhos() {
                   : { background: "var(--border)", color: "var(--foreground)" }
               }
             >
-              Todos ({categoryFilteredItems.length})
+              Todos ({photoFilteredItems.length})
             </button>
             {uniqueTypes.map(type => {
               const count = (
-                categoryFilteredItems as Array<{ productName: string }>
+                photoFilteredItems as Array<{ productName: string }>
               ).filter(i => i.productName === type).length;
               return (
                 <button
@@ -1650,9 +1770,13 @@ export default function Trabalhos() {
             >
               <ClipboardList className="w-12 h-12 text-[var(--muted-foreground)] opacity-20" />
               <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                {selectedType
-                  ? `Nenhum "${selectedType}" encontrado`
-                  : "Nenhum trabalho encontrado nesta categoria."}
+                {selectedType && onlyWithPhotos
+                  ? `Nenhum "${selectedType}" com fotos encontrado`
+                  : selectedType
+                    ? `Nenhum "${selectedType}" encontrado`
+                    : onlyWithPhotos
+                      ? "Nenhum trabalho com fotos encontrado nesta categoria."
+                      : "Nenhum trabalho encontrado nesta categoria."}
               </p>
             </motion.div>
           ) : (

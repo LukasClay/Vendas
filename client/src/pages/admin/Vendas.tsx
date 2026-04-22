@@ -34,6 +34,10 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
 import { CompanyBadge } from "@/components/CompanySwitch";
+import {
+  getSaleAttachmentFiles,
+  getSaleClientPhotos,
+} from "@/lib/saleMedia";
 
 type SalesListItem = RouterOutputs["sales"]["list"][number];
 type UserListItem = RouterOutputs["users"]["listAll"][number];
@@ -58,6 +62,10 @@ const inputStyle = {
   fontSize: "14px",
 };
 
+const MAX_TOTAL_ATTACHMENTS = 5;
+const MAX_TOTAL_PHOTOS = 6;
+const MAX_UPLOAD_BYTES_PER_SAVE = 18 * 1024 * 1024;
+
 // ─── Modal de detalhes (readonly) ─────────────────────────────────────────────
 function ViewSaleModal({
   sale,
@@ -78,6 +86,8 @@ function ViewSaleModal({
     pendente: "bg-blue-100 text-blue-700 border-blue-200",
     feito: "bg-green-100 text-green-700 border-green-200",
   };
+  const attachments = getSaleAttachmentFiles(sale);
+  const clientPhotos = getSaleClientPhotos(sale);
 
   return (
     <div
@@ -195,48 +205,51 @@ function ViewSaleModal({
           </div>
 
           {/* Comprovante */}
-          {sale.attachmentUrl && (
+          {attachments.length > 0 && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">
-                Comprovante
+                Comprovantes
               </p>
-              <a
-                href={sale.attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition-colors"
-              >
-                <Paperclip className="w-4 h-4 text-amber-500" />
-                Ver Comprovante
-                <ExternalLink className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
-              </a>
+              <div className="flex gap-2 flex-wrap">
+                {attachments.map((attachment, index) => (
+                  <a
+                    key={attachment.id}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] transition-colors"
+                  >
+                    <Paperclip className="w-4 h-4 text-amber-500" />
+                    {attachment.name || `Comprovante ${index + 1}`}
+                    <ExternalLink className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Fotos do cliente */}
-          {(sale.photo1Url || sale.photo2Url) && (
+          {clientPhotos.length > 0 && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">
                 Fotos do Cliente
               </p>
               <div className="flex gap-3 flex-wrap">
-                {[sale.photo1Url, sale.photo2Url]
-                  .filter(Boolean)
-                  .map((url: string, i: number) => (
-                    <a
-                      key={i}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
-                    >
-                      <img
-                        src={url}
-                        alt={`Foto ${i + 1}`}
-                        className="w-28 h-36 object-cover"
-                      />
-                    </a>
-                  ))}
+                {clientPhotos.map((photo, index) => (
+                  <a
+                    key={photo.id}
+                    href={photo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={`Foto ${index + 1}`}
+                      className="w-28 h-36 object-cover"
+                    />
+                  </a>
+                ))}
               </div>
             </div>
           )}
@@ -358,6 +371,12 @@ function EditSaleModal({
   // Reagendamento de consulta (só para "Consulta Cartas")
   const isConsultaCartas = editForm.productName === "Consulta Cartas";
   const canUploadClientPhotos = !isConsultaCartas;
+  const attachments = getSaleAttachmentFiles(sale);
+  const extraAttachmentItems = attachments.filter(
+    attachment => !attachment.isLegacy
+  );
+  const clientPhotos = getSaleClientPhotos(sale);
+  const extraPhotoItems = clientPhotos.filter(photo => !photo.isLegacy);
   const availableSlots = trpc.consultationSlots.listAvailable.useQuery(
     undefined,
     { enabled: isConsultaCartas }
@@ -392,19 +411,26 @@ function EditSaleModal({
   // Estado do upload de comprovante
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [extraAttachmentFiles, setExtraAttachmentFiles] = useState<File[]>([]);
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+  const extraAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   // Estado do upload/remoção de fotos do cliente
   const [photoFile1, setPhotoFile1] = useState<File | null>(null);
   const [photoFile2, setPhotoFile2] = useState<File | null>(null);
   const [removePhoto1, setRemovePhoto1] = useState(false);
   const [removePhoto2, setRemovePhoto2] = useState(false);
+  const [extraPhotoFiles, setExtraPhotoFiles] = useState<File[]>([]);
+  const [removeExtraPhotoIds, setRemoveExtraPhotoIds] = useState<string[]>([]);
   const photoInputRef1 = useRef<HTMLInputElement>(null);
   const photoInputRef2 = useRef<HTMLInputElement>(null);
+  const extraPhotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (canUploadClientPhotos) return;
     setPhotoFile1(null);
     setPhotoFile2(null);
+    setExtraPhotoFiles([]);
   }, [canUploadClientPhotos]);
 
   const handlePhotoChange = (f: File | null, which: 1 | 2) => {
@@ -424,6 +450,51 @@ function EditSaleModal({
       setPhotoFile2(f);
       setRemovePhoto2(false);
     }
+  };
+
+  const handleExtraAttachmentSelection = (files: FileList | null) => {
+    if (!files?.length) return;
+    const nextFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`"${file.name}" excede o máximo de 5MB.`);
+        return;
+      }
+      if (
+        ![
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf",
+        ].includes(file.type)
+      ) {
+        toast.error(`"${file.name}" tem formato inválido.`);
+        return;
+      }
+      nextFiles.push(file);
+    }
+
+    setExtraAttachmentFiles(current => [...current, ...nextFiles]);
+  };
+
+  const handleExtraPhotoSelection = (files: FileList | null) => {
+    if (!files?.length) return;
+    const nextFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`"${file.name}" excede o máximo de 5MB.`);
+        return;
+      }
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        toast.error(`"${file.name}" tem formato inválido.`);
+        return;
+      }
+      nextFiles.push(file);
+    }
+
+    setExtraPhotoFiles(current => [...current, ...nextFiles]);
   };
 
   const handleFileChange = (f: File | null) => {
@@ -465,7 +536,50 @@ function EditSaleModal({
     onError: err => toast.error(err.message),
   });
 
+  const keptExtraAttachmentItems = extraAttachmentItems.filter(
+    attachment => !removeAttachmentIds.includes(attachment.id)
+  );
+  const keptExtraPhotoItems = extraPhotoItems.filter(
+    photo => !removeExtraPhotoIds.includes(photo.id)
+  );
+  const attachmentCount =
+    (sale.attachmentUrl || file ? 1 : 0) +
+    keptExtraAttachmentItems.length +
+    extraAttachmentFiles.length;
+  const photoCount =
+    (!removePhoto1 && (sale.photo1Url || photoFile1) ? 1 : 0) +
+    (!removePhoto2 && (sale.photo2Url || photoFile2) ? 1 : 0) +
+    keptExtraPhotoItems.length +
+    extraPhotoFiles.length;
+  const remainingAttachmentSlots = Math.max(
+    0,
+    MAX_TOTAL_ATTACHMENTS - attachmentCount
+  );
+  const remainingPhotoSlots = Math.max(0, MAX_TOTAL_PHOTOS - photoCount);
+
   const handleUpdate = async () => {
+    if (attachmentCount > MAX_TOTAL_ATTACHMENTS) {
+      toast.error(`Máximo de ${MAX_TOTAL_ATTACHMENTS} comprovantes por venda.`);
+      return;
+    }
+
+    if (photoCount > MAX_TOTAL_PHOTOS) {
+      toast.error(`Máximo de ${MAX_TOTAL_PHOTOS} fotos por venda.`);
+      return;
+    }
+
+    const selectedUploadBytes =
+      (file?.size ?? 0) +
+      (photoFile1?.size ?? 0) +
+      (photoFile2?.size ?? 0) +
+      extraAttachmentFiles.reduce((sum, current) => sum + current.size, 0) +
+      extraPhotoFiles.reduce((sum, current) => sum + current.size, 0);
+
+    if (selectedUploadBytes > MAX_UPLOAD_BYTES_PER_SAVE) {
+      toast.error("Muitos arquivos de uma vez. Salve em partes.");
+      return;
+    }
+
     let attachmentBase64: string | undefined;
     let attachmentMime: string | undefined;
     let attachmentName: string | undefined;
@@ -494,6 +608,12 @@ function EditSaleModal({
     let photo1Mime: string | undefined;
     let photo2Base64: string | undefined;
     let photo2Mime: string | undefined;
+    let extraAttachments:
+      | Array<{ base64: string; mime: string; name?: string }>
+      | undefined;
+    let extraPhotos:
+      | Array<{ base64: string; mime: string; name?: string }>
+      | undefined;
 
     if (canUploadClientPhotos && photoFile1) {
       photo1Base64 = await readFileAsBase64(photoFile1);
@@ -502,6 +622,26 @@ function EditSaleModal({
     if (canUploadClientPhotos && photoFile2) {
       photo2Base64 = await readFileAsBase64(photoFile2);
       photo2Mime = photoFile2.type;
+    }
+
+    if (extraAttachmentFiles.length > 0) {
+      extraAttachments = await Promise.all(
+        extraAttachmentFiles.map(async current => ({
+          base64: await readFileAsBase64(current),
+          mime: current.type,
+          name: current.name,
+        }))
+      );
+    }
+
+    if (canUploadClientPhotos && extraPhotoFiles.length > 0) {
+      extraPhotos = await Promise.all(
+        extraPhotoFiles.map(async current => ({
+          base64: await readFileAsBase64(current),
+          mime: current.type,
+          name: current.name,
+        }))
+      );
     }
 
     updateSale.mutate({
@@ -523,12 +663,18 @@ function EditSaleModal({
       attachmentBase64,
       attachmentMime,
       attachmentName,
+      extraAttachments,
+      removeAttachmentIds:
+        removeAttachmentIds.length > 0 ? removeAttachmentIds : undefined,
       photo1Base64,
       photo1Mime,
       removePhoto1: removePhoto1 || undefined,
       photo2Base64,
       photo2Mime,
       removePhoto2: removePhoto2 || undefined,
+      extraPhotos,
+      removeExtraPhotoIds:
+        removeExtraPhotoIds.length > 0 ? removeExtraPhotoIds : undefined,
     });
   };
 
@@ -836,7 +982,7 @@ function EditSaleModal({
             {/* ── Comprovante ── */}
             <div className="sm:col-span-2">
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
-                Comprovante
+                Comprovantes ({attachmentCount}/{MAX_TOTAL_ATTACHMENTS})
               </label>
 
               {/* Comprovante atual (se existir e nenhum novo foi selecionado) */}
@@ -844,7 +990,7 @@ function EditSaleModal({
                 <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] mb-2">
                   <Paperclip className="w-4 h-4 shrink-0 text-amber-500" />
                   <span className="text-xs text-[var(--muted-foreground)] flex-1 truncate">
-                    Comprovante atual
+                    Comprovante principal
                   </span>
                   <a
                     href={sale.attachmentUrl}
@@ -896,17 +1042,100 @@ function EditSaleModal({
                 className="hidden"
                 onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
               />
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                    Comprovantes adicionais
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => extraAttachmentInputRef.current?.click()}
+                    disabled={remainingAttachmentSlots === 0}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] text-xs font-semibold text-[var(--muted-foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Adicionar
+                  </button>
+                </div>
+
+                {keptExtraAttachmentItems.map((attachment, index) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)]"
+                  >
+                    <Paperclip className="w-4 h-4 shrink-0 text-amber-500" />
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-[var(--foreground)] flex-1 truncate hover:underline"
+                    >
+                      {attachment.name || `Comprovante ${index + 2}`}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRemoveAttachmentIds(current => [
+                          ...current,
+                          attachment.id,
+                        ])
+                      }
+                      className="text-[10px] px-2 py-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-red-500"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+
+                {extraAttachmentFiles.map((current, index) => (
+                  <div
+                    key={`${current.name}-${index}`}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10"
+                  >
+                    <FileText className="w-4 h-4 shrink-0 text-amber-500" />
+                    <span className="text-xs font-medium text-[var(--foreground)] flex-1 truncate">
+                      {current.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExtraAttachmentFiles(files =>
+                          files.filter((_, fileIndex) => fileIndex !== index)
+                        )
+                      }
+                      className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+
+                <input
+                  ref={extraAttachmentInputRef}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={e => {
+                    handleExtraAttachmentSelection(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
             </div>
 
             {/* ── Fotos do Cliente ── */}
             {(canUploadClientPhotos ||
               sale.photo1Url ||
               sale.photo2Url ||
+              extraPhotoItems.length > 0 ||
               photoFile1 ||
-              photoFile2) && (
+              photoFile2 ||
+              extraPhotoFiles.length > 0) && (
               <div className="sm:col-span-2">
                 <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5 text-[var(--muted-foreground)]">
-                  Fotos do Cliente
+                  Fotos do Cliente ({photoCount}/{MAX_TOTAL_PHOTOS})
                 </label>
                 {!canUploadClientPhotos && (
                   <p className="text-xs mb-3 text-[var(--muted-foreground)]">
@@ -1069,6 +1298,85 @@ function EditSaleModal({
                       onChange={e =>
                         handlePhotoChange(e.target.files?.[0] ?? null, 2)
                       }
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                      Fotos extras
+                    </span>
+                    <div className="flex gap-3 flex-wrap">
+                      {keptExtraPhotoItems.map((photo, index) => (
+                        <div key={photo.id} className="relative">
+                          <a
+                            href={photo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded-xl overflow-hidden border border-[var(--border)] hover:opacity-80 transition-opacity shadow-sm"
+                          >
+                            <img
+                              src={photo.url}
+                              alt={`Foto extra ${index + 1}`}
+                              className="w-24 h-32 object-cover"
+                            />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExtraPhotoIds(current => [
+                                ...current,
+                                photo.id,
+                              ])
+                            }
+                            className="absolute -top-1.5 -right-1.5 px-2 py-0.5 rounded-full bg-red-500 text-white shadow-md text-[10px] font-bold"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ))}
+
+                      {extraPhotoFiles.map((current, index) => (
+                        <div key={`${current.name}-${index}`} className="relative">
+                          <img
+                            src={URL.createObjectURL(current)}
+                            alt={`Nova foto extra ${index + 1}`}
+                            className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExtraPhotoFiles(files =>
+                                files.filter((_, fileIndex) => fileIndex !== index)
+                              )
+                            }
+                            className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 text-white shadow-md"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+
+                      {canUploadClientPhotos && remainingPhotoSlots > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => extraPhotoInputRef.current?.click()}
+                          className="w-24 h-32 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)] transition-all text-[var(--muted-foreground)] hover:text-[var(--primary)]"
+                        >
+                          <ImagePlus className="w-5 h-5" />
+                          <span className="text-[9px]">Adicionar</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={extraPhotoInputRef}
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={e => {
+                        handleExtraPhotoSelection(e.target.files);
+                        e.currentTarget.value = "";
+                      }}
                     />
                   </div>
                 </div>

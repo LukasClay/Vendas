@@ -95,11 +95,31 @@ export const sales = pgTable("sales", {
   attachmentUrl: text("attachmentUrl"),
   attachmentKey: varchar("attachmentKey", { length: 512 }),
   attachmentMime: varchar("attachmentMime", { length: 64 }),
+  attachmentExtras: jsonb("attachmentExtras")
+    .$type<
+      Array<{
+        id: string;
+        url: string;
+        key: string;
+        mime: string | null;
+        name?: string | null;
+      }>
+    >(),
   // Fotos do cliente (apenas para vendas do tipo Individual)
   photo1Url: text("photo1Url"),
   photo1Key: varchar("photo1Key", { length: 512 }),
   photo2Url: text("photo2Url"),
   photo2Key: varchar("photo2Key", { length: 512 }),
+  photoExtras: jsonb("photoExtras")
+    .$type<
+      Array<{
+        id: string;
+        url: string;
+        key: string;
+        mime: string | null;
+        name?: string | null;
+      }>
+    >(),
   // Empresa que "carimbou" esta venda no momento do registro
   company: companyEnum("company").default("mundo_da_magia"),
   // Workflow de 3 etapas da consultora

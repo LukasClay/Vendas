@@ -112,6 +112,9 @@ describe("consultora photo download route", () => {
       id: 42,
       photo1Key: "fotos/7/photo-1.png",
       photo2Key: null,
+      photo1Url: "https://cdn.test/photo-1.png",
+      photo2Url: null,
+      photoExtras: null,
     });
     mocks.storageDownload.mockResolvedValue({
       key: "fotos/7/photo-1.png",
@@ -124,7 +127,7 @@ describe("consultora photo download route", () => {
   it("permite download autorizado e envia header de attachment", async () => {
     await withServer(async baseUrl => {
       const response = await fetch(
-        `${baseUrl}/api/consultora/photos/42/1/download`
+        `${baseUrl}/api/consultora/photos/42/legacy-photo-1/download`
       );
 
       expect(response.status).toBe(200);
@@ -148,7 +151,7 @@ describe("consultora photo download route", () => {
 
     await withServer(async baseUrl => {
       const response = await fetch(
-        `${baseUrl}/api/consultora/photos/42/1/download`
+        `${baseUrl}/api/consultora/photos/42/legacy-photo-1/download`
       );
 
       expect(response.status).toBe(404);
@@ -158,6 +161,45 @@ describe("consultora photo download route", () => {
     });
   });
 
+  it("aceita identificador de foto extra", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      id: 42,
+      photo1Key: null,
+      photo2Key: null,
+      photo1Url: null,
+      photo2Url: null,
+      photoExtras: [
+        {
+          id: "extra-photo",
+          url: "https://cdn.test/photo-extra.png",
+          key: "fotos/7/photo-extra.png",
+          mime: "image/png",
+        },
+      ],
+    });
+    mocks.storageDownload.mockResolvedValue({
+      key: "fotos/7/photo-extra.png",
+      body: Buffer.from("photo-extra-binary"),
+      contentType: "image/png",
+      contentLength: 18,
+    });
+
+    await withServer(async baseUrl => {
+      const response = await fetch(
+        `${baseUrl}/api/consultora/photos/42/extra-photo/download`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-disposition")).toContain(
+        'attachment; filename="foto-cliente-42-extra-photo.png"'
+      );
+    });
+
+    expect(mocks.storageDownload).toHaveBeenCalledWith(
+      "fotos/7/photo-extra.png"
+    );
+  });
+
   it("bloqueia usuário sem permissão", async () => {
     mocks.createContext.mockResolvedValue(
       createContextWithUser(createUser("user"))
@@ -165,7 +207,7 @@ describe("consultora photo download route", () => {
 
     await withServer(async baseUrl => {
       const response = await fetch(
-        `${baseUrl}/api/consultora/photos/42/1/download`
+        `${baseUrl}/api/consultora/photos/42/legacy-photo-1/download`
       );
 
       expect(response.status).toBe(403);

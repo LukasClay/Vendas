@@ -19,6 +19,11 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getSaleUrgency } from "../../shared/businessDays";
 import type { ProductCategory } from "../../shared/types";
 import { createAuditLog } from "../db";
+import {
+  findSalePhotoForDownload,
+  getSaleClientPhotos,
+  LEGACY_PHOTO_IDS,
+} from "../saleMedia";
 
 // Apenas consultoras e admins podem acessar estes endpoints
 const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -30,8 +35,6 @@ const consultoraProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
-
-export type ConsultoraPhotoSlot = 1 | 2;
 
 function assertConsultoraDownloadAccess(
   user: TrpcContext["user"]
@@ -51,7 +54,7 @@ function getPhotoFileExtension(key: string): string {
 
 export async function resolveConsultoraPhotoDownload(
   user: TrpcContext["user"],
-  input: { saleId: number; slot: ConsultoraPhotoSlot }
+  input: { saleId: number; photoId: string }
 ) {
   assertConsultoraDownloadAccess(user);
 
@@ -63,8 +66,8 @@ export async function resolveConsultoraPhotoDownload(
     });
   }
 
-  const key = input.slot === 1 ? sale.photo1Key : sale.photo2Key;
-  if (!key) {
+  const photo = findSalePhotoForDownload(sale, input.photoId);
+  if (!photo) {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "Foto não encontrada.",
@@ -72,8 +75,14 @@ export async function resolveConsultoraPhotoDownload(
   }
 
   return {
-    key,
-    filename: `foto-cliente-${sale.id}-${input.slot}${getPhotoFileExtension(key)}`,
+    key: photo.key,
+    filename: `foto-cliente-${sale.id}-${
+      input.photoId === LEGACY_PHOTO_IDS[1]
+        ? "1"
+        : input.photoId === LEGACY_PHOTO_IDS[2]
+          ? "2"
+          : input.photoId
+    }${getPhotoFileExtension(photo.key)}`,
   };
 }
 
@@ -129,12 +138,13 @@ export const consultoraRouter = router({
             productName: sales.productName,
             productCategory: sales.productCategory,
             saleDate: sales.saleDate,
-            notes: sales.notes,
-            createdAt: sales.createdAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
+             notes: sales.notes,
+             createdAt: sales.createdAt,
+             sellerName: sales.sellerName,
+             photo1Url: sales.photo1Url,
+             photo2Url: sales.photo2Url,
+             photoExtras: sales.photoExtras,
+           })
           .from(sales) as any
       )
         .where(and(...conditions))
@@ -157,6 +167,7 @@ export const consultoraRouter = router({
           sellerName: s.sellerName,
           photo1Url: s.photo1Url ?? null,
           photo2Url: s.photo2Url ?? null,
+          clientPhotos: getSaleClientPhotos(s),
           ...urgency,
         };
       });
@@ -194,12 +205,13 @@ export const consultoraRouter = router({
             productName: sales.productName,
             productCategory: sales.productCategory,
             saleDate: sales.saleDate,
-            notes: sales.notes,
-            writtenAt: sales.writtenAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
+             notes: sales.notes,
+             writtenAt: sales.writtenAt,
+             sellerName: sales.sellerName,
+             photo1Url: sales.photo1Url,
+             photo2Url: sales.photo2Url,
+             photoExtras: sales.photoExtras,
+           })
           .from(sales) as any
       )
         .where(and(...conditions))
@@ -223,6 +235,7 @@ export const consultoraRouter = router({
             sellerName: s.sellerName,
             photo1Url: s.photo1Url ?? null,
             photo2Url: s.photo2Url ?? null,
+            clientPhotos: getSaleClientPhotos(s),
             ...urgency,
           };
         })
@@ -261,12 +274,13 @@ export const consultoraRouter = router({
             productName: sales.productName,
             productCategory: sales.productCategory,
             saleDate: sales.saleDate,
-            notes: sales.notes,
-            completedAt: sales.completedAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
+             notes: sales.notes,
+             completedAt: sales.completedAt,
+             sellerName: sales.sellerName,
+             photo1Url: sales.photo1Url,
+             photo2Url: sales.photo2Url,
+             photoExtras: sales.photoExtras,
+           })
           .from(sales) as any
       )
         .where(and(...conditions))
@@ -286,6 +300,7 @@ export const consultoraRouter = router({
         sellerName: s.sellerName,
         photo1Url: s.photo1Url ?? null,
         photo2Url: s.photo2Url ?? null,
+        clientPhotos: getSaleClientPhotos(s),
       }));
     }),
 

@@ -28,6 +28,101 @@ import {
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
 import { TYPES_WITH_PHOTOS } from "../../shared/const";
+import {
+  getStoredAttachmentExtras,
+  getStoredPhotoExtras,
+  toPublicSale,
+} from "../saleMedia";
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENTS = 5;
+const MAX_TOTAL_PHOTOS = 6;
+const MAX_UPLOAD_BYTES_PER_REQUEST = 18 * 1024 * 1024;
+
+const extraAttachmentInput = z.object({
+  base64: z.string().max(8000000, "Arquivo extra muito grande (Máximo ~5MB)"),
+  mime: z.string(),
+  name: z.string().optional(),
+});
+
+const extraPhotoInput = z.object({
+  base64: z.string().max(8000000, "Foto extra muito grande (Máximo ~5MB)"),
+  mime: z.string(),
+  name: z.string().optional(),
+});
+
+type ExtraAttachmentInput = z.infer<typeof extraAttachmentInput>;
+type ExtraPhotoInput = z.infer<typeof extraPhotoInput>;
+type StoredMediaRecord = {
+  id: string;
+  url: string;
+  key: string;
+  mime: string | null;
+  name?: string | null;
+};
+
+function decodeBase64File(base64: string, message: string): Buffer {
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length > MAX_FILE_BYTES) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message,
+    });
+  }
+  return buffer;
+}
+
+function ensureRequestUploadBudget(buffers: Buffer[]) {
+  const total = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
+  if (total > MAX_UPLOAD_BYTES_PER_REQUEST) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Muitos arquivos de uma vez. Salve em partes para manter o upload estável.",
+    });
+  }
+}
+
+function getAttachmentExtension(mime: string): string {
+  if (mime.includes("pdf")) return "pdf";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  return "jpg";
+}
+
+function getPhotoExtension(mime: string): string {
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  return "jpg";
+}
+
+async function uploadStoredMedia(args: {
+  userId: number;
+  folder: "comprovantes" | "fotos";
+  mime: string;
+  buffer: Buffer;
+  uploadedKeysToCleanup?: string[];
+  name?: string;
+  suffix?: string;
+}): Promise<StoredMediaRecord> {
+  const ext =
+    args.folder === "comprovantes"
+      ? getAttachmentExtension(args.mime)
+      : getPhotoExtension(args.mime);
+  const baseId = nanoid();
+  const id = args.suffix ? `${baseId}-${args.suffix}` : baseId;
+  const key = `${args.folder}/${args.userId}/${id}.${ext}`;
+  const uploaded = await storagePut(key, args.buffer, args.mime);
+  args.uploadedKeysToCleanup?.push(key);
+
+  return {
+    id,
+    url: uploaded.url,
+    key,
+    mime: args.mime,
+    name: args.name ?? null,
+  };
+}
 
 export const salesRouter = router({
   // Vendedor cria uma nova venda
@@ -86,22 +181,18 @@ export const salesRouter = router({
       let attachmentUrl: string | null = null;
       let attachmentKey: string | null = null;
       let attachmentMime: string | null = null;
+      const uploadBuffers: Buffer[] = [];
+      let attachmentBuffer: Buffer | null = null;
+      let photo1Buffer: Buffer | null = null;
+      let photo2Buffer: Buffer | null = null;
 
       // Upload comprovante para S3 se fornecido
       if (input.attachmentBase64 && input.attachmentMime) {
-        const buffer = Buffer.from(input.attachmentBase64, "base64");
-        if (buffer.length > 5 * 1024 * 1024) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Arquivo muito grande. Máximo 5MB.",
-          });
-        }
-        const ext = input.attachmentMime.includes("pdf") ? "pdf" : "jpg";
-        const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
-        const uploaded = await storagePut(key, buffer, input.attachmentMime);
-        attachmentUrl = uploaded.url;
-        attachmentKey = key;
-        attachmentMime = input.attachmentMime;
+        attachmentBuffer = decodeBase64File(
+          input.attachmentBase64,
+          "Arquivo muito grande. Máximo 5MB."
+        );
+        uploadBuffers.push(attachmentBuffer);
       }
 
       // Upload fotos do cliente para S3 (apenas para tipos permitidos)
@@ -128,41 +219,58 @@ export const salesRouter = router({
 
       if (isPhotoType) {
         if (input.photo1Base64 && input.photo1Mime) {
-          const buf = Buffer.from(input.photo1Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 1 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = input.photo1Mime.includes("png")
-            ? "png"
-            : input.photo1Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo1Mime);
-          photo1Url = r.url;
-          photo1Key = key;
+          photo1Buffer = decodeBase64File(
+            input.photo1Base64,
+            "Foto 1 muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(photo1Buffer);
         }
         if (input.photo2Base64 && input.photo2Mime) {
-          const buf = Buffer.from(input.photo2Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 2 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = input.photo2Mime.includes("png")
-            ? "png"
-            : input.photo2Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo2Mime);
-          photo2Url = r.url;
-          photo2Key = key;
+          photo2Buffer = decodeBase64File(
+            input.photo2Base64,
+            "Foto 2 muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(photo2Buffer);
         }
+      }
+
+      ensureRequestUploadBudget(uploadBuffers);
+
+      if (attachmentBuffer && input.attachmentMime) {
+        const uploaded = await uploadStoredMedia({
+          userId: ctx.user.id,
+          folder: "comprovantes",
+          mime: input.attachmentMime,
+          buffer: attachmentBuffer,
+          name: input.attachmentName,
+        });
+        attachmentUrl = uploaded.url;
+        attachmentKey = uploaded.key;
+        attachmentMime = input.attachmentMime;
+      }
+
+      if (photo1Buffer && input.photo1Mime) {
+        const uploaded = await uploadStoredMedia({
+          userId: ctx.user.id,
+          folder: "fotos",
+          mime: input.photo1Mime,
+          buffer: photo1Buffer,
+          suffix: "legacy-1",
+        });
+        photo1Url = uploaded.url;
+        photo1Key = uploaded.key;
+      }
+
+      if (photo2Buffer && input.photo2Mime) {
+        const uploaded = await uploadStoredMedia({
+          userId: ctx.user.id,
+          folder: "fotos",
+          mime: input.photo2Mime,
+          buffer: photo2Buffer,
+          suffix: "legacy-2",
+        });
+        photo2Url = uploaded.url;
+        photo2Key = uploaded.key;
       }
 
       // Upsert client
@@ -301,7 +409,8 @@ export const salesRouter = router({
 
   // Vendedor vê suas próprias vendas
   myHistory: protectedProcedure.query(async ({ ctx }) => {
-    return getSalesBySeller(ctx.user.id);
+    const sales = await getSalesBySeller(ctx.user.id);
+    return sales.map(sale => toPublicSale(sale));
   }),
 
   // Admin vê todas as vendas com filtros
@@ -319,7 +428,7 @@ export const salesRouter = router({
         .optional()
     )
     .query(async ({ input }) => {
-      return getSales({
+      const rows = await getSales({
         startDate: input?.startDate ? new Date(input.startDate) : undefined,
         endDate: input?.endDate ? new Date(input.endDate) : undefined,
         sellerId: input?.sellerId,
@@ -327,12 +436,17 @@ export const salesRouter = router({
         limit: input?.limit ?? 100,
         offset: input?.offset ?? 0,
       });
+      return rows.map((row: any) => ({
+        ...row,
+        sale: toPublicSale(row.sale),
+      }));
     }),
 
   getById: adminProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return getSaleById(input.id);
+      const sale = await getSaleById(input.id);
+      return sale ? toPublicSale(sale) : undefined;
     }),
 
   // Admin edita uma venda
@@ -359,6 +473,8 @@ export const salesRouter = router({
           .optional(),
         attachmentMime: z.string().optional(),
         attachmentName: z.string().optional(),
+        extraAttachments: z.array(extraAttachmentInput).max(5).optional(),
+        removeAttachmentIds: z.array(z.string().min(1)).max(5).optional(),
         // Alteração do status do trabalho
         workStatus: z.enum(["para_escrever", "pendente", "feito"]).optional(),
         // Troca/remoção de fotos do cliente
@@ -374,6 +490,8 @@ export const salesRouter = router({
           .optional(),
         photo2Mime: z.string().optional(),
         removePhoto2: z.boolean().optional(),
+        extraPhotos: z.array(extraPhotoInput).max(6).optional(),
+        removeExtraPhotoIds: z.array(z.string().min(1)).max(6).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -381,10 +499,14 @@ export const salesRouter = router({
       const data: Record<string, unknown> = {};
       const shouldLoadExistingFiles =
         Boolean(fields.attachmentBase64 && fields.attachmentMime) ||
+        Boolean(fields.extraAttachments?.length) ||
+        Boolean(fields.removeAttachmentIds?.length) ||
         Boolean(fields.removePhoto1) ||
         Boolean(fields.removePhoto2) ||
         Boolean(fields.photo1Base64 && fields.photo1Mime) ||
-        Boolean(fields.photo2Base64 && fields.photo2Mime);
+        Boolean(fields.photo2Base64 && fields.photo2Mime) ||
+        Boolean(fields.extraPhotos?.length) ||
+        Boolean(fields.removeExtraPhotoIds?.length);
       const shouldLoadExistingSale =
         shouldLoadExistingFiles ||
         fields.workStatus === "feito" ||
@@ -477,11 +599,38 @@ export const salesRouter = router({
 
         const nextProductName = fields.productName ?? existingSale?.productName;
         const canUploadPhotos = nextProductName !== "Consulta Cartas";
+        const existingAttachmentExtras = getStoredAttachmentExtras(
+          existingSale ?? {}
+        );
+        const existingPhotoExtras = getStoredPhotoExtras(existingSale ?? {});
+        const uploadBuffers: Buffer[] = [];
+        let attachmentBuffer: Buffer | null = null;
+        let photo1Buffer: Buffer | null = null;
+        let photo2Buffer: Buffer | null = null;
+        const extraAttachmentBuffers = (fields.extraAttachments ?? []).map(
+          file => {
+            const buffer = decodeBase64File(
+              file.base64,
+              "Arquivo extra muito grande. Máximo 5MB."
+            );
+            uploadBuffers.push(buffer);
+            return { file, buffer };
+          }
+        );
+        const extraPhotoBuffers = (fields.extraPhotos ?? []).map(file => {
+          const buffer = decodeBase64File(
+            file.base64,
+            "Foto extra muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(buffer);
+          return { file, buffer };
+        });
 
         if (
           !canUploadPhotos &&
           (Boolean(fields.photo1Base64 && fields.photo1Mime) ||
-            Boolean(fields.photo2Base64 && fields.photo2Mime))
+            Boolean(fields.photo2Base64 && fields.photo2Mime) ||
+            Boolean(fields.extraPhotos?.length))
         ) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -489,23 +638,120 @@ export const salesRouter = router({
           });
         }
 
-        // Upload de novo comprovante se fornecido
         if (fields.attachmentBase64 && fields.attachmentMime) {
-          const buffer = Buffer.from(fields.attachmentBase64, "base64");
-          if (buffer.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Arquivo muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = fields.attachmentMime.includes("pdf") ? "pdf" : "jpg";
-          const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
-          const uploaded = await storagePut(key, buffer, fields.attachmentMime);
-          uploadedKeysToCleanup.push(key);
+          attachmentBuffer = decodeBase64File(
+            fields.attachmentBase64,
+            "Arquivo muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(attachmentBuffer);
+        }
+
+        if (fields.photo1Base64 && fields.photo1Mime) {
+          photo1Buffer = decodeBase64File(
+            fields.photo1Base64,
+            "Foto 1 muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(photo1Buffer);
+        }
+
+        if (fields.photo2Base64 && fields.photo2Mime) {
+          photo2Buffer = decodeBase64File(
+            fields.photo2Base64,
+            "Foto 2 muito grande. Máximo 5MB."
+          );
+          uploadBuffers.push(photo2Buffer);
+        }
+
+        ensureRequestUploadBudget(uploadBuffers);
+
+        const removedAttachmentIds = new Set(fields.removeAttachmentIds ?? []);
+        let nextAttachmentExtras = existingAttachmentExtras.filter(attachment => {
+          if (!removedAttachmentIds.has(attachment.id)) return true;
+          queueDeleteAfterUpdate(attachment.key);
+          return false;
+        });
+
+        const removedExtraPhotoIds = new Set(fields.removeExtraPhotoIds ?? []);
+        let nextPhotoExtras = existingPhotoExtras.filter(photo => {
+          if (!removedExtraPhotoIds.has(photo.id)) return true;
+          queueDeleteAfterUpdate(photo.key);
+          return false;
+        });
+
+        const legacyAttachmentWillExist =
+          Boolean(attachmentBuffer && fields.attachmentMime) ||
+          Boolean(existingSale?.attachmentUrl);
+        const nextAttachmentTotal =
+          (legacyAttachmentWillExist ? 1 : 0) +
+          nextAttachmentExtras.length +
+          extraAttachmentBuffers.length;
+        if (nextAttachmentTotal > MAX_TOTAL_ATTACHMENTS) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `O ADM pode manter no máximo ${MAX_TOTAL_ATTACHMENTS} comprovantes por venda.`,
+          });
+        }
+
+        const legacyPhoto1WillExist =
+          !fields.removePhoto1 &&
+          (Boolean(photo1Buffer && fields.photo1Mime) ||
+            Boolean(existingSale?.photo1Url));
+        const legacyPhoto2WillExist =
+          !fields.removePhoto2 &&
+          (Boolean(photo2Buffer && fields.photo2Mime) ||
+            Boolean(existingSale?.photo2Url));
+        const nextPhotoTotal =
+          (legacyPhoto1WillExist ? 1 : 0) +
+          (legacyPhoto2WillExist ? 1 : 0) +
+          nextPhotoExtras.length +
+          extraPhotoBuffers.length;
+        if (nextPhotoTotal > MAX_TOTAL_PHOTOS) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `O ADM pode manter no máximo ${MAX_TOTAL_PHOTOS} fotos por venda.`,
+          });
+        }
+
+        if (attachmentBuffer && fields.attachmentMime) {
+          const uploaded = await uploadStoredMedia({
+            userId: ctx.user.id,
+            folder: "comprovantes",
+            mime: fields.attachmentMime,
+            buffer: attachmentBuffer,
+            name: fields.attachmentName,
+            uploadedKeysToCleanup,
+            suffix: "legacy",
+          });
           data.attachmentUrl = uploaded.url;
-          data.attachmentKey = key;
+          data.attachmentKey = uploaded.key;
           data.attachmentMime = fields.attachmentMime;
           queueDeleteAfterUpdate(existingSale?.attachmentKey);
+        }
+
+        if (extraAttachmentBuffers.length > 0) {
+          const uploadedExtras: StoredMediaRecord[] = [];
+          for (let index = 0; index < extraAttachmentBuffers.length; index++) {
+            const entry = extraAttachmentBuffers[index];
+            uploadedExtras.push(
+              await uploadStoredMedia({
+                userId: ctx.user.id,
+                folder: "comprovantes",
+                mime: entry.file.mime,
+                buffer: entry.buffer,
+                name: entry.file.name,
+                uploadedKeysToCleanup,
+                suffix: `extra-${index + 1}`,
+              })
+            );
+          }
+          nextAttachmentExtras = [...nextAttachmentExtras, ...uploadedExtras];
+        }
+
+        if (
+          fields.removeAttachmentIds?.length ||
+          fields.extraAttachments?.length
+        ) {
+          data.attachmentExtras = nextAttachmentExtras;
         }
 
         // Upload/remoção de foto 1
@@ -513,24 +759,17 @@ export const salesRouter = router({
           data.photo1Url = null;
           data.photo1Key = null;
           queueDeleteAfterUpdate(existingSale?.photo1Key);
-        } else if (fields.photo1Base64 && fields.photo1Mime) {
-          const buf = Buffer.from(fields.photo1Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 1 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = fields.photo1Mime.includes("png")
-            ? "png"
-            : fields.photo1Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, fields.photo1Mime);
-          uploadedKeysToCleanup.push(key);
-          data.photo1Url = r.url;
-          data.photo1Key = key;
+        } else if (photo1Buffer && fields.photo1Mime) {
+          const uploaded = await uploadStoredMedia({
+            userId: ctx.user.id,
+            folder: "fotos",
+            mime: fields.photo1Mime,
+            buffer: photo1Buffer,
+            uploadedKeysToCleanup,
+            suffix: "legacy-1",
+          });
+          data.photo1Url = uploaded.url;
+          data.photo1Key = uploaded.key;
           queueDeleteAfterUpdate(existingSale?.photo1Key);
         }
 
@@ -539,25 +778,41 @@ export const salesRouter = router({
           data.photo2Url = null;
           data.photo2Key = null;
           queueDeleteAfterUpdate(existingSale?.photo2Key);
-        } else if (fields.photo2Base64 && fields.photo2Mime) {
-          const buf = Buffer.from(fields.photo2Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 2 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = fields.photo2Mime.includes("png")
-            ? "png"
-            : fields.photo2Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, fields.photo2Mime);
-          uploadedKeysToCleanup.push(key);
-          data.photo2Url = r.url;
-          data.photo2Key = key;
+        } else if (photo2Buffer && fields.photo2Mime) {
+          const uploaded = await uploadStoredMedia({
+            userId: ctx.user.id,
+            folder: "fotos",
+            mime: fields.photo2Mime,
+            buffer: photo2Buffer,
+            uploadedKeysToCleanup,
+            suffix: "legacy-2",
+          });
+          data.photo2Url = uploaded.url;
+          data.photo2Key = uploaded.key;
           queueDeleteAfterUpdate(existingSale?.photo2Key);
+        }
+
+        if (extraPhotoBuffers.length > 0) {
+          const uploadedExtras: StoredMediaRecord[] = [];
+          for (let index = 0; index < extraPhotoBuffers.length; index++) {
+            const entry = extraPhotoBuffers[index];
+            uploadedExtras.push(
+              await uploadStoredMedia({
+                userId: ctx.user.id,
+                folder: "fotos",
+                mime: entry.file.mime,
+                buffer: entry.buffer,
+                name: entry.file.name,
+                uploadedKeysToCleanup,
+                suffix: `extra-${index + 1}`,
+              })
+            );
+          }
+          nextPhotoExtras = [...nextPhotoExtras, ...uploadedExtras];
+        }
+
+        if (fields.removeExtraPhotoIds?.length || fields.extraPhotos?.length) {
+          data.photoExtras = nextPhotoExtras;
         }
 
         await updateSale(id, data as any);
