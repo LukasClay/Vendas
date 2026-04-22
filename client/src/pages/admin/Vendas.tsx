@@ -2,9 +2,6 @@ import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { ProductCategory } from "@shared/types";
-
-type SalesListItem = RouterOutputs["sales"]["list"][number];
-type UserListItem = RouterOutputs["users"]["listAll"][number];
 import {
   FileText,
   ExternalLink,
@@ -37,6 +34,9 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { motion, AnimatePresence } from "framer-motion";
 import { CompanyBadge } from "@/components/CompanySwitch";
+
+type SalesListItem = RouterOutputs["sales"]["list"][number];
+type UserListItem = RouterOutputs["users"]["listAll"][number];
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", {
