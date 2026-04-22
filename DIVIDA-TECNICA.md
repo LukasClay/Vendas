@@ -11,44 +11,22 @@ relevantes.
 
 ---
 
-## 1. [BAIXA] Cache do Service Worker sem estratégia de cache-busting de app shell
-
-**Status:** Não é risco no estado atual (abril/2026).
-
-**Onde está o código:** `client/public/sw.js`
-
-**Situação atual:** O Service Worker implementa handlers de push
-notification (`push`, `notificationclick`) e handlers de lifecycle
-(`install` com `self.skipWaiting()`, `activate` com `clients.claim()`).
-Não há `CACHE_NAME`, `workbox`, `VitePWA` nem precaching de HTML/JS/CSS.
-Os assets do Vite já têm hash no nome, então o navegador busca o
-bundle novo a cada deploy automaticamente.
-
-**Quando vira problema:** Se no futuro alguém adicionar precaching de
-app shell (ex.: adotar `VitePWA` ou `workbox` para modo offline),
-clientes com Service Worker velho podem ficar presos em uma versão
-antiga da UI mesmo após deploy. Bugs visuais ou de comportamento
-corrigidos no servidor não chegariam ao usuário até ele limpar o
-cache do navegador manualmente.
-
-**Solução recomendada quando acontecer:**
-
-1. Definir constante `CACHE_VERSION` no `sw.js` e bumpar a cada
-   release.
-2. No evento `activate`, apagar caches cujo nome não bate com a
-   versão atual: `caches.keys().then(keys => keys.filter(k => k !== CACHE_VERSION).forEach(caches.delete))`.
-3. `self.skipWaiting()` no `install` e `clients.claim()` no `activate`
-   já estão implementados — só falta o gerenciamento de cache por
-   versão e o `updateViaCache: 'none'` no `register`.
-4. Registrar o SW no cliente com
-   `navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })`.
-
-**Identificada em:** revisão da branch
-`claude/evaluate-deadline-fix-branches-lEjYW` (abril/2026).
+**Sem dívidas ativas no momento** (abril/2026). Consulte o histórico
+abaixo para contexto de refactors e fixes já aplicados.
 
 ---
 
 ## Histórico de dívidas resolvidas
+
+- **Service Worker: `updateViaCache: 'none'` no register (abril/2026)**
+  — aplicado em `client/src/hooks/usePushNotifications.ts`. Elimina
+  a janela de até 24h em que o browser poderia servir um `sw.js`
+  velho do HTTP cache. Como o projeto não faz precaching de app
+  shell (sem `workbox`/`VitePWA` e sem `fetch` handler no SW), não
+  há cache de HTML/JS/CSS para gerenciar — o fix de 1 linha fecha
+  a única pegadinha real. Se no futuro for adicionado precaching
+  (ex.: PWA offline), resolver na mesma PR:
+  `CACHE_VERSION` + cleanup no `activate` + verificação de hash.
 
 - **Vendas legadas com `productCategory` mal-classificado (abril/2026)**
   — triagem humana concluída pelo dono via painel ADM. Coletivos
