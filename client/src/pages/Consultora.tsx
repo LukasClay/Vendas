@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1696,13 +1696,15 @@ export default function ConsultoraPage() {
                   sub={getEmptySub("Novos trabalhos vendidos aparecerão aqui")}
                 />
               ) : (
-                filteredToWrite.map((item: any) => (
-                  <ToWriteCard
-                    key={item.id}
-                    item={item}
-                    onMarkWritten={id => markWritten.mutate({ id })}
-                  />
-                ))
+                filteredToWrite.map(
+                  (item: RouterOutputs["consultora"]["toWrite"][number]) => (
+                    <ToWriteCard
+                      key={item.id}
+                      item={item}
+                      onMarkWritten={id => markWritten.mutate({ id })}
+                    />
+                  )
+                )
               ))}
             {activeTab === "pendente" &&
               (filteredPending.length === 0 ? (
@@ -1714,13 +1716,15 @@ export default function ConsultoraPage() {
                   )}
                 />
               ) : (
-                filteredPending.map((item: any) => (
-                  <PendingCard
-                    key={item.id}
-                    item={item}
-                    onMarkDone={id => markDone.mutate({ id })}
-                  />
-                ))
+                filteredPending.map(
+                  (item: RouterOutputs["consultora"]["pending"][number]) => (
+                    <PendingCard
+                      key={item.id}
+                      item={item}
+                      onMarkDone={id => markDone.mutate({ id })}
+                    />
+                  )
+                )
               ))}
             {activeTab === "feito" &&
               (filteredDone.length === 0 ? (
@@ -1730,13 +1734,15 @@ export default function ConsultoraPage() {
                   sub={getEmptySub("Trabalhos concluídos aparecerão aqui")}
                 />
               ) : (
-                filteredDone.map((item: any) => (
-                  <DoneCard
-                    key={item.id}
-                    item={item}
-                    onUndo={id => undoDone.mutate({ id })}
-                  />
-                ))
+                filteredDone.map(
+                  (item: RouterOutputs["consultora"]["done"][number]) => (
+                    <DoneCard
+                      key={item.id}
+                      item={item}
+                      onUndo={id => undoDone.mutate({ id })}
+                    />
+                  )
+                )
               ))}
             {activeTab === "alertas" &&
               ((alertItems as any[]).length === 0 ? (

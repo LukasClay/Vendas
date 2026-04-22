@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import {
@@ -36,18 +36,10 @@ import {
 import { useTheme } from "@/contexts/ThemeContext";
 import CompanySwitch, { getCompanyInfo } from "@/components/CompanySwitch";
 import { Building2 } from "lucide-react";
-import type { ProductCategory } from "@shared/types";
 
-interface WorkItem {
-  id: number;
-  clientName: string;
-  productName: string;
-  productCategory?: ProductCategory | null;
-  hasDeadline?: boolean;
-  deadline?: string | Date | null;
-  isOverdue?: boolean;
-  isUrgent?: boolean;
-}
+type WorksSummaryItem =
+  RouterOutputs["consultora"]["worksSummary"]["pending"][number];
+type RecentSale = RouterOutputs["sales"]["list"][number];
 
 function formatDeadline(deadline: string | Date | null | undefined): string {
   if (!deadline) return "—";
@@ -132,8 +124,8 @@ export default function AdminDashboard() {
     undefined,
     { staleTime: 3 * 60 * 1000 }
   );
-  const pendingWorks: WorkItem[] = (worksSummary?.pending ?? []) as WorkItem[];
-  const toWriteWorks: WorkItem[] = (worksSummary?.toWrite ?? []) as WorkItem[];
+  const pendingWorks: WorksSummaryItem[] = worksSummary?.pending ?? [];
+  const toWriteWorks: WorksSummaryItem[] = worksSummary?.toWrite ?? [];
 
   // Cores do gráfico que funcionam em ambos os temas
   const chartGridColor = "var(--border)";
@@ -934,7 +926,7 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {recentSales.slice(0, 6).map((item: any) => {
+                  {recentSales.slice(0, 6).map((item: RecentSale) => {
                     const sale = item.sale ?? item;
                     const seller = item.seller;
                     return (

@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -41,6 +41,16 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+
+type ExportRow = RouterOutputs["reports"]["exportData"][number];
+type ReportSummary = RouterOutputs["reports"]["summary"];
+type SummaryByCompany = ReportSummary["summaryByCompany"][number];
+type TopSeller = ReportSummary["topSellers"][number];
+type TopClient = ReportSummary["topClients"][number];
+type TopProduct = ReportSummary["topProducts"][number];
+type MonthlyTotalRow = RouterOutputs["reports"]["salesByMonth"][number];
+type MonthlyByCompanyRow =
+  RouterOutputs["reports"]["salesByMonthByCompany"][number];
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", {
@@ -130,7 +140,7 @@ export default function AdminRelatorios() {
     setExportLoading(true);
     try {
       const XLSX = await import("xlsx");
-      const rows = exportData.map((item: any) => {
+      const rows = exportData.map((item: ExportRow) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return {
@@ -196,7 +206,7 @@ export default function AdminRelatorios() {
         );
       }
 
-      const rows = exportData.map((item: any) => {
+      const rows = exportData.map((item: ExportRow) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return [
@@ -239,13 +249,10 @@ export default function AdminRelatorios() {
   const topSellers = reportData?.topSellers ?? [];
   const topClients = reportData?.topClients ?? [];
   const topProducts = reportData?.topProducts ?? [];
-  const summaryByCompany: any[] = reportData?.summaryByCompany ?? [];
-  const magiaData = summaryByCompany.find(
-    (c: any) => c.company === "mundo_da_magia"
-  );
-  const ciganoData = summaryByCompany.find(
-    (c: any) => c.company === "mundo_cigano"
-  );
+  const summaryByCompany: SummaryByCompany[] =
+    reportData?.summaryByCompany ?? [];
+  const magiaData = summaryByCompany.find(c => c.company === "mundo_da_magia");
+  const ciganoData = summaryByCompany.find(c => c.company === "mundo_cigano");
 
   return (
     <DashboardLayout>
@@ -580,7 +587,7 @@ export default function AdminRelatorios() {
                           Nenhum dado disponível.
                         </li>
                       ) : (
-                        topSellers.map((seller: any, index: number) => (
+                        topSellers.map((seller: TopSeller, index: number) => (
                           <li
                             key={seller.id}
                             className="flex items-center justify-between group"
@@ -627,7 +634,7 @@ export default function AdminRelatorios() {
                           Nenhum dado disponível.
                         </li>
                       ) : (
-                        topClients.map((client: any, index: number) => (
+                        topClients.map((client: TopClient, index: number) => (
                           <li
                             key={client.id}
                             className="flex items-center justify-between group"
@@ -672,30 +679,32 @@ export default function AdminRelatorios() {
                           Nenhum dado disponível.
                         </li>
                       ) : (
-                        topProducts.map((product: any, index: number) => (
-                          <li
-                            key={product.id}
-                            className="flex items-center justify-between group"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
-                                {index + 1}
-                              </span>
+                        topProducts.map(
+                          (product: TopProduct, index: number) => (
+                            <li
+                              key={product.id}
+                              className="flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold bg-[var(--secondary)] text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
+                                  {index + 1}
+                                </span>
+                                <p
+                                  className="text-sm font-bold"
+                                  style={{ color: "var(--foreground)" }}
+                                >
+                                  {product.productName || product.name}
+                                </p>
+                              </div>
                               <p
                                 className="text-sm font-bold"
-                                style={{ color: "var(--foreground)" }}
+                                style={{ color: "var(--primary)" }}
                               >
-                                {product.productName || product.name}
+                                {formatCurrency(product.totalAmount)}
                               </p>
-                            </div>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "var(--primary)" }}
-                            >
-                              {formatCurrency(product.totalAmount)}
-                            </p>
-                          </li>
-                        ))
+                            </li>
+                          )
+                        )
                       )}
                     </ul>
                   </div>
@@ -790,8 +799,8 @@ export default function AdminRelatorios() {
               "Dez",
             ];
             const totalChartData = MONTHS.map((name, i) => {
-              const found = (monthlyTotal as any[]).find(
-                (m: any) => Number(m.month) === i + 1
+              const found = monthlyTotal.find(
+                (m: MonthlyTotalRow) => Number(m.month) === i + 1
               );
               return {
                 name,
@@ -809,8 +818,8 @@ export default function AdminRelatorios() {
             const ciganoInfo = getCompanyInfo("mundo_cigano");
 
             const magiaChartData = MONTHS.map((name, i) => {
-              const found = (monthlyByCompany as any[]).find(
-                (m: any) =>
+              const found = monthlyByCompany.find(
+                (m: MonthlyByCompanyRow) =>
                   Number(m.month) === i + 1 && m.company === "mundo_da_magia"
               );
               return {
@@ -826,8 +835,8 @@ export default function AdminRelatorios() {
             });
 
             const ciganoChartData = MONTHS.map((name, i) => {
-              const found = (monthlyByCompany as any[]).find(
-                (m: any) =>
+              const found = monthlyByCompany.find(
+                (m: MonthlyByCompanyRow) =>
                   Number(m.month) === i + 1 && m.company === "mundo_cigano"
               );
               return {
