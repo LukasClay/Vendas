@@ -13,66 +13,28 @@ relevantes.
 
 ## 1. [ALTA] Client consome `(item: any)` em vez de `RouterOutputs` do tRPC
 
-**Status:** Ativo — **próximo refactor prioritário**.
+**Status:** ✅ Resolvida em abril/2026 na branch
+`claude/refactor-trpc-router-outputs-wfIAp`.
 
-**Onde está o código:** `client/src/pages/admin/Trabalhos.tsx`,
-`client/src/pages/admin/Dashboard.tsx`, `client/src/pages/admin/Vendas.tsx`,
-parcialmente em `client/src/pages/Consultora.tsx`.
+`client/src/lib/trpc.ts` agora expõe
+`export type RouterOutputs = inferRouterOutputs<AppRouter>` e os
+consumidores listados (Trabalhos, Dashboard, Vendas, Lixeira, Relatórios,
+Alertas, Consultora) tipam props e callbacks por `RouterOutputs`.
+Interface local `WorkItem` em `Dashboard.tsx` removida. Build: chunk
+`trpc-query-*.js` inalterado (83.21 kB antes/depois — `inferRouterOutputs`
+é type-only). Verify (typecheck + format + 71 testes + build) verde.
 
-**Situação atual:** Cards e linhas de tabela aceitam `item: any` /
-`sale: any` / `work: any` como prop. O tipo de retorno dos endpoints
-tRPC (`consultora.toWrite`, `consultora.pending`, `sales.list` etc.) é
-perdido na passagem servidor → cliente → componente. Resultado:
-
-- Refactors no servidor (renomear campo, mudar tipo, remover coluna)
-  não quebram o build do cliente; quebras só aparecem em runtime.
-- IDE não oferece autocomplete nem detecta typos em `item.fooBar`.
-- Foi exatamente essa classe de bug que motivou a tipagem de
-  `productCategory` na Fase 1 deste PR — `WorkItem` em `Dashboard.tsx`
-  declarava `productCategory?: string | null`, divergindo do resto do
-  app que usava `ProductCategory`. Sem tipo compartilhado, só checagem
-  visual de PR pega esse desalinhamento.
-
-**Por que é alta prioridade:**
-
-- Classe de bug real, já observada no próprio código (não hipotética).
-- Refactor isolado, ~1h de trabalho, zero mudança de comportamento.
-- Cada novo endpoint/campo criado sem isso aumenta a dívida.
-
-**Solução recomendada:**
-
-1. Em `client/src/lib/trpc.ts`, adicionar:
-
-   ```ts
-   import type { inferRouterOutputs } from "@trpc/server";
-   import type { AppRouter } from "../../../server/routers";
-
-   export type RouterOutputs = inferRouterOutputs<AppRouter>;
-   ```
-
-2. Substituir `(item: any)` pelos tipos derivados nos principais
-   consumidores:
-   - `admin/Trabalhos.tsx` — `ToWriteCard`, `PendingCard`, `DoneCard`:
-     usar `RouterOutputs["consultora"]["toWrite"][number]`,
-     `RouterOutputs["consultora"]["pending"][number]` etc.
-   - `admin/Dashboard.tsx` — remover a interface local `WorkItem`
-     (linhas 40-49) e usar o tipo derivado de `worksSummary`.
-   - `admin/Vendas.tsx` — ~7 usos de `(sale: any)`.
-   - `Consultora.tsx` — PropTypes inline dos cards podem ser substituídos
-     pelo tipo derivado.
-
-3. Verificar que o bundle do cliente não infla significativamente
-   (`inferRouterOutputs` é puramente type-level, zero runtime). Rodar
-   `pnpm run build` e comparar tamanho do chunk `trpc-query` antes/depois.
-
-**Risco de regressão:** Baixíssimo. A mudança é type-only — TypeScript
-rejeitará qualquer divergência no build, não há mudança de comportamento.
-
-**Prompt prontinho para rodar em sessão separada:**
-`docs/prompts/m2-router-outputs.md`.
-
-**Identificada em:** revisão da branch
-`claude/evaluate-deadline-fix-branches-lEjYW` (abril/2026).
+**Follow-up identificado (nova dívida [ALTA] §4):** Vários helpers de
+`server/db.ts` (ex.: `getSales`, `getTopSellers`, `getTopClients`,
+`getTopProducts`) e queries em `server/routers/consultora.ts`
+(`toWrite`, `pending`, `done`, `worksSummary`, `alerts`) usam
+`(query as any)` para contornar tipagem condicional do builder do Drizzle.
+Isso faz com que `RouterOutputs["sales"]["list"]`,
+`RouterOutputs["consultora"]["toWrite"]` etc. resolvam para `any[]`
+no cliente — a rede de tipos foi estabelecida pelo refactor, mas o
+benefício real só aparece quando esses `as any` no servidor forem
+eliminados reestruturando a ordem do chain (ex.: `.where()` antes de
+`.orderBy()`). Ver §4.
 
 ---
 
@@ -160,3 +122,85 @@ revisão humana caso-a-caso.
 
 **Identificada em:** revisão da branch
 `claude/evaluate-deadline-fix-branches-lEjYW` (abril/2026).
+
+---
+
+## 4. [ALTA] `(query as any)` em helpers do servidor apaga tipos de queries Drizzle
+
+**Status:** Ativo — bloqueia o benefício pleno da dívida §1 resolvida.
+
+**Onde está o código:**
+
+- `server/db.ts:getSales`, `getTopSellers`, `getTopClients`,
+  `getTopProducts`.
+- `server/routers/consultora.ts` (`toWrite`, `pending`, `done`,
+  `worksSummary`, `alerts`).
+
+**Situação atual:** Cada função constrói um query builder Drizzle e
+aplica `(query as any).where(...)` para permitir adicionar `where`
+condicionalmente depois de `.orderBy()`/`.from()`. Como `as any`
+propaga pela Promise de retorno, o tipo inferido vai para `any[]` —
+e cascateia até `RouterOutputs["sales"]["list"]`,
+`RouterOutputs["consultora"]["toWrite"]` etc. no cliente. Resultado: o
+refactor que introduziu `RouterOutputs` no cliente (§1) tem a estrutura
+correta, mas os tipos derivados ainda resolvem para `any`, então
+TypeScript não detecta typos em campos vindos dessas rotas.
+
+Exemplo em `getSales`:
+
+```ts
+const query = db
+  .select({ sale: sales, seller: { ... } })
+  .from(sales)
+  .leftJoin(users, ...)
+  .orderBy(desc(sales.saleDate), desc(sales.createdAt));
+
+return (query as any)          // <-- apaga o tipo
+  .where(and(...conditions))
+  .limit(...)
+  .offset(...);
+```
+
+**Por que é alta prioridade:**
+
+- O refactor do cliente (§1) já expôs `RouterOutputs`; agora cada
+  query sem `as any` passa a render type-safety de verdade no cliente.
+- Sem isso, divergências servidor↔cliente ainda só aparecem em runtime.
+- Pode ter escondido bugs reais — inspeção rápida achou que
+  `sales.exportCsv` lê `r.amount` direto enquanto `getSales` retorna
+  `{ sale: { amount }, seller: { ... } }[]` (precisaria ser
+  `r.sale.amount`). Confirmar/corrigir ao tipar.
+
+**Solução recomendada:**
+
+1. Reestruturar a ordem do chain para construir `where` antes de
+   `orderBy`:
+
+   ```ts
+   const base = db
+     .select({ sale: sales, seller: { ... } })
+     .from(sales)
+     .leftJoin(users, ...);
+
+   const filtered =
+     conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+   return filtered
+     .orderBy(desc(sales.saleDate), desc(sales.createdAt))
+     .limit(filters.limit ?? 100)
+     .offset(filters.offset ?? 0);
+   ```
+
+2. Rodar `pnpm run typecheck` — pode aparecer algum consumidor lendo
+   campos errados (ex.: `r.amount` em vez de `r.sale.amount`). Corrigir
+   caso a caso.
+
+3. Repetir para cada helper que hoje faz `(query as any)`.
+
+**Risco de regressão:** Baixo. A reestruturação não muda o SQL gerado
+(Drizzle emite os mesmos `WHERE/ORDER BY/LIMIT`). O único risco real é
+expor bugs latentes de leitura de campo — o que é o objetivo.
+
+**Identificada em:** revisão da branch
+`claude/refactor-trpc-router-outputs-wfIAp` (abril/2026), enquanto
+resolvia §1.
