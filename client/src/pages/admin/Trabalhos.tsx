@@ -274,10 +274,10 @@ function ToWriteCard({
     </button>
   );
 
-  const hasDeadline = item.hasDeadline ?? true;
-  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
-  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
-  const daysRemaining = item.daysRemaining ?? 7;
+  const hasDeadline = item.hasDeadline;
+  const isOverdue = item.hasDeadline ? item.isOverdue : false;
+  const isUrgent = item.hasDeadline ? item.isUrgent : false;
+  const daysRemaining = item.hasDeadline ? item.daysRemaining : 7;
 
   const borderColor = isOverdue
     ? isDark
@@ -485,9 +485,8 @@ function PendingCard({
     </button>
   );
 
-  const hasDeadline = item.hasDeadline ?? true;
-  const isOverdue = hasDeadline ? (item.isOverdue ?? false) : false;
-  const isUrgent = hasDeadline ? (item.isUrgent ?? false) : false;
+  const isOverdue = item.hasDeadline ? item.isOverdue : false;
+  const isUrgent = item.hasDeadline ? item.isUrgent : false;
 
   return (
     <div
@@ -511,11 +510,11 @@ function PendingCard({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            {hasDeadline && item.daysRemaining != null && (
+            {item.hasDeadline && (
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <UrgencyBadge
                   daysRemaining={item.daysRemaining}
-                  isOverdue={item.isOverdue ?? false}
+                  isOverdue={item.isOverdue}
                 />
               </div>
             )}
@@ -731,7 +730,7 @@ function DoneCard({
             style={{ color: "var(--muted-foreground)" }}
           >
             Venda: {formatDate(item.saleDate)} · Feito:{" "}
-            {formatDate(item.completedAt || item.doneAt)}
+            {formatDate(item.completedAt)}
           </p>
         </div>
         <span

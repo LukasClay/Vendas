@@ -714,30 +714,27 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <ul className="space-y-3">
-                  {toWriteWorks.map(work => {
-                    const hasDeadline = work.hasDeadline ?? true;
-                    return (
-                      <li
-                        key={work.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <p
-                            className="text-sm font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {work.clientName} - {work.productName}
-                          </p>
-                        </div>
-                        <p className="text-xs text-[var(--muted-foreground)]">
-                          {hasDeadline
-                            ? `Prazo: ${formatDeadline(work.deadline)}`
-                            : "—"}
+                  {toWriteWorks.map(work => (
+                    <li
+                      key={work.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        <p
+                          className="text-sm font-medium"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {work.clientName} - {work.productName}
                         </p>
-                      </li>
-                    );
-                  })}
+                      </div>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        {work.hasDeadline
+                          ? `Prazo: ${formatDeadline(work.deadline)}`
+                          : "—"}
+                      </p>
+                    </li>
+                  ))}
                 </ul>
               )}
             </AnimatedCard>
@@ -776,38 +773,35 @@ export default function AdminDashboard() {
                 </p>
               ) : (
                 <ul className="space-y-3">
-                  {pendingWorks.map(work => {
-                    const hasDeadline = work.hasDeadline ?? true;
-                    return (
-                      <li
-                        key={work.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          {hasDeadline ? (
-                            work.isOverdue ? (
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
-                            ) : work.isUrgent ? (
-                              <Clock className="w-4 h-4 text-orange-500" />
-                            ) : (
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            )
-                          ) : null}
-                          <p
-                            className="text-sm font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {work.clientName} - {work.productName}
-                          </p>
-                        </div>
-                        <p className="text-xs text-[var(--muted-foreground)]">
-                          {hasDeadline
-                            ? `Prazo: ${formatDeadline(work.deadline)}`
-                            : "—"}
+                  {pendingWorks.map(work => (
+                    <li
+                      key={work.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        {work.hasDeadline ? (
+                          work.isOverdue ? (
+                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                          ) : work.isUrgent ? (
+                            <Clock className="w-4 h-4 text-orange-500" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          )
+                        ) : null}
+                        <p
+                          className="text-sm font-medium"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {work.clientName} - {work.productName}
                         </p>
-                      </li>
-                    );
-                  })}
+                      </div>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        {work.hasDeadline
+                          ? `Prazo: ${formatDeadline(work.deadline)}`
+                          : "—"}
+                      </p>
+                    </li>
+                  ))}
                 </ul>
               )}
             </AnimatedCard>

@@ -467,7 +467,11 @@ export default function AdminRelatorios() {
                         color: "var(--foreground)",
                       }}
                     >
-                      {formatCurrency(summary?.averageSale ?? 0)}
+                      {formatCurrency(
+                        summary && summary.totalSales > 0
+                          ? summary.totalAmount / summary.totalSales
+                          : 0
+                      )}
                     </p>
                   </div>
                 </div>
@@ -589,7 +593,7 @@ export default function AdminRelatorios() {
                       ) : (
                         topSellers.map((seller: TopSeller, index: number) => (
                           <li
-                            key={seller.id}
+                            key={seller.sellerId}
                             className="flex items-center justify-between group"
                           >
                             <div className="flex items-center gap-3">
@@ -600,9 +604,7 @@ export default function AdminRelatorios() {
                                 className="text-sm font-bold"
                                 style={{ color: "var(--foreground)" }}
                               >
-                                {seller.sellerDisplayName ||
-                                  seller.sellerName ||
-                                  seller.name}
+                                {seller.sellerDisplayName || seller.sellerName}
                               </p>
                             </div>
                             <p
@@ -636,7 +638,7 @@ export default function AdminRelatorios() {
                       ) : (
                         topClients.map((client: TopClient, index: number) => (
                           <li
-                            key={client.id}
+                            key={`${client.clientName}|${client.clientPhone ?? ""}`}
                             className="flex items-center justify-between group"
                           >
                             <div className="flex items-center gap-3">
@@ -647,7 +649,7 @@ export default function AdminRelatorios() {
                                 className="text-sm font-bold"
                                 style={{ color: "var(--foreground)" }}
                               >
-                                {client.clientName || client.name}
+                                {client.clientName}
                               </p>
                             </div>
                             <p
@@ -682,7 +684,7 @@ export default function AdminRelatorios() {
                         topProducts.map(
                           (product: TopProduct, index: number) => (
                             <li
-                              key={product.id}
+                              key={product.productName}
                               className="flex items-center justify-between group"
                             >
                               <div className="flex items-center gap-3">
@@ -693,7 +695,7 @@ export default function AdminRelatorios() {
                                   className="text-sm font-bold"
                                   style={{ color: "var(--foreground)" }}
                                 >
-                                  {product.productName || product.name}
+                                  {product.productName}
                                 </p>
                               </div>
                               <p

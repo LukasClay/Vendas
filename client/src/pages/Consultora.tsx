@@ -528,7 +528,7 @@ function ToWriteCard({
                     )
                   )}
               </div>
-              {(history as any).totalConsultas > 0 && (
+              {history.totalConsultas > 0 && (
                 <div
                   className="rounded-xl overflow-hidden"
                   style={{ border: "1px solid #d0d0e8" }}
@@ -544,12 +544,11 @@ function ToWriteCard({
                       className="text-xs font-semibold"
                       style={{ color: "#3a3a9a" }}
                     >
-                      📅 {(history as any).totalConsultas} consulta
-                      {(history as any).totalConsultas !== 1 ? "s" : ""} de
-                      cartas
+                      📅 {history.totalConsultas} consulta
+                      {history.totalConsultas !== 1 ? "s" : ""} de cartas
                     </span>
                   </div>
-                  {(history as any).consultas.map(
+                  {history.consultas.map(
                     (c: {
                       id: number;
                       consultationDate: string;
@@ -1017,7 +1016,7 @@ function PendingCard({
                     )
                   )}
               </div>
-              {(history as any).totalConsultas > 0 && (
+              {history.totalConsultas > 0 && (
                 <div
                   className="rounded-xl overflow-hidden"
                   style={{ border: "1px solid #d0d0e8" }}
@@ -1033,12 +1032,11 @@ function PendingCard({
                       className="text-xs font-semibold"
                       style={{ color: "#3a3a9a" }}
                     >
-                      📅 {(history as any).totalConsultas} consulta
-                      {(history as any).totalConsultas !== 1 ? "s" : ""} de
-                      cartas
+                      📅 {history.totalConsultas} consulta
+                      {history.totalConsultas !== 1 ? "s" : ""} de cartas
                     </span>
                   </div>
-                  {(history as any).consultas.map(
+                  {history.consultas.map(
                     (c: {
                       id: number;
                       consultationDate: string;
@@ -1342,27 +1340,23 @@ export default function ConsultoraPage() {
           : [];
   // Sub-filtro por categoria
   const categoryFilteredItems = selectedCategory
-    ? (activeItems as any[]).filter(
+    ? activeItems.filter(
         i => (i.productCategory ?? "individual") === selectedCategory
       )
     : activeItems;
   const photoFilteredItems = onlyWithPhotos
-    ? (categoryFilteredItems as any[]).filter(hasClientPhotos)
+    ? categoryFilteredItems.filter(hasClientPhotos)
     : categoryFilteredItems;
-  const photoCount = (categoryFilteredItems as any[]).filter(
-    hasClientPhotos
-  ).length;
-  const hasCategoryOptions = (activeItems as any[]).some(
+  const photoCount = categoryFilteredItems.filter(hasClientPhotos).length;
+  const hasCategoryOptions = activeItems.some(
     i => (i.productCategory ?? "individual") !== "individual"
   );
   const hasSelectedTypeOption =
     selectedType === null ||
-    (photoFilteredItems as Array<{ productName: string }>).some(
-      i => i.productName === selectedType
-    );
+    photoFilteredItems.some(i => i.productName === selectedType);
   const hasSelectedCategoryOption =
     selectedCategory === null ||
-    (activeItems as any[]).some(
+    activeItems.some(
       i => (i.productCategory ?? "individual") === selectedCategory
     );
   const shouldShowCategoryFilter =
@@ -1438,7 +1432,7 @@ export default function ConsultoraPage() {
     return selectedType || onlyWithPhotos ? "Tente outro filtro" : fallbackSub;
   }
 
-  const alertCount = (alertItems as any[]).length;
+  const alertCount = alertItems.length;
   const tabs = [
     {
       id: "para_escrever" as Tab,
@@ -1561,7 +1555,7 @@ export default function ConsultoraPage() {
               { key: "coletivo", label: "👥 Coletivos" },
             ].map(cat => {
               const count = cat.key
-                ? (activeItems as any[]).filter(
+                ? activeItems.filter(
                     i => (i.productCategory ?? "individual") === cat.key
                   ).length
                 : activeItems.length;
@@ -1745,7 +1739,7 @@ export default function ConsultoraPage() {
                 )
               ))}
             {activeTab === "alertas" &&
-              ((alertItems as any[]).length === 0 ? (
+              (alertItems.length === 0 ? (
                 <EmptyState
                   icon={<Bell className="w-10 h-10" />}
                   text="Nenhum alerta no momento"
@@ -1755,16 +1749,8 @@ export default function ConsultoraPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs" style={{ color: "#737390" }}>
-                      {
-                        (alertItems as any[]).filter((a: any) => a.isOverdue)
-                          .length
-                      }{" "}
-                      atrasados •{" "}
-                      {
-                        (alertItems as any[]).filter((a: any) => !a.isOverdue)
-                          .length
-                      }{" "}
-                      urgentes
+                      {alertItems.filter(a => a.isOverdue).length} atrasados •{" "}
+                      {alertItems.filter(a => !a.isOverdue).length} urgentes
                     </p>
                     <button
                       onClick={() => refetchAlerts()}
@@ -1778,7 +1764,7 @@ export default function ConsultoraPage() {
                       Atualizar
                     </button>
                   </div>
-                  {(alertItems as any[]).map((item: any) => {
+                  {alertItems.map(item => {
                     const borderColor = item.isOverdue ? "#e88080" : "#e8b060";
                     const bgColor = item.isOverdue ? "#fff8f8" : "#fffdf0";
                     return (

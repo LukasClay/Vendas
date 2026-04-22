@@ -119,29 +119,27 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await (
-        db
-          .select({
-            id: sales.id,
-            clientName: sales.clientName,
-            clientBirthDate: sales.clientBirthDate,
-            clientPhone: sales.clientPhone,
-            productName: sales.productName,
-            productCategory: sales.productCategory,
-            saleDate: sales.saleDate,
-            notes: sales.notes,
-            createdAt: sales.createdAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
-          .from(sales) as any
-      )
+      const rows = await db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          clientBirthDate: sales.clientBirthDate,
+          clientPhone: sales.clientPhone,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          notes: sales.notes,
+          createdAt: sales.createdAt,
+          sellerName: sales.sellerName,
+          photo1Url: sales.photo1Url,
+          photo2Url: sales.photo2Url,
+        })
+        .from(sales)
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate), asc(sales.createdAt))
         .limit(500);
 
-      return rows.map((s: any) => {
+      return rows.map(s => {
         const category: ProductCategory = s.productCategory ?? "individual";
         const urgency = getSaleUrgency(s.saleDate, category);
         return {
@@ -184,30 +182,28 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await (
-        db
-          .select({
-            id: sales.id,
-            clientName: sales.clientName,
-            clientBirthDate: sales.clientBirthDate,
-            clientPhone: sales.clientPhone,
-            productName: sales.productName,
-            productCategory: sales.productCategory,
-            saleDate: sales.saleDate,
-            notes: sales.notes,
-            writtenAt: sales.writtenAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
-          .from(sales) as any
-      )
+      const rows = await db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          clientBirthDate: sales.clientBirthDate,
+          clientPhone: sales.clientPhone,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          notes: sales.notes,
+          writtenAt: sales.writtenAt,
+          sellerName: sales.sellerName,
+          photo1Url: sales.photo1Url,
+          photo2Url: sales.photo2Url,
+        })
+        .from(sales)
         .where(and(...conditions))
         .orderBy(asc(sales.saleDate))
         .limit(500);
 
       return rows
-        .map((s: any) => {
+        .map(s => {
           const category: ProductCategory = s.productCategory ?? "individual";
           const urgency = getSaleUrgency(s.saleDate, category);
           return {
@@ -251,29 +247,27 @@ export const consultoraRouter = router({
         );
       }
 
-      const rows = await (
-        db
-          .select({
-            id: sales.id,
-            clientName: sales.clientName,
-            clientBirthDate: sales.clientBirthDate,
-            clientPhone: sales.clientPhone,
-            productName: sales.productName,
-            productCategory: sales.productCategory,
-            saleDate: sales.saleDate,
-            notes: sales.notes,
-            completedAt: sales.completedAt,
-            sellerName: sales.sellerName,
-            photo1Url: sales.photo1Url,
-            photo2Url: sales.photo2Url,
-          })
-          .from(sales) as any
-      )
+      const rows = await db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          clientBirthDate: sales.clientBirthDate,
+          clientPhone: sales.clientPhone,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          notes: sales.notes,
+          completedAt: sales.completedAt,
+          sellerName: sales.sellerName,
+          photo1Url: sales.photo1Url,
+          photo2Url: sales.photo2Url,
+        })
+        .from(sales)
         .where(and(...conditions))
         .orderBy(desc(sales.completedAt)) // mais recentes no topo
         .limit(500);
 
-      return rows.map((s: any) => ({
+      return rows.map(s => ({
         id: s.id,
         clientName: s.clientName,
         clientBirthDate: s.clientBirthDate,
@@ -446,18 +440,16 @@ export const consultoraRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const [toWriteRows, pendingRows] = await Promise.all([
-      (
-        db
-          .select({
-            id: sales.id,
-            clientName: sales.clientName,
-            productName: sales.productName,
-            productCategory: sales.productCategory,
-            saleDate: sales.saleDate,
-            sellerName: sales.sellerName,
-          })
-          .from(sales) as any
-      )
+      db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          sellerName: sales.sellerName,
+        })
+        .from(sales)
         .where(
           and(
             eq(sales.workStatus, "para_escrever"),
@@ -466,18 +458,16 @@ export const consultoraRouter = router({
           )
         )
         .orderBy(asc(sales.saleDate)),
-      (
-        db
-          .select({
-            id: sales.id,
-            clientName: sales.clientName,
-            productName: sales.productName,
-            productCategory: sales.productCategory,
-            saleDate: sales.saleDate,
-            sellerName: sales.sellerName,
-          })
-          .from(sales) as any
-      )
+      db
+        .select({
+          id: sales.id,
+          clientName: sales.clientName,
+          productName: sales.productName,
+          productCategory: sales.productCategory,
+          saleDate: sales.saleDate,
+          sellerName: sales.sellerName,
+        })
+        .from(sales)
         .where(
           and(
             eq(sales.workStatus, "pendente"),
@@ -487,7 +477,7 @@ export const consultoraRouter = router({
         )
         .orderBy(asc(sales.saleDate)),
     ]);
-    const mapUrgency = (s: any) => {
+    const mapUrgency = (s: (typeof toWriteRows)[number]) => {
       const category: ProductCategory = s.productCategory ?? "individual";
       const urgency = getSaleUrgency(s.saleDate, category);
       return {
@@ -506,20 +496,18 @@ export const consultoraRouter = router({
   alerts: consultoraProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    const rows = await (
-      db
-        .select({
-          id: sales.id,
-          clientName: sales.clientName,
-          clientPhone: sales.clientPhone,
-          productName: sales.productName,
-          productCategory: sales.productCategory,
-          saleDate: sales.saleDate,
-          workStatus: sales.workStatus,
-          sellerName: sales.sellerName,
-        })
-        .from(sales) as any
-    )
+    const rows = await db
+      .select({
+        id: sales.id,
+        clientName: sales.clientName,
+        clientPhone: sales.clientPhone,
+        productName: sales.productName,
+        productCategory: sales.productCategory,
+        saleDate: sales.saleDate,
+        workStatus: sales.workStatus,
+        sellerName: sales.sellerName,
+      })
+      .from(sales)
       .where(
         and(
           or(
@@ -533,7 +521,7 @@ export const consultoraRouter = router({
       .orderBy(asc(sales.saleDate))
       .limit(500);
 
-    const withUrgency = rows.map((s: any) => {
+    const withUrgency = rows.map(s => {
       const category: ProductCategory = s.productCategory ?? "individual";
       const urgency = getSaleUrgency(s.saleDate, category);
       return {
@@ -549,13 +537,19 @@ export const consultoraRouter = router({
       };
     });
 
+    type AlertItem = Extract<
+      (typeof withUrgency)[number],
+      { hasDeadline: true }
+    >;
+
     // Itens sem prazo automático (ex.: coletivos) não são alertas:
     // hasDeadline=false curto-circuita antes de acessar isOverdue/isUrgent.
     return withUrgency
       .filter(
-        (item: any) => item.hasDeadline && (item.isOverdue || item.isUrgent)
+        (item): item is AlertItem =>
+          item.hasDeadline && (item.isOverdue || item.isUrgent)
       )
-      .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
+      .sort((a, b) => b.urgencyScore - a.urgencyScore);
   }),
 
   // ── ADM: Ações em massa ──────────────────────────────────────────────

@@ -572,7 +572,7 @@ export async function getSales(filters: SaleFilters = {}) {
     );
   }
 
-  const query = db
+  const base = db
     .select({
       sale: sales,
       // Usa snapshot sellerName se disponível (vendedor excluído), senão busca do JOIN
@@ -583,16 +583,15 @@ export async function getSales(filters: SaleFilters = {}) {
       },
     })
     .from(sales)
-    .leftJoin(users, eq(sales.sellerId, users.id))
-    .orderBy(desc(sales.saleDate), desc(sales.createdAt));
+    .leftJoin(users, eq(sales.sellerId, users.id));
 
-  if (conditions.length > 0) {
-    return (query as any)
-      .where(and(...conditions))
-      .limit(filters.limit ?? 100)
-      .offset(filters.offset ?? 0);
-  }
-  return (query as any).limit(filters.limit ?? 100).offset(filters.offset ?? 0);
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered
+    .orderBy(desc(sales.saleDate), desc(sales.createdAt))
+    .limit(filters.limit ?? 100)
+    .offset(filters.offset ?? 0);
 }
 
 export async function getSaleById(id: number) {
@@ -729,17 +728,17 @@ export async function getReportSummary(startDate?: Date, endDate?: Date) {
       sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
     );
 
-  const query = db
+  const base = db
     .select({
       totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
       totalSales: sql<number>`COUNT(*)`,
     })
     .from(sales);
 
-  const result =
-    conditions.length > 0
-      ? await (query as any).where(and(...conditions))
-      : await query;
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  const result = await filtered;
 
   return result[0] ?? { totalAmount: 0, totalSales: 0 };
 }
@@ -761,18 +760,18 @@ export async function getReportSummaryByCompany(
       sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
     );
 
-  const query = db
+  const base = db
     .select({
       company: sales.company,
       totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
       totalSales: sql<number>`COUNT(*)`,
     })
-    .from(sales)
-    .groupBy(sales.company);
+    .from(sales);
 
-  return conditions.length > 0
-    ? (query as any).where(and(...conditions))
-    : query;
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered.groupBy(sales.company);
 }
 
 export async function getTopSellers(
@@ -793,7 +792,7 @@ export async function getTopSellers(
       sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
     );
 
-  const query = db
+  const base = db
     .select({
       sellerId: sales.sellerId,
       // Usa snapshot sellerName se disponível, senão faz JOIN com users
@@ -803,7 +802,12 @@ export async function getTopSellers(
       totalSales: sql<number>`COUNT(*)`,
     })
     .from(sales)
-    .leftJoin(users, eq(sales.sellerId, users.id))
+    .leftJoin(users, eq(sales.sellerId, users.id));
+
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered
     .groupBy(
       sales.sellerId,
       sql`COALESCE(${sales.sellerName}, ${users.name})`,
@@ -811,10 +815,6 @@ export async function getTopSellers(
     )
     .orderBy(desc(sql`SUM(${sales.amount})`))
     .limit(limit);
-
-  return conditions.length > 0
-    ? (query as any).where(and(...conditions))
-    : query;
 }
 
 export async function getTopClients(
@@ -835,21 +835,22 @@ export async function getTopClients(
       sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
     );
 
-  const query = db
+  const base = db
     .select({
       clientName: sales.clientName,
       clientPhone: sales.clientPhone,
       totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
       totalSales: sql<number>`COUNT(*)`,
     })
-    .from(sales)
+    .from(sales);
+
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered
     .groupBy(sales.clientName, sales.clientPhone)
     .orderBy(desc(sql`SUM(${sales.amount})`))
     .limit(limit);
-
-  return conditions.length > 0
-    ? (query as any).where(and(...conditions))
-    : query;
 }
 
 export async function getTopProducts(
@@ -870,20 +871,21 @@ export async function getTopProducts(
       sql`${sales.saleDate} <= ${endDate.toISOString().split("T")[0]}`
     );
 
-  const query = db
+  const base = db
     .select({
       productName: sales.productName,
       totalAmount: sql<number>`COALESCE(SUM(${sales.amount}), 0)`,
       totalSales: sql<number>`COUNT(*)`,
     })
-    .from(sales)
+    .from(sales);
+
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered
     .groupBy(sales.productName)
     .orderBy(desc(sql`COUNT(*)`))
     .limit(limit);
-
-  return conditions.length > 0
-    ? (query as any).where(and(...conditions))
-    : query;
 }
 
 export async function getSalesByMonth(year: number) {
@@ -1079,15 +1081,13 @@ export async function getAuditLogs(
     );
   }
 
-  const query = db
-    .select()
-    .from(auditLogs)
+  const base = db.select().from(auditLogs);
+
+  const filtered =
+    conditions.length > 0 ? base.where(and(...conditions)) : base;
+
+  return filtered
     .orderBy(desc(auditLogs.createdAt))
     .limit(filters.limit ?? 100)
     .offset(filters.offset ?? 0);
-
-  if (conditions.length > 0) {
-    return (query as any).where(and(...conditions));
-  }
-  return query;
 }

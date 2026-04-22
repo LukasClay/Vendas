@@ -653,19 +653,19 @@ export const salesRouter = router({
       };
       const lines = [
         header.join(","),
-        ...rows.map((r: (typeof rows)[number]) =>
+        ...rows.map(({ sale, seller }) =>
           [
-            r.id,
-            r.saleDate,
-            r.clientName,
-            r.clientBirthDate ?? "",
-            r.clientPhone ?? "",
-            r.productName,
-            r.productCategory ?? "individual",
-            r.sellerName ?? "",
-            Number(r.amount).toFixed(2).replace(".", ","),
-            r.workStatus,
-            r.notes ?? "",
+            sale.id,
+            sale.saleDate,
+            sale.clientName,
+            sale.clientBirthDate ?? "",
+            sale.clientPhone ?? "",
+            sale.productName,
+            sale.productCategory ?? "individual",
+            seller?.name ?? sale.sellerName ?? "",
+            Number(sale.amount).toFixed(2).replace(".", ","),
+            sale.workStatus,
+            sale.notes ?? "",
           ]
             .map(escape)
             .join(",")
