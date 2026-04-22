@@ -11,6 +11,49 @@ relevantes.
 
 ---
 
+## ⚠️ Antes de pegar qualquer item desta lista
+
+Este arquivo é **especificação técnica**, não briefing completo. Antes de
+tocar código para resolver qualquer dívida abaixo:
+
+1. **Leia `TODO.md` por inteiro** — é o documento vivo mais importante
+   do projeto. Contém regras invioláveis (incluindo painéis intocáveis,
+   restrições de performance mobile, regras de segurança).
+2. **`TODO.md` tem prioridade sobre este arquivo.** Se algo aqui
+   contradisser `TODO.md`, **`TODO.md` vence** — pare e pergunte ao
+   dono antes de seguir.
+3. **Painéis intocáveis** (`TODO.md §1`):
+   - `NovaVenda.tsx` — inviolável (`TODO.md §14`), nem abra.
+   - Painéis da **Vendedora** e da **Consultora** — nenhuma mudança
+     visual ou funcional sem aprovação explícita. Mudanças de tipo
+     puro (sem alterar JSX/handler/estado) em arquivos compartilhados
+     são aceitáveis se isoladas por `role`.
+4. **Aja como Tech Lead sênior** (`TODO.md §4`): pense nas
+   consequências de cada linha antes de escrever. Para refactors
+   grandes, faça um plano e peça aprovação antes de implementar.
+5. **Não presuma, pergunte** (`TODO.md §1`): antes de remover
+   funcionalidades "aparentemente desnecessárias" ou estender escopo
+   além do item que está resolvendo, consulte o dono.
+6. **Toda ação irreversível exige aprovação explícita**
+   (`TODO.md §1`): commits, pushes, merges — espere confirmação do
+   dono. Nunca aja por antecipação.
+7. **Gate obrigatório antes de cada commit**: `pnpm run verify`
+   (typecheck + format:check + test:backend + build). 71 testes devem
+   passar (ou a quantidade atualizada, se o seu trabalho introduz/
+   remove casos intencionalmente).
+8. **Validação manual mobile 375px** (`TODO.md §99`) antes de merge
+   para qualquer PR que toque UI.
+9. **Sincronize com `origin/main` antes de começar** (`TODO.md §5`):
+   `git fetch origin main` e `git pull --ff-only origin main`.
+10. **Não adicione `as any` novos.** Se um tipo não encaixar, é sinal
+    de que a fonte (servidor, schema, tipo compartilhado) precisa
+    ajuste — corrija a causa ou reporte. Nunca silencie com cast.
+
+Se qualquer um destes passos gerar dúvida sobre o escopo do item que
+você está pegando, **pare e pergunte ao dono** antes de continuar.
+
+---
+
 ## 1. [ALTA] `(query as any)` em helpers do servidor apaga tipos de queries Drizzle
 
 **Status:** Ativo — é o que bloqueia o benefício pleno do refactor de
