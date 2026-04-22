@@ -32,9 +32,11 @@ export function usePushNotifications() {
     }
     setPermission(Notification.permission as PushPermission);
 
-    // Registrar service worker
+    // Registrar service worker. `updateViaCache: "none"` força o browser a
+    // revalidar o arquivo sw.js a cada página, evitando a janela de até 24h
+    // em que um sw.js velho ficaria cacheado.
     navigator.serviceWorker
-      .register("/sw.js")
+      .register("/sw.js", { updateViaCache: "none" })
       .then(async reg => {
         const sub = await reg.pushManager.getSubscription();
         setIsSubscribed(!!sub);
