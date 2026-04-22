@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { errorMessage, showError } from "@/lib/errors";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import {
@@ -448,7 +449,7 @@ export default function Consultas() {
       setCancelModal(null);
       invalidateAll();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const restoreMutation = trpc.consultationSlots.restore.useMutation({
@@ -456,7 +457,7 @@ export default function Consultas() {
       toast.success("Consulta restaurada!");
       invalidateAll();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const deleteMutation = trpc.consultationSlots.deleteCancelled.useMutation({
@@ -464,7 +465,7 @@ export default function Consultas() {
       toast.success("Horário liberado!");
       invalidateAll();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const approveRefundMutation =
@@ -473,7 +474,7 @@ export default function Consultas() {
         toast.success("Reembolso aprovado! Venda movida para a lixeira.");
         invalidateAll();
       },
-      onError: (err: any) => toast.error(err.message),
+      onError: showError,
     });
 
   const rejectRefundMutation = trpc.consultationSlots.rejectRefund.useMutation({
@@ -483,7 +484,7 @@ export default function Consultas() {
       );
       invalidateAll();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const deleteSlotMutation = trpc.consultationSlots.delete.useMutation({
@@ -491,7 +492,7 @@ export default function Consultas() {
       toast.success("Horário removido!");
       invalidateAll();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const [creatingSlots, setCreatingSlots] = useState(false);
@@ -514,8 +515,8 @@ export default function Consultas() {
       );
       invalidateAll();
       setSelectedTime("");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar horário.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Erro ao criar horário."));
     }
     setCreatingSlots(false);
   };

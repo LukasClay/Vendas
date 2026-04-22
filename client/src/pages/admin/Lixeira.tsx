@@ -1,4 +1,5 @@
 import { trpc, type RouterOutputs } from "@/lib/trpc";
+import { showError } from "@/lib/errors";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -65,7 +66,7 @@ export default function AdminLixeira() {
       utils.sales.list.invalidate();
       utils.reports.summary.invalidate();
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const permanentDeleteMutation = trpc.sales.permanentDelete.useMutation({
@@ -74,7 +75,7 @@ export default function AdminLixeira() {
       utils.sales.listDeleted.invalidate();
       setConfirmDelete(null);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const cleanupMutation = trpc.sales.cleanupTrash.useMutation({
@@ -83,7 +84,7 @@ export default function AdminLixeira() {
       utils.sales.listDeleted.invalidate();
       setConfirmCleanup(false);
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: showError,
   });
 
   const filtered = deletedSales.filter((item: DeletedSale) => {
