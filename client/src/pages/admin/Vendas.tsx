@@ -1,7 +1,10 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { ProductCategory } from "@shared/types";
+
+type SalesListItem = RouterOutputs["sales"]["list"][number];
+type UserListItem = RouterOutputs["users"]["listAll"][number];
 import {
   FileText,
   ExternalLink,
@@ -61,7 +64,7 @@ function ViewSaleModal({
   onClose,
   onEdit,
 }: {
-  sale: any;
+  sale: SalesListItem["sale"];
   onClose: () => void;
   onEdit: () => void;
 }) {
@@ -269,8 +272,8 @@ function EditSaleModal({
   sellers,
   onClose,
 }: {
-  sale: any;
-  sellers: any[];
+  sale: SalesListItem["sale"];
+  sellers: UserListItem[];
   onClose: () => void;
 }) {
   const utils = trpc.useUtils();
@@ -1403,7 +1406,7 @@ export default function AdminVendas() {
 
   const salesData = useMemo(() => {
     if (!filters.category) return rawSalesData;
-    return rawSalesData.filter((item: any) => {
+    return rawSalesData.filter((item: SalesListItem) => {
       const sale = item.sale ?? item;
       return (sale.productCategory ?? "individual") === filters.category;
     });
@@ -1420,7 +1423,7 @@ export default function AdminVendas() {
     setExportLoading(true);
     try {
       const XLSX = await import("xlsx");
-      const rows = salesData.map((item: any) => {
+      const rows = salesData.map((item: SalesListItem) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return {
@@ -1481,7 +1484,8 @@ export default function AdminVendas() {
       }
 
       const total = salesData.reduce(
-        (acc: number, item: any) => acc + Number((item.sale ?? item).amount),
+        (acc: number, item: SalesListItem) =>
+          acc + Number((item.sale ?? item).amount),
         0
       );
       doc.setFontSize(11);
@@ -1491,7 +1495,7 @@ export default function AdminVendas() {
         period ? 30 : 23
       );
 
-      const rows = salesData.map((item: any) => {
+      const rows = salesData.map((item: SalesListItem) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return [
@@ -1532,8 +1536,8 @@ export default function AdminVendas() {
       setExportLoading(false);
     }
   }
-  const [viewSale, setViewSale] = useState<any | null>(null);
-  const [editSale, setEditSale] = useState<any | null>(null);
+  const [viewSale, setViewSale] = useState<SalesListItem["sale"] | null>(null);
+  const [editSale, setEditSale] = useState<SalesListItem["sale"] | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // Estado do modal de histórico de cliente
@@ -1555,12 +1559,12 @@ export default function AdminVendas() {
     onError: err => toast.error(err.message),
   });
 
-  const openEdit = (item: any) => {
+  const openEdit = (item: SalesListItem) => {
     const sale = item.sale ?? item;
     setEditSale(sale);
   };
 
-  const totalAmount = salesData.reduce((acc: number, item: any) => {
+  const totalAmount = salesData.reduce((acc: number, item: SalesListItem) => {
     const sale = item.sale ?? item;
     return acc + Number(sale.amount);
   }, 0);
@@ -1775,7 +1779,7 @@ export default function AdminVendas() {
                     </td>
                   </tr>
                 ) : (
-                  salesData.map((item: any) => {
+                  salesData.map((item: SalesListItem) => {
                     const sale = item.sale ?? item;
                     return (
                       <tr
@@ -1905,7 +1909,7 @@ export default function AdminVendas() {
               <span className="text-sm font-bold text-green-600 dark:text-green-400">
                 {formatCurrency(
                   salesData.reduce(
-                    (acc: number, item: any) =>
+                    (acc: number, item: SalesListItem) =>
                       acc + Number((item.sale ?? item).amount),
                     0
                   )
@@ -1930,7 +1934,7 @@ export default function AdminVendas() {
             </div>
           ) : (
             <>
-              {salesData.map((item: any) => {
+              {salesData.map((item: SalesListItem) => {
                 const sale = item.sale ?? item;
                 return (
                   <motion.div
@@ -2074,7 +2078,7 @@ export default function AdminVendas() {
                   <span className="text-lg font-bold text-green-600 dark:text-green-400">
                     {formatCurrency(
                       salesData.reduce(
-                        (acc: number, item: any) =>
+                        (acc: number, item: SalesListItem) =>
                           acc + Number((item.sale ?? item).amount),
                         0
                       )
@@ -2157,7 +2161,7 @@ export default function AdminVendas() {
                           Trabalhos ({clientHistory.totalPurchases})
                         </h3>
                         <div className="rounded-xl overflow-hidden border border-[var(--border)]">
-                          {clientHistory.purchases.map((p: any, i: number) => (
+                          {clientHistory.purchases.map((p, i) => (
                             <div
                               key={i}
                               className="px-4 py-3 flex items-center justify-between gap-2"
@@ -2210,7 +2214,7 @@ export default function AdminVendas() {
                           Consultas de Cartas ({clientHistory.totalConsultas})
                         </h3>
                         <div className="rounded-xl overflow-hidden border border-[var(--border)]">
-                          {clientHistory.consultas.map((c: any, i: number) => (
+                          {clientHistory.consultas.map((c, i) => (
                             <div
                               key={c.id}
                               className="px-4 py-3 flex items-center justify-between gap-2"

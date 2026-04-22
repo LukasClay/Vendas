@@ -1,9 +1,11 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { AlertTriangle, Clock, RefreshCw, Phone, User } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { useTheme } from "@/contexts/ThemeContext";
+
+type AlertItem = RouterOutputs["consultora"]["alerts"][number];
 
 function formatDate(d: Date | string | null) {
   if (!d) return "—";
@@ -94,9 +96,9 @@ export default function AdminAlertas() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const overdueCount = alerts.filter((a: any) => a.isOverdue).length;
+  const overdueCount = alerts.filter((a: AlertItem) => a.isOverdue).length;
   const urgentCount = alerts.filter(
-    (a: any) => !a.isOverdue && a.isUrgent
+    (a: AlertItem) => !a.isOverdue && a.isUrgent
   ).length;
 
   return (
@@ -205,7 +207,7 @@ export default function AdminAlertas() {
           </FadeIn>
         ) : (
           <StaggerList className="space-y-3">
-            {alerts.map((item: any) => {
+            {alerts.map((item: AlertItem) => {
               const borderColor = item.isOverdue
                 ? isDark
                   ? "oklch(0.30 0.10 25)"

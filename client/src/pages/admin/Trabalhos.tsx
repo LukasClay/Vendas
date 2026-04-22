@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { ProductCategory } from "@shared/types";
@@ -240,7 +240,7 @@ function ToWriteCard({
   onMarkWritten,
   sellers,
 }: {
-  item: any;
+  item: RouterOutputs["consultora"]["toWrite"][number];
   onMarkWritten: (id: number) => void;
   sellers: Seller[];
 }) {
@@ -450,7 +450,7 @@ function PendingCard({
   onUndoWritten,
   sellers,
 }: {
-  item: any;
+  item: RouterOutputs["consultora"]["pending"][number];
   onMarkDone: (id: number) => void;
   onUndoWritten: (id: number) => void;
   sellers: Seller[];
@@ -679,16 +679,7 @@ function DoneCard({
   onUndo,
   sellers,
 }: {
-  item: {
-    id: number;
-    clientName: string;
-    productName: string;
-    productCategory?: ProductCategory | null;
-    saleDate: Date | string | null;
-    completedAt: Date | string | null;
-    sellerName?: string | null;
-    doneAt?: Date | string | null;
-  };
+  item: RouterOutputs["consultora"]["done"][number];
   onUndo: (id: number) => void;
   sellers: Seller[];
 }) {

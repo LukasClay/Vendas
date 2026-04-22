@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
 import { CompanyBadge } from "@/components/CompanySwitch";
+
+type DeletedSale = RouterOutputs["sales"]["listDeleted"][number];
 
 function formatCurrency(value: string | number) {
   return Number(value).toLocaleString("pt-BR", {
@@ -84,7 +86,7 @@ export default function AdminLixeira() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const filtered = deletedSales.filter((item: any) => {
+  const filtered = deletedSales.filter((item: DeletedSale) => {
     const sale = item.sale ?? item;
     const term = searchTerm.toLowerCase();
     return (
@@ -97,7 +99,7 @@ export default function AdminLixeira() {
     );
   });
 
-  const expiredCount = deletedSales.filter((item: any) => {
+  const expiredCount = deletedSales.filter((item: DeletedSale) => {
     const sale = item.sale ?? item;
     return daysRemaining(sale.deletedAt) === 0;
   }).length;
@@ -204,7 +206,7 @@ export default function AdminLixeira() {
               {filtered.length} venda{filtered.length !== 1 ? "s" : ""} na
               lixeira
             </p>
-            {filtered.map((item: any) => {
+            {filtered.map((item: DeletedSale) => {
               const sale = item.sale ?? item;
               const days = daysRemaining(sale.deletedAt);
               const daysColor = getDaysColor(days);
