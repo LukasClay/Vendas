@@ -221,8 +221,8 @@ function ViewSaleModal({
               </p>
               <div className="flex gap-3 flex-wrap">
                 {[sale.photo1Url, sale.photo2Url]
-                  .filter(Boolean)
-                  .map((url: string, i: number) => (
+                  .filter((u): u is string => Boolean(u))
+                  .map((url, i) => (
                     <a
                       key={i}
                       href={url}
