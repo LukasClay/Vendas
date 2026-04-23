@@ -3,6 +3,14 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { ProductCategory } from "@shared/types";
 import {
+  ATTACHMENT_MIME_TYPES,
+  MAX_FILE_BYTES,
+  MAX_TOTAL_ATTACHMENTS,
+  MAX_TOTAL_PHOTOS,
+  MAX_UPLOAD_BYTES_PER_REQUEST,
+  PHOTO_MIME_TYPES,
+} from "@shared/const";
+import {
   FileText,
   ExternalLink,
   Filter,
@@ -59,9 +67,35 @@ const inputStyle = {
   fontSize: "14px",
 };
 
-const MAX_TOTAL_ATTACHMENTS = 5;
-const MAX_TOTAL_PHOTOS = 6;
-const MAX_UPLOAD_BYTES_PER_SAVE = 7 * 1024 * 1024;
+function useFilePreview(file: File | null) {
+  const previewUrl = useMemo(
+    () => (file ? URL.createObjectURL(file) : null),
+    [file]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  return previewUrl;
+}
+
+function useFilePreviews(files: File[]) {
+  const previewUrls = useMemo(
+    () => files.map(file => URL.createObjectURL(file)),
+    [files]
+  );
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  return previewUrls;
+}
 
 // ─── Modal de detalhes (readonly) ─────────────────────────────────────────────
 function ViewSaleModal({
@@ -422,6 +456,9 @@ function EditSaleModal({
   const photoInputRef1 = useRef<HTMLInputElement>(null);
   const photoInputRef2 = useRef<HTMLInputElement>(null);
   const extraPhotoInputRef = useRef<HTMLInputElement>(null);
+  const photoPreviewUrl1 = useFilePreview(photoFile1);
+  const photoPreviewUrl2 = useFilePreview(photoFile2);
+  const extraPhotoPreviewUrls = useFilePreviews(extraPhotoFiles);
 
   useEffect(() => {
     if (canUploadClientPhotos) return;
@@ -432,11 +469,13 @@ function EditSaleModal({
 
   const handlePhotoChange = (f: File | null, which: 1 | 2) => {
     if (!f) return;
-    if (f.size > 5 * 1024 * 1024) {
+    if (f.size > MAX_FILE_BYTES) {
       toast.error("Foto muito grande. Máximo 5MB.");
       return;
     }
-    if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) {
+    if (
+      !PHOTO_MIME_TYPES.includes(f.type as (typeof PHOTO_MIME_TYPES)[number])
+    ) {
       toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
       return;
     }
@@ -451,13 +490,13 @@ function EditSaleModal({
 
   const handleFileChange = (f: File | null) => {
     if (!f) return;
-    if (f.size > 5 * 1024 * 1024) {
+    if (f.size > MAX_FILE_BYTES) {
       toast.error("Arquivo muito grande. Máximo 5MB.");
       return;
     }
     if (
-      !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
-        f.type
+      !ATTACHMENT_MIME_TYPES.includes(
+        f.type as (typeof ATTACHMENT_MIME_TYPES)[number]
       )
     ) {
       toast.error("Formato inválido. Use JPG, PNG, WEBP ou PDF.");
@@ -502,13 +541,13 @@ function EditSaleModal({
       return;
     }
     for (const current of selected) {
-      if (current.size > 5 * 1024 * 1024) {
+      if (current.size > MAX_FILE_BYTES) {
         toast.error(`"${current.name}" excede o maximo de 5MB.`);
         return;
       }
       if (
-        !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
-          current.type
+        !ATTACHMENT_MIME_TYPES.includes(
+          current.type as (typeof ATTACHMENT_MIME_TYPES)[number]
         )
       ) {
         toast.error(`"${current.name}" tem formato invalido.`);
@@ -526,11 +565,15 @@ function EditSaleModal({
       return;
     }
     for (const current of selected) {
-      if (current.size > 5 * 1024 * 1024) {
+      if (current.size > MAX_FILE_BYTES) {
         toast.error(`"${current.name}" excede o maximo de 5MB.`);
         return;
       }
-      if (!["image/jpeg", "image/png", "image/webp"].includes(current.type)) {
+      if (
+        !PHOTO_MIME_TYPES.includes(
+          current.type as (typeof PHOTO_MIME_TYPES)[number]
+        )
+      ) {
         toast.error(`"${current.name}" tem formato invalido.`);
         return;
       }
@@ -573,7 +616,7 @@ function EditSaleModal({
       toast.error(`Maximo de ${MAX_TOTAL_PHOTOS} fotos por venda.`);
       return;
     }
-    if (selectedUploadBytes > MAX_UPLOAD_BYTES_PER_SAVE) {
+    if (selectedUploadBytes > MAX_UPLOAD_BYTES_PER_REQUEST) {
       toast.error("Muitos arquivos de uma vez. Salve em partes.");
       return;
     }
@@ -1141,10 +1184,10 @@ function EditSaleModal({
                     <span className="text-[10px] text-[var(--muted-foreground)]">
                       Foto 1
                     </span>
-                    {photoFile1 ? (
+                    {photoFile1 && photoPreviewUrl1 ? (
                       <div className="relative">
                         <img
-                          src={URL.createObjectURL(photoFile1)}
+                          src={photoPreviewUrl1}
                           alt="Nova foto 1"
                           className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
                         />
@@ -1220,10 +1263,10 @@ function EditSaleModal({
                     <span className="text-[10px] text-[var(--muted-foreground)]">
                       Foto 2
                     </span>
-                    {photoFile2 ? (
+                    {photoFile2 && photoPreviewUrl2 ? (
                       <div className="relative">
                         <img
-                          src={URL.createObjectURL(photoFile2)}
+                          src={photoPreviewUrl2}
                           alt="Nova foto 2"
                           className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
                         />
@@ -1334,7 +1377,7 @@ function EditSaleModal({
                           className="relative"
                         >
                           <img
-                            src={URL.createObjectURL(current)}
+                            src={extraPhotoPreviewUrls[index]}
                             alt={`Nova foto extra ${index + 1}`}
                             className="w-24 h-32 object-cover rounded-xl border border-amber-300 dark:border-amber-700"
                           />

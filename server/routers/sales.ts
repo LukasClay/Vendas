@@ -27,24 +27,20 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
-import { TYPES_WITH_PHOTOS } from "../../shared/const";
+import {
+  ATTACHMENT_MIME_TYPES,
+  MAX_FILE_BYTES,
+  MAX_TOTAL_ATTACHMENTS,
+  MAX_TOTAL_PHOTOS,
+  MAX_UPLOAD_BYTES_PER_REQUEST,
+  PHOTO_MIME_TYPES,
+  TYPES_WITH_PHOTOS,
+} from "../../shared/const";
 import {
   getStoredAttachmentExtras,
   getStoredPhotoExtras,
   toPublicSale,
 } from "../saleMedia";
-
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_TOTAL_ATTACHMENTS = 5;
-const MAX_TOTAL_PHOTOS = 6;
-const MAX_UPLOAD_BYTES_PER_REQUEST = 7 * 1024 * 1024;
-const ATTACHMENT_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-] as const;
-const PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 const extraAttachmentInput = z.object({
   base64: z.string().max(8000000, "Arquivo extra muito grande (Maximo ~5MB)"),
@@ -99,6 +95,34 @@ function ensureRequestUploadBudget(buffers: Buffer[]) {
   }
 }
 
+function sanitizeMediaExtrasForAudit(value: unknown) {
+  if (!Array.isArray(value)) return value;
+  return value.map(item => {
+    if (!item || typeof item !== "object") return item;
+    const media = item as Record<string, unknown>;
+    return {
+      id: media.id,
+      mime: media.mime ?? null,
+      name: media.name ?? null,
+    };
+  });
+}
+
+function sanitizeSaleChangesForAudit(changes: Record<string, unknown>) {
+  const safeChanges: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(changes)) {
+    if (key === "attachmentKey" || key === "photo1Key" || key === "photo2Key") {
+      continue;
+    }
+    if (key === "attachmentExtras" || key === "photoExtras") {
+      safeChanges[key] = sanitizeMediaExtrasForAudit(value);
+      continue;
+    }
+    safeChanges[key] = value;
+  }
+  return safeChanges;
+}
+
 function getAttachmentExtension(mime: string): string {
   if (mime.includes("pdf")) return "pdf";
   if (mime.includes("png")) return "png";
@@ -141,38 +165,40 @@ export const salesRouter = router({
   // Vendedor cria uma nova venda
   create: protectedProcedure
     .input(
-      z.object({
-        clientName: z.string().min(1, "Nome do cliente é obrigatório"),
-        clientBirthDate: z.string().optional(),
-        clientPhone: z.string().optional(),
-        productName: z.string().min(1, "Nome do trabalho é obrigatório"),
-        productId: z.number().optional(),
-        productCategory: z
-          .enum(["individual", "promocao", "coletivo"])
-          .default("individual"),
-        saleDate: z.string().min(1, "Data da venda é obrigatória"),
-        amount: z.number().positive("Valor deve ser positivo"),
-        notes: z.string().optional(),
-        consultationSlotId: z.number().optional(), // Para Consulta Cartas
-        // Attachment: base64 encoded file
-        attachmentBase64: z
-          .string()
-          .max(8000000, "Arquivo muito grande (Máximo ~5MB)")
-          .optional(),
-        attachmentMime: z.string().optional(),
-        attachmentName: z.string().optional(),
-        // Fotos do cliente (apenas Individual)
-        photo1Base64: z
-          .string()
-          .max(8000000, "Foto 1 muito grande (Máximo ~5MB)")
-          .optional(),
-        photo1Mime: z.string().optional(),
-        photo2Base64: z
-          .string()
-          .max(8000000, "Foto 2 muito grande (Máximo ~5MB)")
-          .optional(),
-        photo2Mime: z.string().optional(),
-      })
+      z
+        .object({
+          clientName: z.string().min(1, "Nome do cliente é obrigatório"),
+          clientBirthDate: z.string().optional(),
+          clientPhone: z.string().optional(),
+          productName: z.string().min(1, "Nome do trabalho é obrigatório"),
+          productId: z.number().optional(),
+          productCategory: z
+            .enum(["individual", "promocao", "coletivo"])
+            .default("individual"),
+          saleDate: z.string().min(1, "Data da venda é obrigatória"),
+          amount: z.number().positive("Valor deve ser positivo"),
+          notes: z.string().optional(),
+          consultationSlotId: z.number().optional(), // Para Consulta Cartas
+          // Attachment: base64 encoded file
+          attachmentBase64: z
+            .string()
+            .max(8000000, "Arquivo muito grande (Máximo ~5MB)")
+            .optional(),
+          attachmentMime: z.string().optional(),
+          attachmentName: z.string().optional(),
+          // Fotos do cliente (apenas Individual)
+          photo1Base64: z
+            .string()
+            .max(8000000, "Foto 1 muito grande (Máximo ~5MB)")
+            .optional(),
+          photo1Mime: z.string().optional(),
+          photo2Base64: z
+            .string()
+            .max(8000000, "Foto 2 muito grande (Máximo ~5MB)")
+            .optional(),
+          photo2Mime: z.string().optional(),
+        })
+        .strict()
     )
     .mutation(async ({ ctx, input }) => {
       // A1: vendedor/consultora não pode escolher a data — servidor força hoje (fuso Brasil)
@@ -497,23 +523,13 @@ export const salesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...fields } = input;
       const data: Record<string, unknown> = {};
-      const shouldLoadExistingFiles =
-        Boolean(fields.attachmentBase64 && fields.attachmentMime) ||
-        Boolean(fields.extraAttachments?.length) ||
-        Boolean(fields.removeAttachmentIds?.length) ||
-        Boolean(fields.removePhoto1) ||
-        Boolean(fields.removePhoto2) ||
-        Boolean(fields.photo1Base64 && fields.photo1Mime) ||
-        Boolean(fields.photo2Base64 && fields.photo2Mime) ||
-        Boolean(fields.extraPhotos?.length) ||
-        Boolean(fields.removeExtraPhotoIds?.length);
-      const shouldLoadExistingSale =
-        shouldLoadExistingFiles ||
-        fields.workStatus === "feito" ||
-        fields.sellerId !== undefined;
-      const existingSale = shouldLoadExistingSale
-        ? await getSaleById(id)
-        : undefined;
+      const existingSale = await getSaleById(id);
+      if (!existingSale) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Venda não encontrada.",
+        });
+      }
       const keysToDeleteAfterUpdate: string[] = [];
       const uploadedKeysToCleanup: string[] = [];
       const queueDeleteAfterUpdate = (key: string | null | undefined) => {
@@ -838,7 +854,10 @@ export const salesRouter = router({
         userId: ctx.user.id,
         userName,
         action: "Editou Venda",
-        details: JSON.stringify({ saleId: id, changes: data }),
+        details: JSON.stringify({
+          saleId: id,
+          changes: sanitizeSaleChangesForAudit(data),
+        }),
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
       });

@@ -77,6 +77,44 @@ describe("sales.update storage cleanup", () => {
     mocks.getDb.mockResolvedValue(null);
   });
 
+  it("rejeita venda inexistente antes de qualquer upload", async () => {
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 999,
+        attachmentBase64: Buffer.from("new-proof").toString("base64"),
+        attachmentMime: "application/pdf",
+      })
+    ).rejects.toThrow("Venda não encontrada.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+  });
+
+  it("rejeita campos extras no create usado por vendedor e consultora", async () => {
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.create({
+        clientName: "Cliente",
+        productName: "Trabalho Individual",
+        productCategory: "individual",
+        saleDate: "2026-04-23",
+        amount: 100,
+        extraPhotos: [
+          {
+            base64: Buffer.from("extra-photo").toString("base64"),
+            mime: "image/jpeg",
+            name: "Foto extra",
+          },
+        ],
+      } as any)
+    ).rejects.toThrow();
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+  });
+
   it("deleta a key antiga somente depois de atualizar a venda ao trocar a foto", async () => {
     mocks.getSaleById.mockResolvedValue({ photo1Key: "fotos/old-photo.jpg" });
 
@@ -99,6 +137,11 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.updateSale.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.storageDelete.mock.invocationCallOrder[0]
     );
+
+    const auditDetails = JSON.parse(
+      mocks.createAuditLog.mock.calls[0][0].details
+    );
+    expect(auditDetails.changes.photo1Key).toBeUndefined();
   });
 
   it("remove a foto antiga do storage quando o admin marca remoção", async () => {
@@ -256,6 +299,24 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.storageDelete).toHaveBeenCalledWith(
       "comprovantes/remove-proof.pdf"
     );
+
+    const auditDetails = JSON.parse(
+      mocks.createAuditLog.mock.calls[0][0].details
+    );
+    const auditJson = JSON.stringify(auditDetails);
+    expect(auditJson).not.toContain("comprovantes/");
+    expect(auditDetails.changes.attachmentExtras).toEqual([
+      {
+        id: "keep-proof",
+        mime: "application/pdf",
+        name: "Comprovante 2",
+      },
+      {
+        id: "fixed-id",
+        mime: "application/pdf",
+        name: "Comprovante novo",
+      },
+    ]);
   });
 
   it("rejeita quando o total de comprovantes excede o limite do ADM", async () => {

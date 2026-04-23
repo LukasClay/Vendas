@@ -4,6 +4,23 @@ export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = "Please login (10001)";
 export const NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
+export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_TOTAL_ATTACHMENTS = 5;
+export const MAX_TOTAL_PHOTOS = 6;
+export const MAX_UPLOAD_BYTES_PER_REQUEST = 12 * 1024 * 1024;
+
+export const ATTACHMENT_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+] as const;
+export const PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
 // Tipos de venda que permitem anexar fotos do cliente
 export const TYPES_WITH_PHOTOS = ["individual"] as const;
 export type TypeWithPhotos = (typeof TYPES_WITH_PHOTOS)[number];
