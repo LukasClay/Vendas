@@ -5,7 +5,7 @@
  */
 import { getDb } from "../db";
 import { sales } from "../../drizzle/schema";
-import { and, inArray, isNull } from "drizzle-orm";
+import { and, inArray, isNull, ne } from "drizzle-orm";
 import { getSaleUrgency } from "../../shared/businessDays";
 import { sendPushToRoles } from "../webpush";
 
@@ -31,6 +31,9 @@ async function checkAndNotify() {
       .where(
         and(
           inArray(sales.workStatus, ["para_escrever", "pendente"]),
+          // Consulta Cartas tem regra própria (50min pós-horário → realizada via
+          // consultationSlots.effectiveStatus) e já é excluída em consultora.alerts.
+          ne(sales.productName, "Consulta Cartas"),
           isNull(sales.deletedAt) // Garante que não enviará alerta de vendas deletadas
         )
       ) as any);
