@@ -5,19 +5,20 @@
  */
 import { getDb } from "../db";
 import { sales } from "../../drizzle/schema";
-import { and, inArray, isNull } from "drizzle-orm";
+import { and, inArray, isNull, ne } from "drizzle-orm";
 import { getSaleUrgency } from "../../shared/businessDays";
 import { sendPushToRoles } from "../webpush";
 
 // Horários de disparo (hora local do servidor, formato 24h)
 const TRIGGER_HOURS = [8, 18];
 
-async function checkAndNotify() {
+export async function checkAndNotify() {
   const db = await getDb();
   if (!db) return;
 
   try {
-    // Buscar trabalhos Para Escrever e Pendentes
+    // Consulta Cartas segue um fluxo próprio por consultation_slots e não entra
+    // no alerta automático de prazo dos trabalhos da consultora.
     const activeSales = await (db
       .select({
         id: sales.id,
@@ -31,6 +32,7 @@ async function checkAndNotify() {
       .where(
         and(
           inArray(sales.workStatus, ["para_escrever", "pendente"]),
+          ne(sales.productName, "Consulta Cartas"),
           isNull(sales.deletedAt) // Garante que não enviará alerta de vendas deletadas
         )
       ) as any);
@@ -39,6 +41,7 @@ async function checkAndNotify() {
     const overdue: string[] = [];
 
     for (const sale of activeSales) {
+      if (sale.productName === "Consulta Cartas") continue;
       const urgency = getSaleUrgency(sale.saleDate, sale.productCategory);
       // Coletivos (hasDeadline=false) não geram alerta nem push automático.
       if (!urgency.hasDeadline) continue;
