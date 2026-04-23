@@ -533,35 +533,24 @@ function EditSaleModal({
     ...extraPhotoFiles,
   ].reduce((total, current) => total + (current?.size ?? 0), 0);
 
-  const handleExtraAttachmentSelection = (files: FileList | null) => {
+  const handleExtraFileSelection = (
+    kind: "attachment" | "photo",
+    files: FileList | null
+  ) => {
     if (!files?.length) return;
     const selected = Array.from(files);
-    if (selected.length > remainingAttachmentSlots) {
-      toast.error(`Maximo de ${MAX_TOTAL_ATTACHMENTS} comprovantes por venda.`);
-      return;
-    }
-    for (const current of selected) {
-      if (current.size > MAX_FILE_BYTES) {
-        toast.error(`"${current.name}" excede o maximo de 5MB.`);
-        return;
-      }
-      if (
-        !ATTACHMENT_MIME_TYPES.includes(
-          current.type as (typeof ATTACHMENT_MIME_TYPES)[number]
-        )
-      ) {
-        toast.error(`"${current.name}" tem formato invalido.`);
-        return;
-      }
-    }
-    setExtraAttachmentFiles(current => [...current, ...selected]);
-  };
+    const isAttachment = kind === "attachment";
+    const remainingSlots = isAttachment
+      ? remainingAttachmentSlots
+      : remainingPhotoSlots;
+    const maxTotal = isAttachment ? MAX_TOTAL_ATTACHMENTS : MAX_TOTAL_PHOTOS;
+    const label = isAttachment ? "comprovantes" : "fotos";
+    const allowedMimes: readonly string[] = isAttachment
+      ? ATTACHMENT_MIME_TYPES
+      : PHOTO_MIME_TYPES;
 
-  const handleExtraPhotoSelection = (files: FileList | null) => {
-    if (!files?.length) return;
-    const selected = Array.from(files);
-    if (selected.length > remainingPhotoSlots) {
-      toast.error(`Maximo de ${MAX_TOTAL_PHOTOS} fotos por venda.`);
+    if (selected.length > remainingSlots) {
+      toast.error(`Maximo de ${maxTotal} ${label} por venda.`);
       return;
     }
     for (const current of selected) {
@@ -569,16 +558,17 @@ function EditSaleModal({
         toast.error(`"${current.name}" excede o maximo de 5MB.`);
         return;
       }
-      if (
-        !PHOTO_MIME_TYPES.includes(
-          current.type as (typeof PHOTO_MIME_TYPES)[number]
-        )
-      ) {
+      if (!allowedMimes.includes(current.type)) {
         toast.error(`"${current.name}" tem formato invalido.`);
         return;
       }
     }
-    setExtraPhotoFiles(current => [...current, ...selected]);
+
+    if (isAttachment) {
+      setExtraAttachmentFiles(current => [...current, ...selected]);
+    } else {
+      setExtraPhotoFiles(current => [...current, ...selected]);
+    }
   };
 
   const updateSale = trpc.sales.update.useMutation({
@@ -1154,7 +1144,7 @@ function EditSaleModal({
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   className="hidden"
                   onChange={e => {
-                    handleExtraAttachmentSelection(e.target.files);
+                    handleExtraFileSelection("attachment", e.target.files);
                     e.currentTarget.value = "";
                   }}
                 />
@@ -1415,7 +1405,7 @@ function EditSaleModal({
                       accept="image/jpeg,image/png,image/webp"
                       className="hidden"
                       onChange={e => {
-                        handleExtraPhotoSelection(e.target.files);
+                        handleExtraFileSelection("photo", e.target.files);
                         e.currentTarget.value = "";
                       }}
                     />
