@@ -12,7 +12,7 @@ import { sendPushToRoles } from "../webpush";
 // Horários de disparo (hora local do servidor, formato 24h)
 const TRIGGER_HOURS = [8, 18];
 
-async function checkAndNotify() {
+export async function checkAndNotify() {
   const db = await getDb();
   if (!db) return;
 
@@ -42,6 +42,9 @@ async function checkAndNotify() {
     const overdue: string[] = [];
 
     for (const sale of activeSales) {
+      // Defense-in-depth: caso o filtro SQL acima seja removido por engano,
+      // a regra de 50min do Consulta Cartas continua protegida aqui.
+      if (sale.productName === "Consulta Cartas") continue;
       const urgency = getSaleUrgency(sale.saleDate, sale.productCategory);
       // Coletivos (hasDeadline=false) não geram alerta nem push automático.
       if (!urgency.hasDeadline) continue;
