@@ -1,8 +1,8 @@
-export type ConsultoraPhotoSlot = 1 | 2;
+export type ConsultoraPhotoId = string | number;
 
 export function buildConsultoraPhotoDownloadUrl(
   saleId: number,
-  slot: ConsultoraPhotoSlot
+  photoId: ConsultoraPhotoId
 ): string {
-  return `/api/consultora/photos/${saleId}/${slot}/download`;
+  return `/api/consultora/photos/${saleId}/${encodeURIComponent(String(photoId))}/download`;
 }

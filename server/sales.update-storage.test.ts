@@ -200,4 +200,148 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.storagePut).not.toHaveBeenCalled();
     expect(mocks.updateSale).not.toHaveBeenCalled();
   });
+
+  it("adiciona comprovantes extras e remove anexos extras marcados", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      attachmentUrl: "https://cdn.test/legacy-proof.pdf",
+      attachmentKey: "comprovantes/old-proof.pdf",
+      attachmentExtras: [
+        {
+          id: "keep-proof",
+          url: "https://cdn.test/keep-proof.pdf",
+          key: "comprovantes/keep-proof.pdf",
+          mime: "application/pdf",
+          name: "Comprovante 2",
+        },
+        {
+          id: "remove-proof",
+          url: "https://cdn.test/remove-proof.pdf",
+          key: "comprovantes/remove-proof.pdf",
+          mime: "application/pdf",
+          name: "Comprovante 3",
+        },
+      ],
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await caller.update({
+      id: 15,
+      extraAttachments: [
+        {
+          base64: Buffer.from("extra-proof").toString("base64"),
+          mime: "application/pdf",
+          name: "Comprovante novo",
+        },
+      ],
+      removeAttachmentIds: ["remove-proof"],
+    });
+
+    expect(mocks.updateSale).toHaveBeenCalledWith(
+      15,
+      expect.objectContaining({
+        attachmentExtras: [
+          expect.objectContaining({
+            id: "keep-proof",
+            key: "comprovantes/keep-proof.pdf",
+          }),
+          expect.objectContaining({
+            id: "fixed-id",
+            key: "comprovantes/7/fixed-id.pdf",
+            name: "Comprovante novo",
+          }),
+        ],
+      })
+    );
+    expect(mocks.storageDelete).toHaveBeenCalledWith(
+      "comprovantes/remove-proof.pdf"
+    );
+  });
+
+  it("rejeita quando o total de comprovantes excede o limite do ADM", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      attachmentUrl: "https://cdn.test/legacy-proof.pdf",
+      attachmentExtras: [
+        {
+          id: "proof-2",
+          url: "https://cdn.test/proof-2.pdf",
+          key: "comprovantes/proof-2.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-3",
+          url: "https://cdn.test/proof-3.pdf",
+          key: "comprovantes/proof-3.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-4",
+          url: "https://cdn.test/proof-4.pdf",
+          key: "comprovantes/proof-4.pdf",
+          mime: "application/pdf",
+        },
+        {
+          id: "proof-5",
+          url: "https://cdn.test/proof-5.pdf",
+          key: "comprovantes/proof-5.pdf",
+          mime: "application/pdf",
+        },
+      ],
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 16,
+        extraAttachments: [
+          {
+            base64: Buffer.from("overflow-proof").toString("base64"),
+            mime: "application/pdf",
+            name: "Comprovante 6",
+          },
+        ],
+      })
+    ).rejects.toThrow("O ADM pode manter no maximo 5 comprovantes por venda.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+  });
+
+  it("adiciona fotos extras e respeita limite total de fotos", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      productName: "Trabalho Individual",
+      photo1Url: "https://cdn.test/photo-1.jpg",
+      photo1Key: "fotos/photo-1.jpg",
+      photo2Url: null,
+      photo2Key: null,
+      photoExtras: [],
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await caller.update({
+      id: 17,
+      extraPhotos: [
+        {
+          base64: Buffer.from("extra-photo").toString("base64"),
+          mime: "image/jpeg",
+          name: "Foto extra",
+        },
+      ],
+    });
+
+    expect(mocks.updateSale).toHaveBeenCalledWith(
+      17,
+      expect.objectContaining({
+        photoExtras: [
+          expect.objectContaining({
+            id: "fixed-id",
+            key: "fotos/7/fixed-id.jpg",
+            name: "Foto extra",
+          }),
+        ],
+      })
+    );
+  });
 });

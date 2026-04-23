@@ -30,9 +30,8 @@ vi.mock("../storage", async () => {
   };
 });
 
-const { registerConsultoraPhotoDownloadRoute } = await import(
-  "./consultoraPhotoDownload"
-);
+const { registerConsultoraPhotoDownloadRoute } =
+  await import("./consultoraPhotoDownload");
 const { StorageObjectNotFoundError } = await import("../storage");
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -110,8 +109,11 @@ describe("consultora photo download route", () => {
     );
     mocks.getSaleById.mockResolvedValue({
       id: 42,
+      photo1Url: "https://cdn.test/photo-1.png",
       photo1Key: "fotos/7/photo-1.png",
+      photo2Url: null,
       photo2Key: null,
+      photoExtras: null,
     });
     mocks.storageDownload.mockResolvedValue({
       key: "fotos/7/photo-1.png",
@@ -156,6 +158,45 @@ describe("consultora photo download route", () => {
         message: "Arquivo não encontrado.",
       });
     });
+  });
+
+  it("aceita identificador de foto extra", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      id: 42,
+      photo1Url: null,
+      photo1Key: null,
+      photo2Url: null,
+      photo2Key: null,
+      photoExtras: [
+        {
+          id: "extra-photo",
+          url: "https://cdn.test/photo-extra.png",
+          key: "fotos/7/photo-extra.png",
+          mime: "image/png",
+        },
+      ],
+    });
+    mocks.storageDownload.mockResolvedValue({
+      key: "fotos/7/photo-extra.png",
+      body: Buffer.from("photo-extra-binary"),
+      contentType: "image/png",
+      contentLength: 18,
+    });
+
+    await withServer(async baseUrl => {
+      const response = await fetch(
+        `${baseUrl}/api/consultora/photos/42/extra-photo/download`
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-disposition")).toContain(
+        'attachment; filename="foto-cliente-42-extra-photo.png"'
+      );
+    });
+
+    expect(mocks.storageDownload).toHaveBeenCalledWith(
+      "fotos/7/photo-extra.png"
+    );
   });
 
   it("bloqueia usuário sem permissão", async () => {

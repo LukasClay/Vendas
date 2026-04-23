@@ -465,6 +465,8 @@ export async function ensurePhotoColumns() {
     { name: "photo1Key", def: "varchar(512)" },
     { name: "photo2Url", def: "text" },
     { name: "photo2Key", def: "varchar(512)" },
+    { name: "attachmentExtras", def: "jsonb" },
+    { name: "photoExtras", def: "jsonb" },
   ];
   for (const col of columns) {
     try {

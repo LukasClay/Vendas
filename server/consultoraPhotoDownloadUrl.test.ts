@@ -7,4 +7,10 @@ describe("buildConsultoraPhotoDownloadUrl", () => {
       "/api/consultora/photos/123/2/download"
     );
   });
+
+  it("codifica identificador de foto extra", () => {
+    expect(buildConsultoraPhotoDownloadUrl(123, "extra/photo 1")).toBe(
+      "/api/consultora/photos/123/extra%2Fphoto%201/download"
+    );
+  });
 });

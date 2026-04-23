@@ -29,33 +29,29 @@ import {
   Download,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
+import { buildConsultoraPhotoDownloadUrl } from "@/lib/consultoraPhotoDownload";
 import {
-  buildConsultoraPhotoDownloadUrl,
-  type ConsultoraPhotoSlot,
-} from "@/lib/consultoraPhotoDownload";
+  getSaleClientPhotos,
+  hasSaleClientPhotos,
+  type SaleClientPhoto,
+} from "@/lib/saleMedia";
 
 type Tab = "para_escrever" | "pendente" | "feito" | "alertas";
 
-type ClientPhoto = {
-  url: string;
-  slot: ConsultoraPhotoSlot;
-};
-
 function hasClientPhotos(item: {
+  clientPhotos?: SaleClientPhoto[] | null;
   photo1Url?: string | null;
   photo2Url?: string | null;
 }): boolean {
-  return Boolean(item.photo1Url || item.photo2Url);
+  return hasSaleClientPhotos(item);
 }
 
-function getClientPhotos(
-  photo1Url?: string | null,
-  photo2Url?: string | null
-): ClientPhoto[] {
-  return [
-    photo1Url ? { url: photo1Url, slot: 1 } : null,
-    photo2Url ? { url: photo2Url, slot: 2 } : null,
-  ].filter((photo): photo is ClientPhoto => photo !== null);
+function getClientPhotos(item: {
+  clientPhotos?: SaleClientPhoto[] | null;
+  photo1Url?: string | null;
+  photo2Url?: string | null;
+}): SaleClientPhoto[] {
+  return getSaleClientPhotos(item);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,6 +153,7 @@ function ToWriteCard({
     daysRemaining?: number;
     isOverdue?: boolean;
     isUrgent?: boolean;
+    clientPhotos?: SaleClientPhoto[] | null;
     photo1Url?: string | null;
     photo2Url?: string | null;
   };
@@ -379,35 +376,34 @@ function ToWriteCard({
               </div>
             )}
             {/* Fotos do cliente */}
-            {(item.photo1Url || item.photo2Url) && (
+            {hasClientPhotos(item) && (
               <div className="p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <p className="text-xs mb-2" style={{ color: "#737390" }}>
                   Fotos do Cliente
                 </p>
-                <div className="flex gap-3">
-                  {getClientPhotos(item.photo1Url, item.photo2Url).map(
-                    photo => (
-                      <div key={photo.slot} className="relative">
-                        <img
-                          src={photo.url}
-                          alt={`Foto ${photo.slot}`}
-                          className="w-20 h-28 object-cover rounded-xl shadow-sm"
-                        />
-                        <a
-                          href={buildConsultoraPhotoDownloadUrl(
-                            item.id,
-                            photo.slot
-                          )}
-                          download
-                          className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
-                          style={{ background: "rgba(0,0,0,0.6)" }}
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Download className="w-3.5 h-3.5 text-white" />
-                        </a>
-                      </div>
-                    )
-                  )}
+                <div className="flex flex-wrap gap-3">
+                  {getClientPhotos(item).map(photo => (
+                    <div key={photo.id} className="relative">
+                      <img
+                        src={photo.url}
+                        alt={`Foto ${photo.id}`}
+                        loading="lazy"
+                        className="w-20 h-28 object-cover rounded-xl shadow-sm"
+                      />
+                      <a
+                        href={buildConsultoraPhotoDownloadUrl(
+                          item.id,
+                          photo.id
+                        )}
+                        download
+                        className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
+                        style={{ background: "rgba(0,0,0,0.6)" }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Download className="w-3.5 h-3.5 text-white" />
+                      </a>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -651,6 +647,7 @@ function PendingCard({
     isOverdue?: boolean;
     isUrgent?: boolean;
     sellerName?: string | null;
+    clientPhotos?: SaleClientPhoto[] | null;
     photo1Url?: string | null;
     photo2Url?: string | null;
   };
@@ -868,35 +865,34 @@ function PendingCard({
               </div>
             )}
             {/* Fotos do cliente */}
-            {(item.photo1Url || item.photo2Url) && (
+            {hasClientPhotos(item) && (
               <div className="p-3 rounded-xl" style={{ background: "#f2ede3" }}>
                 <p className="text-xs mb-2" style={{ color: "#737390" }}>
                   Fotos do Cliente
                 </p>
-                <div className="flex gap-3">
-                  {getClientPhotos(item.photo1Url, item.photo2Url).map(
-                    photo => (
-                      <div key={photo.slot} className="relative">
-                        <img
-                          src={photo.url}
-                          alt={`Foto ${photo.slot}`}
-                          className="w-20 h-28 object-cover rounded-xl shadow-sm"
-                        />
-                        <a
-                          href={buildConsultoraPhotoDownloadUrl(
-                            item.id,
-                            photo.slot
-                          )}
-                          download
-                          className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
-                          style={{ background: "rgba(0,0,0,0.6)" }}
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Download className="w-3.5 h-3.5 text-white" />
-                        </a>
-                      </div>
-                    )
-                  )}
+                <div className="flex flex-wrap gap-3">
+                  {getClientPhotos(item).map(photo => (
+                    <div key={photo.id} className="relative">
+                      <img
+                        src={photo.url}
+                        alt={`Foto ${photo.id}`}
+                        loading="lazy"
+                        className="w-20 h-28 object-cover rounded-xl shadow-sm"
+                      />
+                      <a
+                        href={buildConsultoraPhotoDownloadUrl(
+                          item.id,
+                          photo.id
+                        )}
+                        download
+                        className="absolute bottom-1.5 right-1.5 p-1.5 rounded-full shadow"
+                        style={{ background: "rgba(0,0,0,0.6)" }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Download className="w-3.5 h-3.5 text-white" />
+                      </a>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1133,6 +1129,7 @@ function DoneCard({
     saleDate: Date | string | null;
     completedAt: Date | string | null;
     sellerName?: string | null;
+    clientPhotos?: SaleClientPhoto[] | null;
     photo1Url?: string | null;
     photo2Url?: string | null;
   };
@@ -1193,13 +1190,14 @@ function DoneCard({
             <p className="text-xs mt-0.5" style={{ color: "#8888a0" }}>
               Feito em {formatDate(item.completedAt)}
             </p>
-            {(item.photo1Url || item.photo2Url) && (
-              <div className="flex gap-2 mt-2">
-                {getClientPhotos(item.photo1Url, item.photo2Url).map(photo => (
+            {hasClientPhotos(item) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {getClientPhotos(item).map(photo => (
                   <img
-                    key={photo.slot}
+                    key={photo.id}
                     src={photo.url}
-                    alt={`Foto ${photo.slot}`}
+                    alt={`Foto ${photo.id}`}
+                    loading="lazy"
                     className="w-12 h-16 object-cover rounded-lg border border-[#c0e8d0]"
                   />
                 ))}
