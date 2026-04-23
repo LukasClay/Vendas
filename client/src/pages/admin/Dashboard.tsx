@@ -21,6 +21,8 @@ import {
   Clock,
   CheckCircle2,
   ClipboardList,
+  Receipt,
+  CalendarDays,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -70,6 +72,10 @@ export default function AdminDashboard() {
   const { data: reportData, isLoading } =
     trpc.reports.summary.useQuery(summaryInput);
   const { data: last7DaysData = [] } = trpc.reports.salesLast7Days.useQuery();
+  const { data: currentMonthMetrics } =
+    trpc.reports.currentMonthMetrics.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000,
+    });
   const { data: recentSales = [] } =
     trpc.sales.list.useQuery(RECENT_SALES_INPUT);
 
@@ -110,6 +116,11 @@ export default function AdminDashboard() {
   const topSellers = reportData?.topSellers ?? [];
   const topClients = reportData?.topClients ?? [];
   const summaryByCompany = reportData?.summaryByCompany ?? [];
+
+  const totalAmount = Number(summary?.totalAmount ?? 0);
+  const totalSales = Number(summary?.totalSales ?? 0);
+  const ticketMedio = totalSales > 0 ? totalAmount / totalSales : 0;
+  const dailyAverage = Number(currentMonthMetrics?.dailyAverage ?? 0);
 
   const magiaData = summaryByCompany.find(
     (c: { company: string | null }) => c.company === "mundo_da_magia"
@@ -298,18 +309,18 @@ export default function AdminDashboard() {
 
         {/* KPI Cards com Skeleton Loading e Animated Numbers */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map(i => (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map(i => (
               <SkeletonCard key={i} />
             ))}
           </div>
         ) : (
-          <StaggerList className="grid grid-cols-2 gap-3">
+          <StaggerList className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               {
                 icon: DollarSign,
                 label: "Total Vendido",
-                value: Number(summary?.totalAmount ?? 0),
+                value: totalAmount,
                 prefix: "R$ ",
                 color: "var(--primary)",
                 bg: "var(--secondary)",
@@ -317,10 +328,26 @@ export default function AdminDashboard() {
               {
                 icon: ShoppingBag,
                 label: "Nº de Vendas",
-                value: Number(summary?.totalSales ?? 0),
+                value: totalSales,
                 prefix: "",
                 color: isDark ? "oklch(0.65 0.18 160)" : "oklch(0.55 0.15 160)",
                 bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 160)",
+              },
+              {
+                icon: Receipt,
+                label: "Ticket Médio",
+                value: ticketMedio,
+                prefix: "R$ ",
+                color: isDark ? "oklch(0.68 0.17 300)" : "oklch(0.52 0.18 300)",
+                bg: isDark ? "var(--secondary)" : "oklch(0.94 0.04 300)",
+              },
+              {
+                icon: CalendarDays,
+                label: "Média Diária (Mês)",
+                value: dailyAverage,
+                prefix: "R$ ",
+                color: isDark ? "oklch(0.68 0.14 200)" : "oklch(0.52 0.15 200)",
+                bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 200)",
               },
               {
                 icon: Users,

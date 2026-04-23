@@ -52,6 +52,31 @@ export const reportsRouter = router({
     return getSalesLast7Days();
   }),
 
+  currentMonthMetrics: adminProcedure.query(async () => {
+    // Calcula "mês atual" no fuso do Brasil, independente do TZ do servidor (Railway roda em UTC).
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t: string) =>
+      Number(parts.find(p => p.type === t)?.value ?? 0);
+    const year = get("year");
+    const month = get("month");
+    const day = get("day");
+
+    const firstOfMonth = new Date(year, month - 1, 1);
+    const today = new Date(year, month - 1, day);
+
+    const summary = await getReportSummary(firstOfMonth, today);
+    const totalAmount = Number(summary.totalAmount ?? 0);
+    const totalSales = Number(summary.totalSales ?? 0);
+    const daysElapsed = day;
+    const dailyAverage = daysElapsed > 0 ? totalAmount / daysElapsed : 0;
+    return { totalAmount, totalSales, daysElapsed, dailyAverage };
+  }),
+
   salesByMonthByCompany: adminProcedure
     .input(z.object({ year: z.number() }))
     .query(async ({ input }) => {
