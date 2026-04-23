@@ -27,24 +27,23 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
 import { getProductById } from "../db";
-import { TYPES_WITH_PHOTOS } from "../../shared/const";
+import {
+  TYPES_WITH_PHOTOS,
+  MAX_FILE_BYTES,
+  MAX_TOTAL_ATTACHMENTS,
+  MAX_TOTAL_PHOTOS,
+  ATTACHMENT_MIME_TYPES,
+  PHOTO_MIME_TYPES,
+} from "../../shared/const";
 import {
   getStoredAttachmentExtras,
   getStoredPhotoExtras,
   toPublicSale,
 } from "../saleMedia";
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_TOTAL_ATTACHMENTS = 5;
-const MAX_TOTAL_PHOTOS = 6;
+// Local do servidor: orçamento de uma única requisição de upload.
+// Mantido consistente com o Express body limit (10mb) — base64 adiciona ~33%.
 const MAX_UPLOAD_BYTES_PER_REQUEST = 7 * 1024 * 1024;
-const ATTACHMENT_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-] as const;
-const PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 const extraAttachmentInput = z.object({
   base64: z.string().max(8000000, "Arquivo extra muito grande (Maximo ~5MB)"),
@@ -834,14 +833,61 @@ export const salesRouter = router({
       await safeDeleteAll(keysToDeleteAfterUpdate);
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
-      await createAuditLog({
-        userId: ctx.user.id,
-        userName,
-        action: "Editou Venda",
-        details: JSON.stringify({ saleId: id, changes: data }),
-        ipAddress: ctx.ipAddress,
-        userAgent: ctx.userAgent,
-      });
+
+      const mediaOnlyFields = new Set([
+        "attachmentUrl",
+        "attachmentKey",
+        "attachmentMime",
+        "attachmentExtras",
+        "photo1Url",
+        "photo1Key",
+        "photo2Url",
+        "photo2Key",
+        "photoExtras",
+      ]);
+      const touchedKeys = Object.keys(data);
+      const onlyMediaChanged =
+        touchedKeys.length > 0 &&
+        touchedKeys.every(key => mediaOnlyFields.has(key));
+
+      if (onlyMediaChanged) {
+        const extraAttachmentsAdded = fields.extraAttachments?.length ?? 0;
+        const extraAttachmentsRemoved = fields.removeAttachmentIds?.length ?? 0;
+        const extraPhotosAdded = fields.extraPhotos?.length ?? 0;
+        const extraPhotosRemoved = fields.removeExtraPhotoIds?.length ?? 0;
+        await createAuditLog({
+          userId: ctx.user.id,
+          userName,
+          action: "Editou mídia da venda",
+          details: JSON.stringify({
+            saleId: id,
+            attachments: {
+              added: extraAttachmentsAdded,
+              removed: extraAttachmentsRemoved,
+              legacyReplaced: Boolean(fields.attachmentBase64),
+            },
+            photos: {
+              added: extraPhotosAdded,
+              removed: extraPhotosRemoved,
+              legacyReplaced:
+                Boolean(fields.photo1Base64) || Boolean(fields.photo2Base64),
+              legacyRemoved:
+                Boolean(fields.removePhoto1) || Boolean(fields.removePhoto2),
+            },
+          }),
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        });
+      } else {
+        await createAuditLog({
+          userId: ctx.user.id,
+          userName,
+          action: "Editou Venda",
+          details: JSON.stringify({ saleId: id, changes: data }),
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        });
+      }
       return { success: true };
     }),
 

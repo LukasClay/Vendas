@@ -63,6 +63,31 @@ function createAdminContext(id = 7): TrpcContext {
   };
 }
 
+function createSellerContext(id = 42): TrpcContext {
+  const user: AuthenticatedUser = {
+    id,
+    openId: `user-${id}`,
+    email: `user${id}@test.com`,
+    name: `Vendedor ${id}`,
+    loginMethod: "manus",
+    role: "user",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+    displayName: `Vendedor ${id}`,
+    phone: null,
+    active: true,
+  };
+
+  return {
+    user,
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: () => {} } as TrpcContext["res"],
+    ipAddress: "127.0.0.1",
+    userAgent: "vitest",
+  };
+}
+
 describe("sales.update storage cleanup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -343,5 +368,26 @@ describe("sales.update storage cleanup", () => {
         ],
       })
     );
+  });
+
+  it("veta vendedor de chamar sales.update (adminProcedure)", async () => {
+    const caller = salesRouter.createCaller(createSellerContext());
+
+    await expect(
+      caller.update({
+        id: 18,
+        extraPhotos: [
+          {
+            base64: Buffer.from("tentativa-vendedor").toString("base64"),
+            mime: "image/jpeg",
+            name: "foto-extra-vendedor.jpg",
+          },
+        ],
+      })
+    ).rejects.toThrow();
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+    expect(mocks.getSaleById).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,13 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { ProductCategory } from "@shared/types";
 import {
+  MAX_FILE_BYTES,
+  MAX_TOTAL_ATTACHMENTS,
+  MAX_TOTAL_PHOTOS,
+  ATTACHMENT_MIME_TYPES,
+  PHOTO_MIME_TYPES,
+} from "@shared/const";
+import {
   FileText,
   ExternalLink,
   Filter,
@@ -59,8 +66,6 @@ const inputStyle = {
   fontSize: "14px",
 };
 
-const MAX_TOTAL_ATTACHMENTS = 5;
-const MAX_TOTAL_PHOTOS = 6;
 const MAX_UPLOAD_BYTES_PER_SAVE = 7 * 1024 * 1024;
 
 // ─── Modal de detalhes (readonly) ─────────────────────────────────────────────
@@ -494,48 +499,42 @@ function EditSaleModal({
     ...extraPhotoFiles,
   ].reduce((total, current) => total + (current?.size ?? 0), 0);
 
-  const handleExtraAttachmentSelection = (files: FileList | null) => {
+  const handleExtraFileSelection = (
+    kind: "attachment" | "photo",
+    files: FileList | null
+  ) => {
     if (!files?.length) return;
     const selected = Array.from(files);
-    if (selected.length > remainingAttachmentSlots) {
-      toast.error(`Maximo de ${MAX_TOTAL_ATTACHMENTS} comprovantes por venda.`);
-      return;
-    }
-    for (const current of selected) {
-      if (current.size > 5 * 1024 * 1024) {
-        toast.error(`"${current.name}" excede o maximo de 5MB.`);
-        return;
-      }
-      if (
-        !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
-          current.type
-        )
-      ) {
-        toast.error(`"${current.name}" tem formato invalido.`);
-        return;
-      }
-    }
-    setExtraAttachmentFiles(current => [...current, ...selected]);
-  };
+    const isAttachment = kind === "attachment";
+    const remainingSlots = isAttachment
+      ? remainingAttachmentSlots
+      : remainingPhotoSlots;
+    const maxTotal = isAttachment ? MAX_TOTAL_ATTACHMENTS : MAX_TOTAL_PHOTOS;
+    const label = isAttachment ? "comprovantes" : "fotos";
+    const allowedMimes: readonly string[] = isAttachment
+      ? ATTACHMENT_MIME_TYPES
+      : PHOTO_MIME_TYPES;
 
-  const handleExtraPhotoSelection = (files: FileList | null) => {
-    if (!files?.length) return;
-    const selected = Array.from(files);
-    if (selected.length > remainingPhotoSlots) {
-      toast.error(`Maximo de ${MAX_TOTAL_PHOTOS} fotos por venda.`);
+    if (selected.length > remainingSlots) {
+      toast.error(`Maximo de ${maxTotal} ${label} por venda.`);
       return;
     }
     for (const current of selected) {
-      if (current.size > 5 * 1024 * 1024) {
+      if (current.size > MAX_FILE_BYTES) {
         toast.error(`"${current.name}" excede o maximo de 5MB.`);
         return;
       }
-      if (!["image/jpeg", "image/png", "image/webp"].includes(current.type)) {
+      if (!allowedMimes.includes(current.type)) {
         toast.error(`"${current.name}" tem formato invalido.`);
         return;
       }
     }
-    setExtraPhotoFiles(current => [...current, ...selected]);
+
+    if (isAttachment) {
+      setExtraAttachmentFiles(current => [...current, ...selected]);
+    } else {
+      setExtraPhotoFiles(current => [...current, ...selected]);
+    }
   };
 
   const updateSale = trpc.sales.update.useMutation({
@@ -1111,7 +1110,7 @@ function EditSaleModal({
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   className="hidden"
                   onChange={e => {
-                    handleExtraAttachmentSelection(e.target.files);
+                    handleExtraFileSelection("attachment", e.target.files);
                     e.currentTarget.value = "";
                   }}
                 />
@@ -1372,7 +1371,7 @@ function EditSaleModal({
                       accept="image/jpeg,image/png,image/webp"
                       className="hidden"
                       onChange={e => {
-                        handleExtraPhotoSelection(e.target.files);
+                        handleExtraFileSelection("photo", e.target.files);
                         e.currentTarget.value = "";
                       }}
                     />
