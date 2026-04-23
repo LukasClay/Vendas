@@ -2,8 +2,9 @@ import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
 import {
-  AreaChart,
+  ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,8 +14,9 @@ import {
 import {
   DollarSign,
   ShoppingBag,
-  Users,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Crown,
   Star,
   AlertTriangle,
@@ -71,7 +73,8 @@ export default function AdminDashboard() {
 
   const { data: reportData, isLoading } =
     trpc.reports.summary.useQuery(summaryInput);
-  const { data: last7DaysData = [] } = trpc.reports.salesLast7Days.useQuery();
+  const { data: last14DaysData = [] } =
+    trpc.reports.salesLast14Days.useQuery();
   const { data: currentMonthMetrics } =
     trpc.reports.currentMonthMetrics.useQuery(undefined, {
       staleTime: 5 * 60 * 1000,
@@ -79,26 +82,32 @@ export default function AdminDashboard() {
   const { data: recentSales = [] } =
     trpc.sales.list.useQuery(RECENT_SALES_INPUT);
 
-  // Gerar últimos 7 dias
-  const chartData = useMemo(() => {
+  // Gerar últimos 7 dias (exibidos) + 7 anteriores (para cálculo de tendência)
+  const { chartData, previousWeekTotal } = useMemo(() => {
     const days: {
       name: string;
       total: number;
       vendas: number;
       fullDate: string;
     }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    let prevTotal = 0;
+    for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 10);
-      const found = last7DaysData.find(r => r.day === iso);
+      const found = last14DaysData.find(r => r.day === iso);
+      const total = found ? Number(found.totalAmount) : 0;
+      if (i >= 7) {
+        prevTotal += total;
+        continue;
+      }
       const dayName =
         i === 0 ? "Hoje" : i === 1 ? "Ontem" : WEEKDAYS_SHORT[d.getDay()];
       days.push({
         name: dayName,
-        total: found ? Number(found.totalAmount) : 0,
+        total,
         vendas: found ? Number(found.totalSales) : 0,
         fullDate: d.toLocaleDateString("pt-BR", {
           day: "2-digit",
@@ -106,11 +115,17 @@ export default function AdminDashboard() {
         }),
       });
     }
-    return days;
-  }, [last7DaysData]);
+    return { chartData: days, previousWeekTotal: prevTotal };
+  }, [last14DaysData]);
 
   const weekTotal = chartData.reduce((s, d) => s + d.total, 0);
   const weekSales = chartData.reduce((s, d) => s + d.vendas, 0);
+
+  // Delta semana atual vs. 7 dias anteriores (null = sem base de comparação)
+  const weekDeltaPct =
+    previousWeekTotal > 0
+      ? ((weekTotal - previousWeekTotal) / previousWeekTotal) * 100
+      : null;
 
   const summary = reportData?.summary;
   const topSellers = reportData?.topSellers ?? [];
@@ -141,6 +156,9 @@ export default function AdminDashboard() {
   // Cores do gráfico que funcionam em ambos os temas
   const chartGridColor = "var(--border)";
   const chartTickColor = "var(--muted-foreground)";
+  const salesLineColor = isDark
+    ? "oklch(0.70 0.16 160)"
+    : "oklch(0.55 0.15 160)";
 
   return (
     <DashboardLayout>
@@ -309,13 +327,13 @@ export default function AdminDashboard() {
 
         {/* KPI Cards com Skeleton Loading e Animated Numbers */}
         {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5, 6].map(i => (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map(i => (
               <SkeletonCard key={i} />
             ))}
           </div>
         ) : (
-          <StaggerList className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <StaggerList className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               {
                 icon: DollarSign,
@@ -348,22 +366,6 @@ export default function AdminDashboard() {
                 prefix: "R$ ",
                 color: isDark ? "oklch(0.68 0.14 200)" : "oklch(0.52 0.15 200)",
                 bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 200)",
-              },
-              {
-                icon: Users,
-                label: "Melhores Clientes",
-                value: topClients.length,
-                prefix: "",
-                color: isDark ? "oklch(0.60 0.18 250)" : "oklch(0.50 0.18 250)",
-                bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 250)",
-              },
-              {
-                icon: TrendingUp,
-                label: "Melhores Vendedores",
-                value: topSellers.length,
-                prefix: "",
-                color: isDark ? "oklch(0.65 0.20 30)" : "oklch(0.55 0.20 30)",
-                bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 30)",
               },
             ].map((card, i) => (
               <StaggerItem key={i}>
@@ -522,23 +524,70 @@ export default function AdminDashboard() {
                 border: "1px solid var(--border)",
               }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2
-                  className="font-bold flex items-center gap-2"
-                  style={{ color: "var(--foreground)" }}
-                >
-                  <TrendingUp
-                    className="w-4 h-4"
-                    style={{ color: "var(--primary)" }}
-                  />
-                  Últimos 7 Dias
-                </h2>
+              <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2
+                    className="font-bold flex items-center gap-2"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    <TrendingUp
+                      className="w-4 h-4"
+                      style={{ color: "var(--primary)" }}
+                    />
+                    Últimos 7 Dias
+                  </h2>
+                  {weekDeltaPct !== null && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3, duration: 0.3 }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                      style={{
+                        background:
+                          weekDeltaPct > 0
+                            ? isDark
+                              ? "oklch(0.28 0.08 160)"
+                              : "oklch(0.94 0.06 160)"
+                            : weekDeltaPct < 0
+                              ? isDark
+                                ? "oklch(0.30 0.08 25)"
+                                : "oklch(0.95 0.05 25)"
+                              : "var(--secondary)",
+                        color:
+                          weekDeltaPct > 0
+                            ? isDark
+                              ? "oklch(0.78 0.18 160)"
+                              : "oklch(0.45 0.15 160)"
+                            : weekDeltaPct < 0
+                              ? isDark
+                                ? "oklch(0.78 0.18 25)"
+                                : "oklch(0.50 0.20 25)"
+                              : "var(--muted-foreground)",
+                      }}
+                      title="Faturamento dos últimos 7 dias comparado com os 7 dias anteriores"
+                    >
+                      {weekDeltaPct > 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : weekDeltaPct < 0 ? (
+                        <TrendingDown className="w-3 h-3" />
+                      ) : (
+                        <Minus className="w-3 h-3" />
+                      )}
+                      {weekDeltaPct > 0 ? "+" : ""}
+                      {weekDeltaPct.toFixed(1)}% vs. semana anterior
+                    </motion.span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p
-                      className="text-xs font-medium"
+                      className="text-xs font-medium flex items-center gap-1.5 justify-end"
                       style={{ color: "var(--muted-foreground)" }}
                     >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full"
+                        style={{ background: "var(--primary)" }}
+                      />
                       Faturamento
                     </p>
                     <p
@@ -554,9 +603,13 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-right">
                     <p
-                      className="text-xs font-medium"
+                      className="text-xs font-medium flex items-center gap-1.5 justify-end"
                       style={{ color: "var(--muted-foreground)" }}
                     >
+                      <span
+                        className="inline-block w-2 h-2 rounded-full"
+                        style={{ background: salesLineColor }}
+                      />
                       Vendas
                     </p>
                     <p
@@ -568,17 +621,17 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={180}>
-                <AreaChart
+              <ResponsiveContainer width="100%" height={200}>
+                <ComposedChart
                   data={chartData}
-                  margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                  margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="5%"
                         stopColor="var(--primary)"
-                        stopOpacity={0.3}
+                        stopOpacity={0.35}
                       />
                       <stop
                         offset="95%"
@@ -598,6 +651,7 @@ export default function AdminDashboard() {
                     tickLine={false}
                   />
                   <YAxis
+                    yAxisId="left"
                     tick={{ fontSize: 11, fill: chartTickColor }}
                     axisLine={false}
                     tickLine={false}
@@ -605,11 +659,27 @@ export default function AdminDashboard() {
                       v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
                     }
                   />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: chartTickColor }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    width={28}
+                  />
                   <Tooltip
-                    formatter={(value: number) => [
-                      formatCurrency(value),
-                      "Faturamento",
-                    ]}
+                    cursor={{
+                      stroke: "var(--primary)",
+                      strokeWidth: 1,
+                      strokeDasharray: "3 3",
+                      opacity: 0.5,
+                    }}
+                    formatter={(value: number, name: string) =>
+                      name === "Faturamento"
+                        ? [formatCurrency(value), name]
+                        : [value, name]
+                    }
                     labelFormatter={(label: string, payload: any[]) => {
                       const item = payload?.[0]?.payload;
                       return item?.fullDate
@@ -625,8 +695,10 @@ export default function AdminDashboard() {
                     }}
                   />
                   <Area
+                    yAxisId="left"
                     type="monotone"
                     dataKey="total"
+                    name="Faturamento"
                     stroke="var(--primary)"
                     strokeWidth={2.5}
                     fill="url(#colorTotal)"
@@ -636,9 +708,37 @@ export default function AdminDashboard() {
                       strokeWidth: 2,
                       stroke: "var(--card)",
                     }}
-                    activeDot={{ r: 6 }}
+                    activeDot={{
+                      r: 7,
+                      strokeWidth: 3,
+                      stroke: "var(--card)",
+                    }}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
                   />
-                </AreaChart>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="vendas"
+                    name="Vendas"
+                    stroke={salesLineColor}
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    dot={{
+                      r: 3,
+                      fill: salesLineColor,
+                      strokeWidth: 2,
+                      stroke: "var(--card)",
+                    }}
+                    activeDot={{
+                      r: 6,
+                      strokeWidth: 3,
+                      stroke: "var(--card)",
+                    }}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </AnimatedCard>
           </FadeIn>

@@ -919,12 +919,12 @@ export async function getSalesByMonthByCompany(year: number) {
   }));
 }
 
-export async function getSalesLast7Days() {
+export async function getSalesLast14Days() {
   const db = await getDb();
   if (!db) return [];
 
   const result = await db.execute(
-    sql`SELECT "saleDate"::date AS day, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "saleDate" >= CURRENT_DATE - INTERVAL '6 days' AND "deletedAt" IS NULL GROUP BY "saleDate"::date ORDER BY "saleDate"::date`
+    sql`SELECT "saleDate"::date AS day, COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "saleDate" >= CURRENT_DATE - INTERVAL '13 days' AND "deletedAt" IS NULL GROUP BY "saleDate"::date ORDER BY "saleDate"::date`
   );
   const rows = extractRows(result);
   return rows.map(r => ({

@@ -10,7 +10,7 @@ import {
   getSales,
   getSalesByMonth,
   getSalesByMonthByCompany,
-  getSalesLast7Days,
+  getSalesLast14Days,
   getTopClients,
   getTopProducts,
   getTopSellers,
@@ -48,8 +48,8 @@ export const reportsRouter = router({
       return getSalesByMonth(input.year);
     }),
 
-  salesLast7Days: adminProcedure.query(async () => {
-    return getSalesLast7Days();
+  salesLast14Days: adminProcedure.query(async () => {
+    return getSalesLast14Days();
   }),
 
   currentMonthMetrics: adminProcedure.query(async () => {
