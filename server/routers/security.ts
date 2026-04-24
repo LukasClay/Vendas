@@ -13,18 +13,32 @@ import { users } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
-// Senha mestre hasheada (SHA-256) para validação de operações críticas
-// Lê de ENV para não expor a senha no código fonte. Fallback hardcoded para compatibilidade.
-const MASTER_PASSWORD_HASH =
-  process.env.MASTER_PASSWORD_HASH ||
-  "2259180d28299fada66242f3c25eb2adc9b8ecfa2c6cce67d219f286fbe47241";
+// Senha mestre hasheada (SHA-256) para validação de operações críticas.
+// A env `MASTER_PASSWORD_HASH` é obrigatória — sem fallback. Se faltar, o
+// servidor falha no boot (ver `assertMasterPasswordConfigured`).
+function getMasterPasswordHash(): string {
+  const hash = process.env.MASTER_PASSWORD_HASH;
+  if (!hash) {
+    throw new Error(
+      "MASTER_PASSWORD_HASH não configurada. Defina a env var antes de iniciar o servidor."
+    );
+  }
+  return hash;
+}
+
+// Chamada no startup (`server/_core/index.ts`) para falhar cedo em caso de
+// misconfiguração, antes de aceitar requests.
+export function assertMasterPasswordConfigured(): void {
+  getMasterPasswordHash();
+}
 
 function verifyMasterPassword(password: string): boolean {
+  const expected = getMasterPasswordHash();
   const hash = crypto.createHash("sha256").update(password).digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(MASTER_PASSWORD_HASH)
-  );
+  const a = Buffer.from(hash);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 export const securityRouter = router({

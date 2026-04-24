@@ -7,7 +7,7 @@
 
 ### Sprint 0 — Fogo imediato
 - [x] C1 — IDOR consultora (markWritten/markDone/undoDone) — **CORRIGIDO (revisado)**
-- [ ] C3 (parte 1) — Master password sem fallback hardcoded
+- [x] C3 (parte 1) — Master password sem fallback hardcoded — **CORRIGIDO**
 - [ ] C4 — Validacao Zod em payload Manus
 - [ ] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx
 - [ ] M1 — Cookie logout com `maxAge: 0`
@@ -35,6 +35,26 @@ endurecidas para a mesma invariante.
 
 Arquivos: `server/routers/consultora.ts`, `server/consultora.mutations.test.ts` (novo).
 Testes adicionados: 4 (cobertura dos 3 verbos + admin tambem).
+
+#### Nota de execucao — C3 (parte 1)
+Fallback SHA256 hardcoded (`"2259180d..."`) removido. A env
+`MASTER_PASSWORD_HASH` passa a ser obrigatoria — servidor falha no boot
+se ausente, via `assertMasterPasswordConfigured()` chamada no topo de
+`startServer()` (padrao "fail fast" para misconfiguracao).
+
+Tambem adicionado check defensivo de `length` antes de
+`crypto.timingSafeEqual` (que so aceita buffers de tamanho igual).
+
+ATENCAO OPERACIONAL (nao e parte deste commit): o valor atual do hash
+em producao e identico ao fallback publico que estava no repo.
+Ou seja, a senha mestre real esta comprometida — quem clonou o repo
+tem acesso a um hash SHA256 rapido de quebrar. Rotacao da senha
+mestre deve ser feita ASAP. Migracao de SHA256 para bcrypt fica para
+M13 (sprint futuro).
+
+Arquivos: `server/routers/security.ts`, `server/_core/index.ts`,
+`server/security.masterPassword.test.ts` (novo).
+Testes adicionados: 3 (ausente, vazia, presente).
 
 ### Sprint 1 — Robustez
 - [ ] C2 + #3 + #4 — Job cleanup lixeira + arquivos R2 orfaos

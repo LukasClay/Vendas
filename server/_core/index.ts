@@ -14,6 +14,7 @@ import { startReportsJob } from "../jobs/reportsJob";
 import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
+import { assertMasterPasswordConfigured } from "../routers/security";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +36,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Falha cedo se segredos obrigatórios não estiverem configurados.
+  assertMasterPasswordConfigured();
+
   const app = express();
   const server = createServer(app);
 
