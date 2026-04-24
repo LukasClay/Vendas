@@ -8,6 +8,7 @@ import {
   getSales,
   getSalesBySeller,
   updateSale,
+  updateSaleAndReleaseConsultationSlot,
   upsertClient,
   getDb,
   withRetry,
@@ -42,6 +43,9 @@ import {
   getStoredPhotoExtras,
   toPublicSale,
 } from "../saleMedia";
+import {
+  reserveConsultationSlotState,
+} from "../consultationSlotState";
 
 const extraAttachmentInput = z.object({
   base64: z.string().max(8000000, "Arquivo extra muito grande (Maximo ~5MB)"),
@@ -252,13 +256,14 @@ export const salesRouter = router({
       let photo1Buffer: Buffer | null = null;
       let photo2Buffer: Buffer | null = null;
 
+      const isConsultaCartas = input.productName === "Consulta Cartas";
       const isPhotoType =
         (TYPES_WITH_PHOTOS as readonly string[]).includes(
           input.productCategory
-        ) && input.productName !== "Consulta Cartas";
+        ) && !isConsultaCartas;
 
       if (
-        input.productName === "Consulta Cartas" &&
+        isConsultaCartas &&
         (Boolean(input.photo1Base64 && input.photo1Mime) ||
           Boolean(input.photo2Base64 && input.photo2Mime))
       ) {
@@ -309,6 +314,14 @@ export const salesRouter = router({
 
       ensureRequestUploadBudget(uploadBuffers);
 
+      if (!isConsultaCartas && input.consultationSlotId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Somente Consulta Cartas pode reservar horario de consulta.",
+        });
+      }
+
       // Upsert client
       let clientId: number | null = null;
       try {
@@ -322,10 +335,7 @@ export const salesRouter = router({
       }
 
       // Regra de negócio: Consulta Cartas OBRIGA horário reservado
-      if (
-        input.productName === "Consulta Cartas" &&
-        !input.consultationSlotId
-      ) {
+      if (isConsultaCartas && !input.consultationSlotId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
@@ -431,7 +441,7 @@ export const salesRouter = router({
           const updatedSlot = await withRetry(() =>
             db
               .update(consultationSlots)
-              .set({ sold: true, saleId })
+              .set(reserveConsultationSlotState(saleId))
               .where(
                 and(
                   eq(consultationSlots.id, input.consultationSlotId!),
@@ -653,7 +663,19 @@ export const salesRouter = router({
         }
 
         const nextProductName = fields.productName ?? existingSale?.productName;
-        const canUploadPhotos = nextProductName !== "Consulta Cartas";
+        const existingIsConsultaCartas =
+          existingSale.productName === "Consulta Cartas";
+        const nextIsConsultaCartas = nextProductName === "Consulta Cartas";
+        if (!existingIsConsultaCartas && nextIsConsultaCartas) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Para transformar uma venda em Consulta Cartas, crie a venda pelo fluxo de agendamento.",
+          });
+        }
+        const shouldReleaseConsultationSlot =
+          existingIsConsultaCartas && !nextIsConsultaCartas;
+        const canUploadPhotos = !nextIsConsultaCartas;
         const existingAttachmentExtras = getStoredAttachmentExtras(
           existingSale ?? {}
         );
@@ -880,7 +902,11 @@ export const salesRouter = router({
           data.photoExtras = nextPhotoExtras;
         }
 
-        await updateSale(id, data as any);
+        if (shouldReleaseConsultationSlot) {
+          await updateSaleAndReleaseConsultationSlot(id, data as any);
+        } else {
+          await updateSale(id, data as any);
+        }
       } catch (error) {
         await safeDeleteAll(uploadedKeysToCleanup);
         throw error;
@@ -908,7 +934,7 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const sale = await getSaleById(input.id);
-      await deleteSale(input.id);
+      await deleteSale(input.id, ctx.user.id);
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({

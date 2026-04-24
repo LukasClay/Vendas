@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   withRetry: vi.fn(),
   notifyOwner: vi.fn(),
   queryResults: [] as unknown[],
+  updateSets: [] as unknown[],
 }));
 
 function nextQueryResult() {
@@ -24,10 +25,13 @@ function createDbMock() {
   return {
     select: vi.fn(() => selectBuilder),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => Promise.resolve(nextQueryResult())),
-        returning: vi.fn(() => Promise.resolve(nextQueryResult())),
-      })),
+      set: vi.fn((values: unknown) => {
+        mocks.updateSets.push(values);
+        return {
+          where: vi.fn(() => Promise.resolve(nextQueryResult())),
+          returning: vi.fn(() => Promise.resolve(nextQueryResult())),
+        };
+      }),
     })),
     delete: vi.fn(() => ({
       where: vi.fn(() => Promise.resolve(nextQueryResult())),
@@ -89,6 +93,7 @@ beforeEach(() => {
     async (fn: () => Promise<unknown>) => await fn()
   );
   mocks.notifyOwner.mockResolvedValue(undefined);
+  mocks.updateSets.length = 0;
 });
 
 async function expectNotFoundError(promise: Promise<unknown>) {
@@ -213,6 +218,99 @@ describe("consultationSlots.restore (permissão)", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expectNotFoundError(caller.consultationSlots.restore({ id: 9999 }));
+  });
+  it("restaura slot cancelado limpando cancelamento e reembolso", async () => {
+    mocks.queryResults.push([
+      {
+        id: 10,
+        saleId: 55,
+        status: "cancelada",
+        refundStatus: "pending",
+      },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await caller.consultationSlots.restore({ id: 10 });
+
+    expect(mocks.updateSets).toEqual(
+      expect.arrayContaining([
+        { deletedAt: null },
+        expect.objectContaining({
+          sold: true,
+          saleId: 55,
+          status: "pendente",
+          cancelledBy: null,
+          cancelledAt: null,
+          cancelReason: null,
+          refundStatus: "none",
+          refundRequestedAt: null,
+          refundRequestedBy: null,
+          refundResolvedAt: null,
+          refundResolvedBy: null,
+        }),
+      ])
+    );
+  });
+});
+
+describe("consultationSlots.approveRefund", () => {
+  it("libera o slot aprovado para uso normal", async () => {
+    mocks.queryResults.push([
+      {
+        id: 20,
+        saleId: 77,
+        refundStatus: "pending",
+        status: "cancelada",
+      },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await caller.consultationSlots.approveRefund({ id: 20 });
+
+    expect(mocks.updateSets).toContainEqual(
+      expect.objectContaining({
+        sold: false,
+        saleId: null,
+        status: "pendente",
+        cancelledBy: null,
+        cancelledAt: null,
+        cancelReason: null,
+        refundStatus: "approved",
+        refundResolvedBy: 1,
+      })
+    );
+  });
+});
+
+describe("consultationSlots.rejectRefund", () => {
+  it("restaura a venda e preserva historico de reembolso rejeitado", async () => {
+    mocks.queryResults.push([
+      {
+        id: 21,
+        saleId: 78,
+        refundStatus: "pending",
+        status: "cancelada",
+      },
+    ]);
+
+    const caller = appRouter.createCaller(createContext("admin"));
+    await caller.consultationSlots.rejectRefund({ id: 21 });
+
+    expect(mocks.updateSets).toEqual(
+      expect.arrayContaining([
+        { deletedAt: null },
+        expect.objectContaining({
+          sold: true,
+          saleId: 78,
+          status: "pendente",
+          cancelledBy: null,
+          cancelledAt: null,
+          cancelReason: null,
+          refundStatus: "rejected",
+          refundResolvedBy: 1,
+        }),
+      ])
+    );
   });
 });
 

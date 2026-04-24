@@ -36,6 +36,11 @@ import {
 } from "./_core/localLoginHealth";
 import { storageDelete } from "./storage";
 import { getSaleStorageKeys } from "./saleMedia";
+import {
+  releaseConsultationSlotState,
+  reserveConsultationSlotState,
+  trashConsultationSlotState,
+} from "./consultationSlotState";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
@@ -625,18 +630,36 @@ export async function updateSale(id: number, data: Partial<InsertSale>) {
   await db.update(sales).set(data).where(eq(sales.id, id));
 }
 
-export async function deleteSale(id: number) {
+export async function updateSaleAndReleaseConsultationSlot(
+  id: number,
+  data: Partial<InsertSale>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Libera o horário de consulta caso essa venda seja de uma "Consulta Cartas"
+  await db.transaction(async tx => {
+    await tx.update(sales).set(data).where(eq(sales.id, id));
+    await tx
+      .update(consultationSlots)
+      .set(releaseConsultationSlotState())
+      .where(eq(consultationSlots.saleId, id));
+  });
+}
+
+export async function deleteSale(id: number, deletedByUserId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const deletedAt = new Date();
+
+  // Mantem o vinculo do slot enquanto a venda pode ser restaurada da lixeira.
   await db
     .update(consultationSlots)
-    .set({ sold: false, saleId: null, status: "pendente" })
+    .set(trashConsultationSlotState(deletedByUserId ?? null, deletedAt))
     .where(eq(consultationSlots.saleId, id));
 
   // M1: soft delete — preserva o registro no banco
-  await db.update(sales).set({ deletedAt: new Date() }).where(eq(sales.id, id));
+  await db.update(sales).set({ deletedAt }).where(eq(sales.id, id));
 }
 
 // ─── Lixeira (Trash) ─────────────────────────────────────────────────────────
@@ -663,6 +686,10 @@ export async function restoreSale(id: number) {
 
   // Restaura a venda (remove deletedAt)
   await db.update(sales).set({ deletedAt: null }).where(eq(sales.id, id));
+  await db
+    .update(consultationSlots)
+    .set(reserveConsultationSlotState(id))
+    .where(eq(consultationSlots.saleId, id));
 }
 
 async function deleteSaleStorageObjects(
@@ -691,7 +718,7 @@ export async function permanentDeleteSale(id: number) {
   // Libera o horário de consulta se houver
   await db
     .update(consultationSlots)
-    .set({ sold: false, saleId: null, status: "pendente" })
+    .set(releaseConsultationSlotState())
     .where(eq(consultationSlots.saleId, id));
 
   // Delete permanente real
@@ -751,7 +778,18 @@ export async function cleanupExpiredTrash(
   }
 
   await db.execute(
-    sql`UPDATE consultation_slots SET sold = false, "saleId" = NULL, status = 'pendente'
+    sql`UPDATE consultation_slots
+        SET sold = false,
+            "saleId" = NULL,
+            status = 'pendente',
+            "cancelledBy" = NULL,
+            "cancelledAt" = NULL,
+            "cancelReason" = NULL,
+            "refundStatus" = 'none',
+            "refundRequestedAt" = NULL,
+            "refundRequestedBy" = NULL,
+            "refundResolvedAt" = NULL,
+            "refundResolvedBy" = NULL
         WHERE "saleId" IN (SELECT id FROM sales WHERE "deletedAt" IS NOT NULL AND "deletedAt" < ${cutoff.toISOString()})`
   );
 

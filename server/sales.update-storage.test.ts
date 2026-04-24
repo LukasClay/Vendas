@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getSaleById: vi.fn(),
   getDb: vi.fn(),
   updateSale: vi.fn(),
+  updateSaleAndReleaseConsultationSlot: vi.fn(),
   storagePut: vi.fn(),
   storageDelete: vi.fn(),
 }));
@@ -18,6 +19,8 @@ vi.mock("./db", async () => {
     getSaleById: mocks.getSaleById,
     getDb: mocks.getDb,
     updateSale: mocks.updateSale,
+    updateSaleAndReleaseConsultationSlot:
+      mocks.updateSaleAndReleaseConsultationSlot,
   };
 });
 
@@ -94,6 +97,7 @@ describe("sales.update storage cleanup", () => {
     mocks.createAuditLog.mockResolvedValue(undefined);
     mocks.getSaleById.mockResolvedValue(undefined);
     mocks.updateSale.mockResolvedValue(undefined);
+    mocks.updateSaleAndReleaseConsultationSlot.mockResolvedValue(undefined);
     mocks.storagePut.mockResolvedValue({
       key: "ignored",
       url: "https://cdn.test/uploaded-file",
@@ -174,6 +178,61 @@ describe("sales.update storage cleanup", () => {
     ).rejects.toThrow("Formato invalido. Use JPG, PNG ou WEBP.");
 
     expect(mocks.storagePut).not.toHaveBeenCalled();
+  });
+
+  it("rejeita slot de consulta em venda que nao e Consulta Cartas", async () => {
+    const caller = salesRouter.createCaller(createSellerContext());
+
+    await expect(
+      caller.create({
+        clientName: "Cliente",
+        productName: "Trabalho Individual",
+        productCategory: "individual",
+        saleDate: "2026-04-23",
+        amount: 100,
+        consultationSlotId: 123,
+      })
+    ).rejects.toThrow("Somente Consulta Cartas pode reservar horario");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.getDb).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia converter venda comum em Consulta Cartas sem agendamento", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      productName: "Trabalho Individual",
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.update({
+        id: 30,
+        productName: "Consulta Cartas",
+      })
+    ).rejects.toThrow("crie a venda pelo fluxo de agendamento");
+
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+    expect(mocks.updateSaleAndReleaseConsultationSlot).not.toHaveBeenCalled();
+  });
+
+  it("libera o slot quando Consulta Cartas vira venda comum", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      productName: "Consulta Cartas",
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+
+    await caller.update({
+      id: 31,
+      productName: "Trabalho Individual",
+    });
+
+    expect(mocks.updateSale).not.toHaveBeenCalled();
+    expect(mocks.updateSaleAndReleaseConsultationSlot).toHaveBeenCalledWith(
+      31,
+      expect.objectContaining({ productName: "Trabalho Individual" })
+    );
   });
 
   it("deleta a key antiga somente depois de atualizar a venda ao trocar a foto", async () => {

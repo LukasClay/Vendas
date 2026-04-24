@@ -5,6 +5,10 @@ import { getDb, withRetry } from "../db";
 import { consultationSlots, sales, users } from "../../drizzle/schema";
 import { eq, and, gte, ne, asc, desc, lt } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
+import {
+  releaseConsultationSlotState,
+  reserveConsultationSlotState,
+} from "../consultationSlotState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -422,15 +426,23 @@ export const consultationSlotsRouter = router({
           message: "Consulta não está cancelada.",
         });
 
+      const nextSlotState = slot[0].saleId
+        ? reserveConsultationSlotState(slot[0].saleId)
+        : releaseConsultationSlotState();
+
+      if (slot[0].saleId) {
+        await withRetry(() =>
+          db
+            .update(sales)
+            .set({ deletedAt: null })
+            .where(eq(sales.id, slot[0].saleId!))
+        );
+      }
+
       await withRetry(() =>
         db
           .update(consultationSlots)
-          .set({
-            status: "pendente",
-            cancelledBy: null,
-            cancelledAt: null,
-            cancelReason: null,
-          })
+          .set(nextSlotState)
           .where(eq(consultationSlots.id, input.id))
       );
       return { success: true };
@@ -604,16 +616,15 @@ export const consultationSlotsRouter = router({
         });
 
       // Aprova: venda permanece na lixeira (será excluída em 30 dias), slot liberado
+      const resolvedAt = new Date();
       await withRetry(() =>
         db
           .update(consultationSlots)
           .set({
+            ...releaseConsultationSlotState(),
             refundStatus: "approved",
-            refundResolvedAt: new Date(),
+            refundResolvedAt: resolvedAt,
             refundResolvedBy: ctx.user.id,
-            // Libera o slot para recadastro
-            sold: false,
-            saleId: null,
           })
           .where(eq(consultationSlots.id, input.id))
       );
@@ -642,28 +653,30 @@ export const consultationSlotsRouter = router({
           message: "Reembolso não está pendente.",
         });
 
-      // Rejeita: restaura a venda da lixeira, consulta volta para pendente
-      if (slot[0].saleId) {
-        await withRetry(() =>
-          db
-            .update(sales)
-            .set({ deletedAt: null })
-            .where(eq(sales.id, slot[0].saleId!))
-        );
+      const saleId = slot[0].saleId;
+      if (!saleId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Reembolso sem venda vinculada.",
+        });
       }
+
+      // Rejeita: restaura a venda da lixeira, consulta volta para pendente
+      await withRetry(() =>
+        db
+          .update(sales)
+          .set({ deletedAt: null })
+          .where(eq(sales.id, saleId))
+      );
 
       await withRetry(() =>
         db
           .update(consultationSlots)
           .set({
+            ...reserveConsultationSlotState(saleId),
             refundStatus: "rejected",
             refundResolvedAt: new Date(),
             refundResolvedBy: ctx.user.id,
-            // Restaura a consulta
-            status: "pendente",
-            cancelledBy: null,
-            cancelledAt: null,
-            cancelReason: null,
           })
           .where(eq(consultationSlots.id, input.id))
       );
@@ -766,7 +779,7 @@ export const consultationSlotsRouter = router({
         await withRetry(() =>
           db
             .update(consultationSlots)
-            .set({ sold: false, saleId: null, status: "pendente" })
+            .set(releaseConsultationSlotState())
             .where(eq(consultationSlots.id, oldSlots[0].id))
         );
       }
@@ -775,7 +788,7 @@ export const consultationSlotsRouter = router({
       const reserved = await withRetry(() =>
         db
           .update(consultationSlots)
-          .set({ sold: true, saleId: input.saleId, status: "pendente" })
+          .set(reserveConsultationSlotState(input.saleId))
           .where(
             and(
               eq(consultationSlots.id, input.newSlotId),
@@ -790,7 +803,7 @@ export const consultationSlotsRouter = router({
           await withRetry(() =>
             db
               .update(consultationSlots)
-              .set({ sold: true, saleId: input.saleId, status: "pendente" })
+              .set(reserveConsultationSlotState(input.saleId))
               .where(eq(consultationSlots.id, oldSlots[0].id))
           );
         }

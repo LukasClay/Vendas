@@ -13,6 +13,13 @@
 
 ## Acompanhamento Codex
 
+### Regra de auditoria por branch
+
+- Cada branch de sprint deve carregar sua propria copia deste arquivo, com o progresso real daquela branch.
+- `codex/sprint-0`: contem o estado ate o Sprint 0, partindo de `origin/main` atualizado.
+- `codex/sprint-1`: contem o Sprint 0 herdado, Sprint 1A, Sprint 1B e o ponto atual do Sprint 1C.
+- Proximas branches (`codex/sprint-2`, etc.) devem continuar este historico, marcando o que foi herdado, o que foi concluido no sprint atual e onde o trabalho parou.
+
 ### Sprint 0
 
 - [x] C1 - Validado como falso positivo em 2026-04-24. Regra oficial do produto: consultoras compartilham um workboard unico e qualquer consultora pode processar qualquer trabalho. Nao aplicar filtro `sellerId = ctx.user.id`.
@@ -58,6 +65,45 @@ Validacao do Sprint 1B:
 - `pnpm.cmd run test:backend`
 - `pnpm.cmd run build`
 - `git diff --check`
+
+### Sprint 1C - Parcial, ponto de parada
+
+- [~] A3/#7/#8/#9/#10/#14 - Integridade de Consulta Cartas em cancelamento, restore, refund, lixeira e troca de tipo.
+- [x] #10 - `sales.create` agora rejeita `consultationSlotId` quando `productName !== "Consulta Cartas"`.
+- [~] #8/#14 - Restore de venda/slot agora tenta reconciliar slot e limpar metadados de cancelamento/reembolso, mas o fluxo ainda precisa validacao completa.
+- [~] #7 - `approveRefund` passou a liberar o slot para uso normal preservando historico `approved`; `rejectRefund` restaura venda e reserva do slot preservando historico `rejected`. Ainda falta revisar a semantica final com o dono do produto.
+- [~] #9 - `sales.update` bloqueia conversao de venda comum para `Consulta Cartas` sem fluxo de agendamento e libera slot quando `Consulta Cartas` vira venda comum. Ainda falta revisao manual no ADM `Vendas.tsx` e `Consultas.tsx`.
+
+O que foi alterado ate aqui no Sprint 1C:
+
+- Novo helper `server/consultationSlotState.ts` centraliza estados de slot reservado, liberado e enviado para lixeira.
+- `server/db.ts` passou a manter slot vinculado/cancelado enquanto a venda esta na lixeira, restaurar slot no `restoreSale`, liberar slot no delete permanente e normalizar metadados no cleanup.
+- `server/routers/consultationSlots.ts` passou a usar os estados centralizados em restore, approve/reject refund e reschedule.
+- `server/routers/sales.ts` passou a usar estado centralizado ao reservar slot, bloqueia slot em venda que nao e Consulta Cartas e adiciona caminho transacional para liberar slot quando a venda deixa de ser Consulta Cartas.
+- Testes focados foram adicionados em `server/consultationSlots.test.ts` e `server/sales.update-storage.test.ts`.
+- Versao do sistema atualizada para `2.10.6`.
+
+Onde parei:
+
+- Eu estava estabilizando o Sprint 1C parcial apos o pedido de commit/push.
+- O ultimo erro encontrado foi de typecheck em `server/routers/consultationSlots.ts` por `saleId` possivelmente nulo no `rejectRefund`; foi corrigido com variavel local nao nula.
+- Ainda nao declarei o Sprint 1C como concluido porque, embora a validacao automatizada tenha passado, ainda falta QA manual e decisao final de produto sobre o historico de reembolso aprovado/rejeitado.
+
+Ainda nao feito:
+
+- Nao foi criada uma service transacional unica para todo o dominio de consulta; por enquanto o sprint usa helpers de estado e um caminho transacional especifico em `updateSaleAndReleaseConsultationSlot`.
+- Nao fiz QA visual/manual das telas `client/src/pages/admin/Consultas.tsx`, `client/src/pages/admin/Vendas.tsx` e `client/src/pages/Consultas.tsx`.
+- Nao avancei para A7/LGPD nem para os demais itens fora de Consulta Cartas.
+
+Validacao do Sprint 1C parcial:
+
+- `pnpm.cmd exec vitest run server/consultationSlots.test.ts server/sales.update-storage.test.ts`
+- `pnpm.cmd run typecheck`
+- `pnpm.cmd run test:backend`
+- `pnpm.cmd run build`
+- `git diff --check`
+
+Observacao de validacao: o primeiro Vitest focado falhou no sandbox com `spawn EPERM` ao carregar o esbuild; o mesmo comando passou ao ser reexecutado com permissao elevada.
 
 Este documento consolida o pedido original e as duas auditorias tecnicas recebidas para o projeto `vendas`.
 
