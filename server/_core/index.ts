@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
+import { startCleanupJob } from "../jobs/cleanupJob";
 import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
@@ -112,6 +113,8 @@ async function startServer() {
     startAlertsJob();
     // Iniciar job de relatorios por email
     startReportsJob();
+    // Iniciar job de limpeza automatica da lixeira
+    startCleanupJob();
   });
 }
 

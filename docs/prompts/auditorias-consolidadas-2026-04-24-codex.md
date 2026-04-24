@@ -45,6 +45,20 @@ Validacao do Sprint 1A:
 - `pnpm.cmd run build`
 - `git diff --check`
 
+### Sprint 1B
+
+- [x] C2 - Criar job automatico da lixeira com dry-run inicial.
+- [x] #3/#4 - Deletar do storage apenas objetos conhecidos da venda removida permanentemente.
+- [x] Testes focados - Cobrir coleta de chaves de midia e comportamento do cleanup job.
+
+Validacao do Sprint 1B:
+
+- `pnpm.cmd exec vitest run server/cleanupJob.test.ts server/saleMedia.test.ts`
+- `pnpm.cmd run typecheck`
+- `pnpm.cmd run test:backend`
+- `pnpm.cmd run build`
+- `git diff --check`
+
 Este documento consolida o pedido original e as duas auditorias tecnicas recebidas para o projeto `vendas`.
 
 Objetivo de uso: validar os achados no codigo atual e corrigir por partes, priorizando seguranca, integridade de dados, LGPD, bugs de logica, tipagem, performance, arquitetura, testes e limpeza de codigo. Os textos das auditorias abaixo foram preservados como fonte bruta, sem reescrita.

@@ -1101,7 +1101,7 @@ export const salesRouter = router({
     }),
 
   cleanupTrash: adminProcedure.mutation(async () => {
-    const count = await cleanupExpiredTrash(30);
-    return { deletedCount: count };
+    const result = await cleanupExpiredTrash(30, { dryRun: false });
+    return result;
   }),
 });

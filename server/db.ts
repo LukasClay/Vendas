@@ -34,6 +34,8 @@ import {
   getLocalLoginHealth,
   type LocalLoginHealthResult,
 } from "./_core/localLoginHealth";
+import { storageDelete } from "./storage";
+import { getSaleStorageKeys } from "./saleMedia";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
@@ -663,9 +665,28 @@ export async function restoreSale(id: number) {
   await db.update(sales).set({ deletedAt: null }).where(eq(sales.id, id));
 }
 
+async function deleteSaleStorageObjects(
+  sale: Parameters<typeof getSaleStorageKeys>[0]
+) {
+  const keys = getSaleStorageKeys(sale);
+  for (const key of keys) {
+    await storageDelete(key);
+  }
+  return keys.length;
+}
+
 export async function permanentDeleteSale(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  const [saleToDelete] = await db
+    .select()
+    .from(sales)
+    .where(eq(sales.id, id))
+    .limit(1);
+  if (saleToDelete) {
+    await deleteSaleStorageObjects(saleToDelete);
+  }
 
   // Libera o horário de consulta se houver
   await db
@@ -677,22 +698,33 @@ export async function permanentDeleteSale(id: number) {
   await db.delete(sales).where(eq(sales.id, id));
 }
 
-export async function cleanupExpiredTrash(daysOld = 30) {
+export type CleanupExpiredTrashResult = {
+  dryRun: boolean;
+  expiredCount: number;
+  deletedCount: number;
+  storageObjectCount: number;
+};
+
+export async function cleanupExpiredTrash(
+  daysOld = 30,
+  options: { dryRun?: boolean } = {}
+): Promise<CleanupExpiredTrashResult> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    return {
+      dryRun: options.dryRun === true,
+      expiredCount: 0,
+      deletedCount: 0,
+      storageObjectCount: 0,
+    };
+  }
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysOld);
 
-  // Libera slots de consulta de todas as vendas expiradas numa única query
-  await db.execute(
-    sql`UPDATE consultation_slots SET sold = false, "saleId" = NULL, status = 'pendente'
-        WHERE "saleId" IN (SELECT id FROM sales WHERE "deletedAt" IS NOT NULL AND "deletedAt" < ${cutoff.toISOString()})`
-  );
-
-  // Seleciona IDs antes de deletar para retornar contagem
+  // Seleciona as vendas completas para calcular dry-run e limpar midias conhecidas.
   const expiredSales = await db
-    .select({ id: sales.id })
+    .select()
     .from(sales)
     .where(
       and(
@@ -700,6 +732,28 @@ export async function cleanupExpiredTrash(daysOld = 30) {
         sql`${sales.deletedAt} < ${cutoff.toISOString()}`
       )
     );
+
+  if (options.dryRun) {
+    return {
+      dryRun: true,
+      expiredCount: expiredSales.length,
+      deletedCount: 0,
+      storageObjectCount: expiredSales.reduce(
+        (total, sale) => total + getSaleStorageKeys(sale).length,
+        0
+      ),
+    };
+  }
+
+  let storageObjectCount = 0;
+  for (const sale of expiredSales) {
+    storageObjectCount += await deleteSaleStorageObjects(sale);
+  }
+
+  await db.execute(
+    sql`UPDATE consultation_slots SET sold = false, "saleId" = NULL, status = 'pendente'
+        WHERE "saleId" IN (SELECT id FROM sales WHERE "deletedAt" IS NOT NULL AND "deletedAt" < ${cutoff.toISOString()})`
+  );
 
   // Delete permanente
   await db
@@ -711,7 +765,12 @@ export async function cleanupExpiredTrash(daysOld = 30) {
       )
     );
 
-  return expiredSales.length;
+  return {
+    dryRun: false,
+    expiredCount: expiredSales.length,
+    deletedCount: expiredSales.length,
+    storageObjectCount,
+  };
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────

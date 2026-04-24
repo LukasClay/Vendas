@@ -71,6 +71,25 @@ export function getStoredPhotoExtras(
   return normalizeStoredMedia(sale.photoExtras);
 }
 
+export function getSaleStorageKeys(
+  sale: Pick<
+    SaleMediaFields,
+    "attachmentKey" | "attachmentExtras" | "photo1Key" | "photo2Key" | "photoExtras"
+  >
+): string[] {
+  const keys = new Set<string>();
+  if (sale.attachmentKey) keys.add(sale.attachmentKey);
+  for (const attachment of getStoredAttachmentExtras(sale)) {
+    keys.add(attachment.key);
+  }
+  if (sale.photo1Key) keys.add(sale.photo1Key);
+  if (sale.photo2Key) keys.add(sale.photo2Key);
+  for (const photo of getStoredPhotoExtras(sale)) {
+    keys.add(photo.key);
+  }
+  return Array.from(keys);
+}
+
 export function getSaleAttachmentFiles(
   sale: Pick<
     SaleMediaFields,
