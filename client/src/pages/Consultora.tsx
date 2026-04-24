@@ -1261,25 +1261,27 @@ export default function ConsultoraPage() {
     [debouncedSearch]
   );
 
+  // `refetchOnMount: "always"` foi removido: jogava fora o cache a cada
+  // troca de aba, pesando no 3G/4G. Mutations ja chamam `invalidateAll()`,
+  // entao os dados ficam frescos apos qualquer acao do usuario.
   const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, {
     staleTime: 2 * 60 * 1000,
-    refetchOnMount: "always",
   });
 
   const { data: toWriteItems = [], isLoading: loadingWrite } =
     trpc.consultora.toWrite.useQuery(queryInput, {
       enabled: activeTab === "para_escrever",
-      refetchOnMount: "always",
+      staleTime: 2 * 60 * 1000,
     });
   const { data: pendingItems = [], isLoading: loadingPending } =
     trpc.consultora.pending.useQuery(queryInput, {
       enabled: activeTab === "pendente",
-      refetchOnMount: "always",
+      staleTime: 2 * 60 * 1000,
     });
   const { data: doneItems = [], isLoading: loadingDone } =
     trpc.consultora.done.useQuery(queryInput, {
       enabled: activeTab === "feito",
-      refetchOnMount: "always",
+      staleTime: 2 * 60 * 1000,
     });
   const {
     data: alertItems = [],
@@ -1289,7 +1291,6 @@ export default function ConsultoraPage() {
   } = trpc.consultora.alerts.useQuery(undefined, {
     enabled: activeTab === "alertas",
     staleTime: 3 * 60 * 1000,
-    refetchOnMount: "always",
   });
 
   const invalidateAll = () => {

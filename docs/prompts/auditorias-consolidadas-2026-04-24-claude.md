@@ -9,7 +9,7 @@
 - [x] C1 — IDOR consultora (markWritten/markDone/undoDone) — **CORRIGIDO (revisado)**
 - [x] C3 (parte 1) — Master password sem fallback hardcoded — **CORRIGIDO**
 - [x] C4 — Validacao Zod em payload Manus — **CORRIGIDO**
-- [ ] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx
+- [x] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx — **CORRIGIDO**
 - [ ] M1 — Cookie logout com `maxAge: 0`
 
 #### Nota de execucao — C1 (revisado)
@@ -66,6 +66,23 @@ com ZodError em vez de gravar `undefined` como URL da venda.
 Arquivos: `server/storage.ts`, `server/storage.manus.test.ts` (novo).
 Testes adicionados: 7 (valido, extras, sem url, vazia, nao-absoluta,
 undefined, nao-objeto).
+
+#### Nota de execucao — A4
+As 5 queries do painel da Consultora tinham `refetchOnMount: "always"`,
+o que descartava o cache a cada troca de aba e pesava no 3G/4G (cenario
+critico para consultoras no celular — regra de performance do TODO.md).
+
+Opcao removida das 5 queries. As tres que nao tinham `staleTime`
+explicito (`toWrite`, `pending`, `done`) ganharam `staleTime: 2min`
+alinhado com `statusCounts`. Mutations ja chamam `invalidateAll()`
+(linhas 1295-1301), entao apos qualquer acao do usuario os dados
+continuam frescos.
+
+Sem mudanca visual, sem mudanca funcional — apenas config do React Query.
+Melhora direta: menos requests, menos spinners, menos dados trafegados
+em mobile.
+
+Arquivo: `client/src/pages/Consultora.tsx` (so bloco das queries, ~20 linhas).
 
 ### Sprint 1 — Robustez
 - [ ] C2 + #3 + #4 — Job cleanup lixeira + arquivos R2 orfaos
