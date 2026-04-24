@@ -14,16 +14,27 @@ import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
 // Senha mestre hasheada (SHA-256) para validação de operações críticas
-// Lê de ENV para não expor a senha no código fonte. Fallback hardcoded para compatibilidade.
-const MASTER_PASSWORD_HASH =
-  process.env.MASTER_PASSWORD_HASH ||
-  "2259180d28299fada66242f3c25eb2adc9b8ecfa2c6cce67d219f286fbe47241";
+// Le de ENV para nao expor a senha no codigo fonte.
+const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH;
+if (!MASTER_PASSWORD_HASH) {
+  throw new Error(
+    "FATAL: MASTER_PASSWORD_HASH nao definido. " +
+      "Defina a variavel de ambiente antes de iniciar o servidor."
+  );
+}
+if (!/^[a-f0-9]{64}$/i.test(MASTER_PASSWORD_HASH)) {
+  throw new Error(
+    "FATAL: MASTER_PASSWORD_HASH deve ser um hash SHA-256 hexadecimal de 64 caracteres."
+  );
+}
+
+const REQUIRED_MASTER_PASSWORD_HASH = MASTER_PASSWORD_HASH;
 
 function verifyMasterPassword(password: string): boolean {
   const hash = crypto.createHash("sha256").update(password).digest("hex");
   return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(MASTER_PASSWORD_HASH)
+    Buffer.from(hash, "hex"),
+    Buffer.from(REQUIRED_MASTER_PASSWORD_HASH, "hex")
   );
 }
 

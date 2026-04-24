@@ -7,6 +7,7 @@
  * Se nenhum estiver configurado, o upload falha com mensagem clara.
  */
 
+import { z } from "zod";
 import { ENV } from "./_core/env";
 
 export class StorageObjectNotFoundError extends Error {
@@ -36,6 +37,10 @@ function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "");
 }
 
+const ManusUrlResponse = z.object({
+  url: z.string().url(),
+});
+
 async function manusPut(
   relKey: string,
   data: Buffer | Uint8Array | string,
@@ -63,7 +68,7 @@ async function manusPut(
     const message = await response.text().catch(() => response.statusText);
     throw new Error(`Storage upload failed (${response.status}): ${message}`);
   }
-  const url = (await response.json()).url;
+  const { url } = ManusUrlResponse.parse(await response.json());
   return { key, url };
 }
 
@@ -85,7 +90,8 @@ async function manusGet(relKey: string): Promise<{ key: string; url: string }> {
       `Storage download URL failed (${response.status}): ${message}`
     );
   }
-  return { key, url: (await response.json()).url };
+  const { url } = ManusUrlResponse.parse(await response.json());
+  return { key, url };
 }
 
 function parseContentLength(value: string | null): number | null {

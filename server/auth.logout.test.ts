@@ -59,6 +59,7 @@ describe("auth.logout", () => {
       sameSite: "lax",
       httpOnly: true,
       path: "/",
+      maxAge: 0,
     });
   });
 });

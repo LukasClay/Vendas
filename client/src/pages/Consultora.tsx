@@ -1263,23 +1263,19 @@ export default function ConsultoraPage() {
 
   const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, {
     staleTime: 2 * 60 * 1000,
-    refetchOnMount: "always",
   });
 
   const { data: toWriteItems = [], isLoading: loadingWrite } =
     trpc.consultora.toWrite.useQuery(queryInput, {
       enabled: activeTab === "para_escrever",
-      refetchOnMount: "always",
     });
   const { data: pendingItems = [], isLoading: loadingPending } =
     trpc.consultora.pending.useQuery(queryInput, {
       enabled: activeTab === "pendente",
-      refetchOnMount: "always",
     });
   const { data: doneItems = [], isLoading: loadingDone } =
     trpc.consultora.done.useQuery(queryInput, {
       enabled: activeTab === "feito",
-      refetchOnMount: "always",
     });
   const {
     data: alertItems = [],
