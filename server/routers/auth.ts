@@ -248,7 +248,9 @@ export const ownAuthRouter = router({
         .where(eq(users.id, ctx.user.id));
     }
     const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
+    // `maxAge: 0` explicito alem do `expires` que o clearCookie injeta,
+    // para maior portabilidade entre clients/browsers.
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: 0 });
     return { success: true };
   }),
 

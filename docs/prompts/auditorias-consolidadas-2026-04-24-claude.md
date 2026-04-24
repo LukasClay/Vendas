@@ -10,7 +10,9 @@
 - [x] C3 (parte 1) — Master password sem fallback hardcoded — **CORRIGIDO**
 - [x] C4 — Validacao Zod em payload Manus — **CORRIGIDO**
 - [x] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx — **CORRIGIDO**
-- [ ] M1 — Cookie logout com `maxAge: 0`
+- [x] M1 — Cookie logout com `maxAge: 0` — **CORRIGIDO**
+
+> **Sprint 0 concluido.** Proximos passos: Sprint 1 (robustez) — ver lista abaixo.
 
 #### Nota de execucao — C1 (revisado)
 O fix proposto pela Auditoria 1 (`eq(sales.sellerId, ctx.user.id)`) era
@@ -83,6 +85,22 @@ Melhora direta: menos requests, menos spinners, menos dados trafegados
 em mobile.
 
 Arquivo: `client/src/pages/Consultora.tsx` (so bloco das queries, ~20 linhas).
+
+#### Nota de execucao — M1
+Logout agora envia `maxAge: 0` explicito alem do `expires` que o
+`res.clearCookie` do Express ja injeta. Isso da maior portabilidade
+entre browsers/clients (alguns respeitam melhor `maxAge` do que
+`expires`, e vice-versa). Aplicado nas **duas** implementacoes de
+logout existentes:
+
+- `server/routers.ts` (`auth.logout`, usado pelo `Logout` do frontend)
+- `server/routers/auth.ts` (`ownAuth.logout`)
+
+Nao descobri antes que existiam duas implementacoes paralelas — vale
+considerar consolidar numa unica no Sprint 3+ (arquitetura).
+
+Teste existente (`auth.logout.test.ts`) atualizado para verificar
+`maxAge: 0` e um novo caso cobrindo `ownAuth.logout`.
 
 ### Sprint 1 — Robustez
 - [ ] C2 + #3 + #4 — Job cleanup lixeira + arquivos R2 orfaos

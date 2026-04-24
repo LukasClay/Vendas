@@ -59,6 +59,21 @@ describe("auth.logout", () => {
       sameSite: "lax",
       httpOnly: true,
       path: "/",
+      maxAge: 0,
+    });
+  });
+
+  it("o logout de ownAuth tambem envia maxAge: 0", async () => {
+    const { ctx, clearedCookies } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.ownAuth.logout();
+
+    expect(result).toEqual({ success: true });
+    expect(clearedCookies[0]?.options).toMatchObject({
+      httpOnly: true,
+      path: "/",
+      maxAge: 0,
     });
   });
 });
