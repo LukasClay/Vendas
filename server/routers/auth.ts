@@ -21,6 +21,7 @@ import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { ENV } from "../_core/env";
+import { checkAdminActionRateLimit } from "../_core/adminRateLimit";
 
 const REMEMBER_ME_MS = ONE_YEAR_MS; // 1 ano
 const SESSION_MS = 1000 * 60 * 60 * 8; // 8 horas
@@ -339,7 +340,8 @@ export const ownAuthRouter = router({
         active: z.boolean().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      checkAdminActionRateLimit(ctx, "resetPassword");
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 

@@ -31,6 +31,20 @@ Validacao do Sprint 0 parcial:
 
 Observacao: `pnpm.cmd run format:check` ainda falha por formatacao preexistente em 165 arquivos do repositorio; nao foi usado como bloqueio deste lote.
 
+### Sprint 1A
+
+- [x] #12/#13/#23 - Validar MIME/tamanho no `sales.create`, usando os mesmos helpers do `sales.update`.
+- [x] A6 - Rate limit em `resetPassword`, `sales.exportCsv` e `reports.exportData`.
+- [x] Testes focados - Cobrir rejeicao de MIME invalido no create e limite de acoes administrativas.
+
+Validacao do Sprint 1A:
+
+- `pnpm.cmd exec vitest run server/sales.update-storage.test.ts server/_core/adminRateLimit.test.ts`
+- `pnpm.cmd run typecheck`
+- `pnpm.cmd run test:backend`
+- `pnpm.cmd run build`
+- `git diff --check`
+
 Este documento consolida o pedido original e as duas auditorias tecnicas recebidas para o projeto `vendas`.
 
 Objetivo de uso: validar os achados no codigo atual e corrigir por partes, priorizando seguranca, integridade de dados, LGPD, bugs de logica, tipagem, performance, arquitetura, testes e limpeza de codigo. Os textos das auditorias abaixo foram preservados como fonte bruta, sem reescrita.

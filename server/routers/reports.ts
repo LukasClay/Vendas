@@ -17,6 +17,7 @@ import {
   updateReportSchedule,
 } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
+import { checkAdminActionRateLimit } from "../_core/adminRateLimit";
 
 export const reportsRouter = router({
   summary: adminProcedure
@@ -91,7 +92,8 @@ export const reportsRouter = router({
         sellerId: z.number().optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      checkAdminActionRateLimit(ctx, "reports.exportData");
       const salesData = await getSales({
         startDate: input.startDate ? new Date(input.startDate) : undefined,
         endDate: input.endDate ? new Date(input.endDate) : undefined,

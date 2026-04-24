@@ -17,6 +17,7 @@ import {
   cleanupExpiredTrash,
 } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { checkAdminActionRateLimit } from "../_core/adminRateLimit";
 import { storageDelete, storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import {
@@ -220,22 +221,27 @@ export const salesRouter = router({
       let attachmentUrl: string | null = null;
       let attachmentKey: string | null = null;
       let attachmentMime: string | null = null;
+      const uploadBuffers: Buffer[] = [];
+      let attachmentBuffer: Buffer | null = null;
 
       // Upload comprovante para S3 se fornecido
-      if (input.attachmentBase64 && input.attachmentMime) {
-        const buffer = Buffer.from(input.attachmentBase64, "base64");
-        if (buffer.length > 5 * 1024 * 1024) {
+      if (input.attachmentBase64 || input.attachmentMime) {
+        if (!input.attachmentBase64 || !input.attachmentMime) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Arquivo muito grande. Máximo 5MB.",
+            message: "Comprovante incompleto. Envie arquivo e formato.",
           });
         }
-        const ext = input.attachmentMime.includes("pdf") ? "pdf" : "jpg";
-        const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
-        const uploaded = await storagePut(key, buffer, input.attachmentMime);
-        attachmentUrl = uploaded.url;
-        attachmentKey = key;
-        attachmentMime = input.attachmentMime;
+        assertMime(
+          input.attachmentMime,
+          ATTACHMENT_MIME_TYPES,
+          "Formato invalido. Use JPG, PNG, WEBP ou PDF."
+        );
+        attachmentBuffer = decodeBase64File(
+          input.attachmentBase64,
+          "Arquivo muito grande. Maximo 5MB."
+        );
+        uploadBuffers.push(attachmentBuffer);
       }
 
       // Upload fotos do cliente para S3 (apenas para tipos permitidos)
@@ -243,6 +249,8 @@ export const salesRouter = router({
       let photo1Key: string | null = null;
       let photo2Url: string | null = null;
       let photo2Key: string | null = null;
+      let photo1Buffer: Buffer | null = null;
+      let photo2Buffer: Buffer | null = null;
 
       const isPhotoType =
         (TYPES_WITH_PHOTOS as readonly string[]).includes(
@@ -261,43 +269,45 @@ export const salesRouter = router({
       }
 
       if (isPhotoType) {
-        if (input.photo1Base64 && input.photo1Mime) {
-          const buf = Buffer.from(input.photo1Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
+        if (input.photo1Base64 || input.photo1Mime) {
+          if (!input.photo1Base64 || !input.photo1Mime) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Foto 1 muito grande. Máximo 5MB.",
+              message: "Foto 1 incompleta. Envie arquivo e formato.",
             });
           }
-          const ext = input.photo1Mime.includes("png")
-            ? "png"
-            : input.photo1Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo1Mime);
-          photo1Url = r.url;
-          photo1Key = key;
+          assertMime(
+            input.photo1Mime,
+            PHOTO_MIME_TYPES,
+            "Formato invalido. Use JPG, PNG ou WEBP."
+          );
+          photo1Buffer = decodeBase64File(
+            input.photo1Base64,
+            "Foto 1 muito grande. Maximo 5MB."
+          );
+          uploadBuffers.push(photo1Buffer);
         }
-        if (input.photo2Base64 && input.photo2Mime) {
-          const buf = Buffer.from(input.photo2Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
+        if (input.photo2Base64 || input.photo2Mime) {
+          if (!input.photo2Base64 || !input.photo2Mime) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Foto 2 muito grande. Máximo 5MB.",
+              message: "Foto 2 incompleta. Envie arquivo e formato.",
             });
           }
-          const ext = input.photo2Mime.includes("png")
-            ? "png"
-            : input.photo2Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo2Mime);
-          photo2Url = r.url;
-          photo2Key = key;
+          assertMime(
+            input.photo2Mime,
+            PHOTO_MIME_TYPES,
+            "Formato invalido. Use JPG, PNG ou WEBP."
+          );
+          photo2Buffer = decodeBase64File(
+            input.photo2Base64,
+            "Foto 2 muito grande. Maximo 5MB."
+          );
+          uploadBuffers.push(photo2Buffer);
         }
       }
+
+      ensureRequestUploadBudget(uploadBuffers);
 
       // Upsert client
       let clientId: number | null = null;
@@ -353,6 +363,35 @@ export const salesRouter = router({
       }
 
       // Snapshot do nome do vendedor para preservar mesmo se o usuário for excluído
+      if (attachmentBuffer && input.attachmentMime) {
+        const ext = getAttachmentExtension(input.attachmentMime);
+        const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
+        const uploaded = await storagePut(
+          key,
+          attachmentBuffer,
+          input.attachmentMime
+        );
+        attachmentUrl = uploaded.url;
+        attachmentKey = key;
+        attachmentMime = input.attachmentMime;
+      }
+
+      if (photo1Buffer && input.photo1Mime) {
+        const ext = getPhotoExtension(input.photo1Mime);
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const uploaded = await storagePut(key, photo1Buffer, input.photo1Mime);
+        photo1Url = uploaded.url;
+        photo1Key = key;
+      }
+
+      if (photo2Buffer && input.photo2Mime) {
+        const ext = getPhotoExtension(input.photo2Mime);
+        const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+        const uploaded = await storagePut(key, photo2Buffer, input.photo2Mime);
+        photo2Url = uploaded.url;
+        photo2Key = key;
+      }
+
       const sellerName =
         ctx.user.displayName ||
         ctx.user.name ||
@@ -899,7 +938,8 @@ export const salesRouter = router({
         })
         .optional()
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      checkAdminActionRateLimit(ctx, "sales.exportCsv");
       const rows = await getSales({
         startDate: input?.startDate ? new Date(input.startDate) : undefined,
         endDate: input?.endDate ? new Date(input.endDate) : undefined,

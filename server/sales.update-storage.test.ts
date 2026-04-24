@@ -140,6 +140,42 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.storagePut).not.toHaveBeenCalled();
   });
 
+  it("rejeita MIME invalido no comprovante do sales.create antes do upload", async () => {
+    const caller = salesRouter.createCaller(createSellerContext());
+
+    await expect(
+      caller.create({
+        clientName: "Cliente",
+        productName: "Trabalho Individual",
+        productCategory: "individual",
+        saleDate: "2026-04-23",
+        amount: 100,
+        attachmentBase64: Buffer.from("proof").toString("base64"),
+        attachmentMime: "text/html",
+      })
+    ).rejects.toThrow("Formato invalido. Use JPG, PNG, WEBP ou PDF.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+  });
+
+  it("rejeita MIME invalido em foto do sales.create antes do upload", async () => {
+    const caller = salesRouter.createCaller(createSellerContext());
+
+    await expect(
+      caller.create({
+        clientName: "Cliente",
+        productName: "Trabalho Individual",
+        productCategory: "individual",
+        saleDate: "2026-04-23",
+        amount: 100,
+        photo1Base64: Buffer.from("photo").toString("base64"),
+        photo1Mime: "application/pdf",
+      })
+    ).rejects.toThrow("Formato invalido. Use JPG, PNG ou WEBP.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+  });
+
   it("deleta a key antiga somente depois de atualizar a venda ao trocar a foto", async () => {
     mocks.getSaleById.mockResolvedValue({ photo1Key: "fotos/old-photo.jpg" });
 
