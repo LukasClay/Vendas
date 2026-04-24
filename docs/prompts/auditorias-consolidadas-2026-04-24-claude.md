@@ -6,11 +6,35 @@
 ## Painel de progresso
 
 ### Sprint 0 — Fogo imediato
-- [ ] C1 — IDOR consultora (markWritten/markDone/undoDone)
+- [x] C1 — IDOR consultora (markWritten/markDone/undoDone) — **CORRIGIDO (revisado)**
 - [ ] C3 (parte 1) — Master password sem fallback hardcoded
 - [ ] C4 — Validacao Zod em payload Manus
 - [ ] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx
 - [ ] M1 — Cookie logout com `maxAge: 0`
+
+#### Nota de execucao — C1 (revisado)
+O fix proposto pela Auditoria 1 (`eq(sales.sellerId, ctx.user.id)`) era
+falso positivo: o painel da Consultora foi desenhado como **workboard
+compartilhado** — nao ha `consultoraId`, as queries listam todos os
+trabalhos pendentes para qualquer consultora processar. Aplicar o filtro
+original quebraria o funcionamento basico do painel.
+
+Investigacao no codigo revelou **dois invariantes reais** violados pelas
+mesmas 3 mutations, que passaram desapercebidos pela auditoria:
+
+1. Nao filtravam `ne(sales.productName, "Consulta Cartas")` — permitindo
+   alterar o `workStatus` de vendas de Consulta Cartas (que tem ciclo
+   proprio via `consultation_slots` com auto "realizada" +50min).
+2. Nao filtravam `isNull(sales.deletedAt)` — permitindo alterar status
+   de vendas na lixeira, deixando-as em estado inesperado ao restaurar.
+
+Ambos os filtros ja existiam em todas as outras queries/filtros do
+router (`toWrite`, `pending`, `done`, `alerts`, `statusCounts`,
+`worksSummary`, `distinctProducts`, `bulkUpdate*`). As mutations foram
+endurecidas para a mesma invariante.
+
+Arquivos: `server/routers/consultora.ts`, `server/consultora.mutations.test.ts` (novo).
+Testes adicionados: 4 (cobertura dos 3 verbos + admin tambem).
 
 ### Sprint 1 — Robustez
 - [ ] C2 + #3 + #4 — Job cleanup lixeira + arquivos R2 orfaos

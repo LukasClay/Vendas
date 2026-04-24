@@ -306,11 +306,19 @@ export const consultoraRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      // Endurecemos o WHERE com os mesmos filtros das queries que listam
+      // esses cards (Consulta Cartas tem ciclo próprio via consultation_slots
+      // e vendas na lixeira não devem sofrer alteração de workStatus).
       await db
         .update(sales)
         .set({ workStatus: "pendente", writtenAt: new Date() })
         .where(
-          and(eq(sales.id, input.id), eq(sales.workStatus, "para_escrever"))
+          and(
+            eq(sales.id, input.id),
+            eq(sales.workStatus, "para_escrever"),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
         );
       return { success: true };
     }),
@@ -324,7 +332,14 @@ export const consultoraRouter = router({
       await db
         .update(sales)
         .set({ workStatus: "feito", completedAt: new Date() })
-        .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
+        .where(
+          and(
+            eq(sales.id, input.id),
+            eq(sales.workStatus, "pendente"),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
+        );
       return { success: true };
     }),
 
@@ -337,7 +352,14 @@ export const consultoraRouter = router({
       await db
         .update(sales)
         .set({ workStatus: "pendente", completedAt: null })
-        .where(and(eq(sales.id, input.id), eq(sales.workStatus, "feito")));
+        .where(
+          and(
+            eq(sales.id, input.id),
+            eq(sales.workStatus, "feito"),
+            ne(sales.productName, "Consulta Cartas"),
+            isNull(sales.deletedAt)
+          )
+        );
       return { success: true };
     }),
 
