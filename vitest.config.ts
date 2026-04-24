@@ -23,6 +23,11 @@ export default defineConfig({
     env: {
       // JWT_SECRET mínimo de 32 chars para o ambiente de teste
       JWT_SECRET: "test-secret-key-for-vitest-minimum-32-chars-ok",
+      // Hash SHA-256 "zerado" suficiente para passar nos checks de formato.
+      // Os testes que exercem presenca/ausencia/formato alteram a env e
+      // restauram em afterEach.
+      MASTER_PASSWORD_HASH:
+        "0000000000000000000000000000000000000000000000000000000000000000",
     },
   },
 });

@@ -13,6 +13,16 @@
 - [x] M1 — Cookie logout com `maxAge: 0` — **CORRIGIDO**
 
 > **Sprint 0 concluido.** Proximos passos: Sprint 1 (robustez) — ver lista abaixo.
+>
+> **Polish Codex aplicado** (comparacao com `origin/codex/sprint-0`):
+> - Validacao regex SHA-256 no `getMasterPasswordHash()` (misconfig com senha em texto claro agora falha no boot)
+> - `Buffer.from(..., "hex")` em `timingSafeEqual` (idiomatico, 32 bytes binarios em vez de 64 ASCII)
+> - Testes de integracao com `fetch` stub em `storage.manus.test.ts` (complementam os testes de contrato)
+> - Bump de versao 2.10.2 -> 2.10.3 (fix de seguranca)
+> - `MASTER_PASSWORD_HASH` adicionado em `vitest.config.ts` por higiene (nao necessario com assert lazy, mas previne regressao caso futuramente migre para throw no modulo)
+>
+> Abordagem mantida: assert lazy via `assertMasterPasswordConfigured()`
+> (mais testavel que throw no modulo que o Codex usou). Ver nota C3 acima.
 
 #### Nota de execucao — C1 (revisado)
 O fix proposto pela Auditoria 1 (`eq(sales.sellerId, ctx.user.id)`) era

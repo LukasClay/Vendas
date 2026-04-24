@@ -14,13 +14,21 @@ import { adminProcedure, router } from "../_core/trpc";
 import crypto from "crypto";
 
 // Senha mestre hasheada (SHA-256) para validação de operações críticas.
-// A env `MASTER_PASSWORD_HASH` é obrigatória — sem fallback. Se faltar, o
-// servidor falha no boot (ver `assertMasterPasswordConfigured`).
+// A env `MASTER_PASSWORD_HASH` é obrigatória — sem fallback. Se faltar ou
+// estiver em formato inválido, o servidor falha no boot (ver
+// `assertMasterPasswordConfigured`).
+const SHA256_HEX_REGEX = /^[a-f0-9]{64}$/i;
+
 function getMasterPasswordHash(): string {
   const hash = process.env.MASTER_PASSWORD_HASH;
   if (!hash) {
     throw new Error(
       "MASTER_PASSWORD_HASH não configurada. Defina a env var antes de iniciar o servidor."
+    );
+  }
+  if (!SHA256_HEX_REGEX.test(hash)) {
+    throw new Error(
+      "MASTER_PASSWORD_HASH deve ser um hash SHA-256 hexadecimal de 64 caracteres."
     );
   }
   return hash;
@@ -35,10 +43,11 @@ export function assertMasterPasswordConfigured(): void {
 function verifyMasterPassword(password: string): boolean {
   const expected = getMasterPasswordHash();
   const hash = crypto.createHash("sha256").update(password).digest("hex");
-  const a = Buffer.from(hash);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  // Comparar 32 bytes binarios e idiomatico e mais barato que 64 bytes ASCII.
+  return crypto.timingSafeEqual(
+    Buffer.from(hash, "hex"),
+    Buffer.from(expected, "hex")
+  );
 }
 
 export const securityRouter = router({

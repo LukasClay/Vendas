@@ -34,4 +34,25 @@ describe("assertMasterPasswordConfigured", () => {
       .digest("hex");
     expect(() => assertMasterPasswordConfigured()).not.toThrow();
   });
+
+  it("lança erro quando MASTER_PASSWORD_HASH está em formato invalido (nao-hex)", () => {
+    process.env.MASTER_PASSWORD_HASH = "senha-em-texto-claro";
+    expect(() => assertMasterPasswordConfigured()).toThrow(
+      /SHA-256|hexadecimal/
+    );
+  });
+
+  it("lança erro quando MASTER_PASSWORD_HASH tem tamanho errado", () => {
+    process.env.MASTER_PASSWORD_HASH = "abc123"; // hex mas com apenas 6 chars
+    expect(() => assertMasterPasswordConfigured()).toThrow(
+      /SHA-256|hexadecimal/
+    );
+  });
+
+  it("aceita hex uppercase e lowercase (case-insensitive)", () => {
+    process.env.MASTER_PASSWORD_HASH = "A".repeat(64);
+    expect(() => assertMasterPasswordConfigured()).not.toThrow();
+    process.env.MASTER_PASSWORD_HASH = "a".repeat(64);
+    expect(() => assertMasterPasswordConfigured()).not.toThrow();
+  });
 });
