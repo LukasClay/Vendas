@@ -8,7 +8,7 @@
 ### Sprint 0 — Fogo imediato
 - [x] C1 — IDOR consultora (markWritten/markDone/undoDone) — **CORRIGIDO (revisado)**
 - [x] C3 (parte 1) — Master password sem fallback hardcoded — **CORRIGIDO**
-- [ ] C4 — Validacao Zod em payload Manus
+- [x] C4 — Validacao Zod em payload Manus — **CORRIGIDO**
 - [ ] A4 — Remover `refetchOnMount: "always"` em Consultora.tsx
 - [ ] M1 — Cookie logout com `maxAge: 0`
 
@@ -55,6 +55,17 @@ M13 (sprint futuro).
 Arquivos: `server/routers/security.ts`, `server/_core/index.ts`,
 `server/security.masterPassword.test.ts` (novo).
 Testes adicionados: 3 (ausente, vazia, presente).
+
+#### Nota de execucao — C4
+Respostas JSON da API Manus (upload e downloadUrl) agora passam por
+`ManusUrlResponse.parse(...)` antes de extrair `.url`. O schema e
+`z.object({ url: z.string().url() })`. Se o provedor retornar
+`{ error: "..." }` ou qualquer payload sem URL valida, falhamos cedo
+com ZodError em vez de gravar `undefined` como URL da venda.
+
+Arquivos: `server/storage.ts`, `server/storage.manus.test.ts` (novo).
+Testes adicionados: 7 (valido, extras, sem url, vazia, nao-absoluta,
+undefined, nao-objeto).
 
 ### Sprint 1 — Robustez
 - [ ] C2 + #3 + #4 — Job cleanup lixeira + arquivos R2 orfaos

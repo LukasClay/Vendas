@@ -7,7 +7,13 @@
  * Se nenhum estiver configurado, o upload falha com mensagem clara.
  */
 
+import { z } from "zod";
 import { ENV } from "./_core/env";
+
+// Shape esperado das respostas JSON do Manus storage (upload e downloadUrl).
+// Valida em runtime — se o provedor retornar erro ou payload diferente,
+// falhamos cedo em vez de gravar uma URL invalida na venda.
+const ManusUrlResponse = z.object({ url: z.string().url() });
 
 export class StorageObjectNotFoundError extends Error {
   constructor(key: string) {
@@ -63,7 +69,7 @@ async function manusPut(
     const message = await response.text().catch(() => response.statusText);
     throw new Error(`Storage upload failed (${response.status}): ${message}`);
   }
-  const url = (await response.json()).url;
+  const { url } = ManusUrlResponse.parse(await response.json());
   return { key, url };
 }
 
@@ -85,7 +91,8 @@ async function manusGet(relKey: string): Promise<{ key: string; url: string }> {
       `Storage download URL failed (${response.status}): ${message}`
     );
   }
-  return { key, url: (await response.json()).url };
+  const { url } = ManusUrlResponse.parse(await response.json());
+  return { key, url };
 }
 
 function parseContentLength(value: string | null): number | null {
