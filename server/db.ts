@@ -607,13 +607,19 @@ export async function getSaleById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getSalesBySeller(sellerId: number) {
+export async function getSalesBySeller(sellerId: number, fromDate?: Date) {
   const db = await getDb();
   if (!db) return [];
+  const conditions = [eq(sales.sellerId, sellerId), isNull(sales.deletedAt)];
+  if (fromDate) {
+    conditions.push(
+      sql`${sales.saleDate} >= ${fromDate.toISOString().split("T")[0]}`
+    );
+  }
   return db
     .select()
     .from(sales)
-    .where(and(eq(sales.sellerId, sellerId), isNull(sales.deletedAt)))
+    .where(and(...conditions))
     .orderBy(desc(sales.saleDate));
 }
 

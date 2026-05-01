@@ -433,9 +433,19 @@ export const salesRouter = router({
       return { success: true, saleId };
     }),
 
-  // Vendedor vê suas próprias vendas
+  // Vendedor vê suas próprias vendas — apenas do mês corrente (fuso de Brasília).
+  // Ao virar o mês (00h Brasília do dia 1º), totais e lista zeram automaticamente.
+  // Vendas de meses anteriores continuam no banco e visíveis ao ADM.
   myHistory: protectedProcedure.query(async ({ ctx }) => {
-    const rows = await getSalesBySeller(ctx.user.id);
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t: string) =>
+      Number(parts.find(p => p.type === t)?.value ?? 0);
+    const firstOfMonth = new Date(get("year"), get("month") - 1, 1);
+    const rows = await getSalesBySeller(ctx.user.id, firstOfMonth);
     return rows.map(sale => toPublicSale(sale, { includeExtraMedia: false }));
   }),
 
