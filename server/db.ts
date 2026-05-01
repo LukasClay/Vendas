@@ -942,6 +942,85 @@ export async function getSalesLast14Days() {
   }));
 }
 
+// Agrega vendas por dia ou mês, em qualquer janela de datas.
+// Quando startDate é omitido, usa a data da venda mais antiga (caso "Total").
+// Retorna também o total da janela anterior de mesmo tamanho (para o delta);
+// null quando não há janela anterior comparável (caso "Total").
+export async function getSalesByPeriod(params: {
+  startDate?: Date;
+  endDate?: Date;
+  granularity: "day" | "month";
+}) {
+  const db = await getDb();
+  if (!db)
+    return {
+      buckets: [] as { key: string; totalAmount: number; totalSales: number }[],
+      previous: null as { totalAmount: number; totalSales: number } | null,
+    };
+
+  const trunc = params.granularity === "month" ? "month" : "day";
+
+  let startStr = params.startDate?.toISOString().split("T")[0];
+  const endStr = params.endDate?.toISOString().split("T")[0];
+
+  if (!startStr) {
+    const earliest = await db.execute(
+      sql`SELECT MIN("saleDate")::date AS "minDate" FROM sales WHERE "deletedAt" IS NULL`
+    );
+    const earliestRows = extractRows(earliest);
+    const minDate = earliestRows[0]?.minDate
+      ? String(earliestRows[0].minDate).slice(0, 10)
+      : null;
+    if (!minDate) return { buckets: [], previous: null };
+    startStr = minDate;
+  }
+
+  const conditions: SQL[] = [
+    sql`"deletedAt" IS NULL`,
+    sql`"saleDate" >= ${startStr}`,
+  ];
+  if (endStr) conditions.push(sql`"saleDate" <= ${endStr}`);
+  const where = sql.join(conditions, sql` AND `);
+
+  const result = await db.execute(
+    sql`SELECT TO_CHAR(DATE_TRUNC(${trunc}, "saleDate"), ${
+      trunc === "month" ? sql`'YYYY-MM'` : sql`'YYYY-MM-DD'`
+    }) AS "key", COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE ${where} GROUP BY DATE_TRUNC(${trunc}, "saleDate") ORDER BY DATE_TRUNC(${trunc}, "saleDate")`
+  );
+  const rows = extractRows(result);
+  const buckets = rows.map(r => ({
+    key: String(r.key),
+    totalAmount: Number(r.totalAmount),
+    totalSales: Number(r.totalSales),
+  }));
+
+  // Janela anterior: mesmo número de dias (inclusivo) imediatamente antes da janela atual.
+  // Só calculada quando o chamador passou um startDate explícito (não em "Total").
+  let previous: { totalAmount: number; totalSales: number } | null = null;
+  if (params.startDate && params.endDate) {
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    const days =
+      Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    const prevEnd = new Date(start);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - (days - 1));
+    const prevStartStr = prevStart.toISOString().split("T")[0];
+    const prevEndStr = prevEnd.toISOString().split("T")[0];
+    const prevResult = await db.execute(
+      sql`SELECT COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "deletedAt" IS NULL AND "saleDate" >= ${prevStartStr} AND "saleDate" <= ${prevEndStr}`
+    );
+    const prevRows = extractRows(prevResult);
+    previous = {
+      totalAmount: Number(prevRows[0]?.totalAmount ?? 0),
+      totalSales: Number(prevRows[0]?.totalSales ?? 0),
+    };
+  }
+
+  return { buckets, previous };
+}
+
 // ─── Report Schedules ─────────────────────────────────────────────────────────
 
 export async function getReportSchedules() {

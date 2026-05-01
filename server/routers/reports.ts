@@ -10,6 +10,7 @@ import {
   getSales,
   getSalesByMonth,
   getSalesByMonthByCompany,
+  getSalesByPeriod,
   getSalesLast14Days,
   getTopClients,
   getTopProducts,
@@ -51,6 +52,24 @@ export const reportsRouter = router({
   salesLast14Days: adminProcedure.query(async () => {
     return getSalesLast14Days();
   }),
+
+  // Gráfico do dashboard ADM: agrega vendas por dia ou mês em qualquer janela.
+  // Sem startDate/endDate = "Total" (desde a venda mais antiga, sem comparação).
+  salesByPeriod: adminProcedure
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        granularity: z.enum(["day", "month"]),
+      })
+    )
+    .query(async ({ input }) => {
+      return getSalesByPeriod({
+        startDate: input.startDate ? new Date(input.startDate) : undefined,
+        endDate: input.endDate ? new Date(input.endDate) : undefined,
+        granularity: input.granularity,
+      });
+    }),
 
   currentMonthMetrics: adminProcedure.query(async () => {
     // Calcula "mês atual" no fuso do Brasil, independente do TZ do servidor (Railway roda em UTC).
