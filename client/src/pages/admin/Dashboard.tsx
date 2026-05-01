@@ -59,10 +59,45 @@ function formatCurrency(value: number | string) {
 }
 
 const WEEKDAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const MONTHS_SHORT = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
 const RECENT_SALES_INPUT = { limit: 8 } as const;
+
+type FilterPreset =
+  | "hoje"
+  | "semana"
+  | "mes"
+  | "mesPassado"
+  | "ano"
+  | "total"
+  | "custom";
+
+function isoToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function spanInDays(startDate: string, endDate: string): number | null {
+  if (!startDate || !endDate) return null;
+  const s = new Date(`${startDate}T00:00:00`);
+  const e = new Date(`${endDate}T00:00:00`);
+  return Math.round((e.getTime() - s.getTime()) / 86_400_000) + 1;
+}
 
 export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState({ startDate: "", endDate: "" });
+  const [preset, setPreset] = useState<FilterPreset>("total");
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -71,10 +106,24 @@ export default function AdminDashboard() {
     [dateFilter.startDate, dateFilter.endDate]
   );
 
+  // Granularidade do gráfico: ≤ 31 dias = barras por dia; senão por mês.
+  // Sem datas (preset "total") = mês.
+  const span = spanInDays(dateFilter.startDate, dateFilter.endDate);
+  const granularity: "day" | "month" =
+    span !== null && span <= 31 ? "day" : "month";
+
+  const periodInput = useMemo(
+    () => ({
+      startDate: dateFilter.startDate || undefined,
+      endDate: dateFilter.endDate || undefined,
+      granularity,
+    }),
+    [dateFilter.startDate, dateFilter.endDate, granularity]
+  );
+
   const { data: reportData, isLoading } =
     trpc.reports.summary.useQuery(summaryInput);
-  const { data: last14DaysData = [] } =
-    trpc.reports.salesLast14Days.useQuery();
+  const { data: periodData } = trpc.reports.salesByPeriod.useQuery(periodInput);
   const { data: currentMonthMetrics } =
     trpc.reports.currentMonthMetrics.useQuery(undefined, {
       staleTime: 5 * 60 * 1000,
@@ -82,50 +131,135 @@ export default function AdminDashboard() {
   const { data: recentSales = [] } =
     trpc.sales.list.useQuery(RECENT_SALES_INPUT);
 
-  // Gerar últimos 7 dias (exibidos) + 7 anteriores (para cálculo de tendência)
-  const { chartData, previousWeekTotal } = useMemo(() => {
-    const days: {
+  const chartData = useMemo(() => {
+    type Point = {
       name: string;
       total: number;
       vendas: number;
       fullDate: string;
-    }[] = [];
-    let prevTotal = 0;
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 10);
-      const found = last14DaysData.find(r => r.day === iso);
-      const total = found ? Number(found.totalAmount) : 0;
-      if (i >= 7) {
-        prevTotal += total;
-        continue;
+    };
+    const buckets = periodData?.buckets ?? [];
+
+    if (granularity === "month") {
+      // Preenche meses faltantes entre primeiro e último bucket (ou janela do filtro).
+      let startKey = buckets[0]?.key;
+      let endKey = buckets[buckets.length - 1]?.key;
+      if (dateFilter.startDate) startKey = dateFilter.startDate.slice(0, 7);
+      if (dateFilter.endDate) endKey = dateFilter.endDate.slice(0, 7);
+      if (!startKey || !endKey) return [] as Point[];
+
+      const map = new Map(buckets.map(b => [b.key, b]));
+      const out: Point[] = [];
+      const [sy, sm] = startKey.split("-").map(Number);
+      const [ey, em] = endKey.split("-").map(Number);
+      let y = sy;
+      let m = sm;
+      while (y < ey || (y === ey && m <= em)) {
+        const key = `${y}-${String(m).padStart(2, "0")}`;
+        const b = map.get(key);
+        out.push({
+          name: MONTHS_SHORT[m - 1],
+          total: b ? b.totalAmount : 0,
+          vendas: b ? b.totalSales : 0,
+          fullDate: `${String(m).padStart(2, "0")}/${y}`,
+        });
+        m += 1;
+        if (m > 12) {
+          m = 1;
+          y += 1;
+        }
       }
-      const dayName =
-        i === 0 ? "Hoje" : i === 1 ? "Ontem" : WEEKDAYS_SHORT[d.getDay()];
-      days.push({
-        name: dayName,
-        total,
-        vendas: found ? Number(found.totalSales) : 0,
-        fullDate: d.toLocaleDateString("pt-BR", {
+      return out;
+    }
+
+    // Granularidade diária — preenche dias faltantes na janela [startDate, endDate].
+    if (!dateFilter.startDate || !dateFilter.endDate) return [] as Point[];
+    const start = new Date(`${dateFilter.startDate}T00:00:00`);
+    const end = new Date(`${dateFilter.endDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const useWeekdayLabels = (span ?? 0) <= 7;
+
+    const map = new Map(buckets.map(b => [b.key, b]));
+    const out: Point[] = [];
+    const cursor = new Date(start);
+    while (cursor.getTime() <= end.getTime()) {
+      const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+      const b = map.get(iso);
+      const diffDays = Math.round(
+        (today.getTime() - cursor.getTime()) / 86_400_000
+      );
+      let name: string;
+      if (useWeekdayLabels) {
+        name =
+          diffDays === 0
+            ? "Hoje"
+            : diffDays === 1
+              ? "Ontem"
+              : WEEKDAYS_SHORT[cursor.getDay()];
+      } else {
+        name = `${String(cursor.getDate()).padStart(2, "0")}/${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+      }
+      out.push({
+        name,
+        total: b ? b.totalAmount : 0,
+        vendas: b ? b.totalSales : 0,
+        fullDate: cursor.toLocaleDateString("pt-BR", {
           day: "2-digit",
           month: "2-digit",
+          year: "numeric",
         }),
       });
+      cursor.setDate(cursor.getDate() + 1);
     }
-    return { chartData: days, previousWeekTotal: prevTotal };
-  }, [last14DaysData]);
+    return out;
+  }, [periodData, granularity, dateFilter.startDate, dateFilter.endDate, span]);
 
-  const weekTotal = chartData.reduce((s, d) => s + d.total, 0);
-  const weekSales = chartData.reduce((s, d) => s + d.vendas, 0);
+  const periodTotal = chartData.reduce((s, d) => s + d.total, 0);
+  const periodSales = chartData.reduce((s, d) => s + d.vendas, 0);
 
-  // Delta semana atual vs. 7 dias anteriores (null = sem base de comparação)
-  const weekDeltaPct =
-    previousWeekTotal > 0
-      ? ((weekTotal - previousWeekTotal) / previousWeekTotal) * 100
+  const previousTotal = periodData?.previous?.totalAmount ?? null;
+  const periodDeltaPct =
+    previousTotal !== null && previousTotal > 0
+      ? ((periodTotal - previousTotal) / previousTotal) * 100
       : null;
+
+  const chartTitle = useMemo(() => {
+    switch (preset) {
+      case "hoje":
+        return "Hoje";
+      case "semana":
+        return "Esta Semana";
+      case "mes":
+        return "Este Mês";
+      case "mesPassado":
+        return "Mês Passado";
+      case "ano":
+        return "Este Ano";
+      case "total":
+        return "Histórico Completo";
+      default:
+        return "Período Personalizado";
+    }
+  }, [preset]);
+
+  const comparisonLabel = useMemo(() => {
+    switch (preset) {
+      case "hoje":
+        return "vs. dia anterior";
+      case "semana":
+        return "vs. semana anterior";
+      case "mes":
+      case "mesPassado":
+        return "vs. mês anterior";
+      case "ano":
+        return "vs. ano anterior";
+      case "total":
+        return null;
+      default:
+        return "vs. período anterior";
+    }
+  }, [preset]);
 
   const summary = reportData?.summary;
   const topSellers = reportData?.topSellers ?? [];
@@ -192,13 +326,15 @@ export default function AdminDashboard() {
                 {(
                   [
                     {
+                      key: "hoje",
                       label: "Hoje",
                       fn: () => {
-                        const t = new Date().toISOString().slice(0, 10);
+                        const t = isoToday();
                         setDateFilter({ startDate: t, endDate: t });
                       },
                     },
                     {
+                      key: "semana",
                       label: "Esta semana",
                       fn: () => {
                         const now = new Date();
@@ -214,6 +350,7 @@ export default function AdminDashboard() {
                       },
                     },
                     {
+                      key: "mes",
                       label: "Este mês",
                       fn: () => {
                         const now = new Date();
@@ -234,6 +371,7 @@ export default function AdminDashboard() {
                       },
                     },
                     {
+                      key: "mesPassado",
                       label: "Mês passado",
                       fn: () => {
                         const now = new Date();
@@ -253,31 +391,65 @@ export default function AdminDashboard() {
                         });
                       },
                     },
-                  ] as { label: string; fn: () => void }[]
-                ).map(({ label, fn }) => (
-                  <motion.button
-                    key={label}
-                    onClick={fn}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                    style={{
-                      background: "var(--secondary)",
-                      color: "var(--primary)",
-                      border: "1px solid var(--border)",
-                    }}
-                  >
-                    {label}
-                  </motion.button>
-                ))}
+                    {
+                      key: "ano",
+                      label: "Este ano",
+                      fn: () => {
+                        const now = new Date();
+                        const first = new Date(now.getFullYear(), 0, 1);
+                        setDateFilter({
+                          startDate: first.toISOString().slice(0, 10),
+                          endDate: isoToday(),
+                        });
+                      },
+                    },
+                    {
+                      key: "total",
+                      label: "Total",
+                      fn: () => {
+                        setDateFilter({ startDate: "", endDate: "" });
+                      },
+                    },
+                  ] as {
+                    key: FilterPreset;
+                    label: string;
+                    fn: () => void;
+                  }[]
+                ).map(({ key, label, fn }) => {
+                  const active = preset === key;
+                  return (
+                    <motion.button
+                      key={label}
+                      onClick={() => {
+                        fn();
+                        setPreset(key);
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      style={{
+                        background: active
+                          ? "var(--primary)"
+                          : "var(--secondary)",
+                        color: active
+                          ? "var(--primary-foreground)"
+                          : "var(--primary)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      {label}
+                    </motion.button>
+                  );
+                })}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="date"
                   value={dateFilter.startDate}
-                  onChange={e =>
-                    setDateFilter(f => ({ ...f, startDate: e.target.value }))
-                  }
+                  onChange={e => {
+                    setDateFilter(f => ({ ...f, startDate: e.target.value }));
+                    setPreset("custom");
+                  }}
                   className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
                   style={{
                     border: "1.5px solid var(--border)",
@@ -294,9 +466,10 @@ export default function AdminDashboard() {
                 <input
                   type="date"
                   value={dateFilter.endDate}
-                  onChange={e =>
-                    setDateFilter(f => ({ ...f, endDate: e.target.value }))
-                  }
+                  onChange={e => {
+                    setDateFilter(f => ({ ...f, endDate: e.target.value }));
+                    setPreset("custom");
+                  }}
                   className="flex-1 min-w-[130px] px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
                   style={{
                     border: "1.5px solid var(--border)",
@@ -306,9 +479,10 @@ export default function AdminDashboard() {
                 />
                 {(dateFilter.startDate || dateFilter.endDate) && (
                   <motion.button
-                    onClick={() =>
-                      setDateFilter({ startDate: "", endDate: "" })
-                    }
+                    onClick={() => {
+                      setDateFilter({ startDate: "", endDate: "" });
+                      setPreset("total");
+                    }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="px-3 py-2.5 rounded-xl text-sm font-medium shrink-0"
@@ -534,9 +708,9 @@ export default function AdminDashboard() {
                       className="w-4 h-4"
                       style={{ color: "var(--primary)" }}
                     />
-                    Últimos 7 Dias
+                    {chartTitle}
                   </h2>
-                  {weekDeltaPct !== null && (
+                  {periodDeltaPct !== null && comparisonLabel && (
                     <motion.span
                       initial={{ opacity: 0, scale: 0.85 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -544,37 +718,37 @@ export default function AdminDashboard() {
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
                       style={{
                         background:
-                          weekDeltaPct > 0
+                          periodDeltaPct > 0
                             ? isDark
                               ? "oklch(0.28 0.08 160)"
                               : "oklch(0.94 0.06 160)"
-                            : weekDeltaPct < 0
+                            : periodDeltaPct < 0
                               ? isDark
                                 ? "oklch(0.30 0.08 25)"
                                 : "oklch(0.95 0.05 25)"
                               : "var(--secondary)",
                         color:
-                          weekDeltaPct > 0
+                          periodDeltaPct > 0
                             ? isDark
                               ? "oklch(0.78 0.18 160)"
                               : "oklch(0.45 0.15 160)"
-                            : weekDeltaPct < 0
+                            : periodDeltaPct < 0
                               ? isDark
                                 ? "oklch(0.78 0.18 25)"
                                 : "oklch(0.50 0.20 25)"
                               : "var(--muted-foreground)",
                       }}
-                      title="Faturamento dos últimos 7 dias comparado com os 7 dias anteriores"
+                      title={`Faturamento do período comparado com o período anterior de mesmo tamanho`}
                     >
-                      {weekDeltaPct > 0 ? (
+                      {periodDeltaPct > 0 ? (
                         <TrendingUp className="w-3 h-3" />
-                      ) : weekDeltaPct < 0 ? (
+                      ) : periodDeltaPct < 0 ? (
                         <TrendingDown className="w-3 h-3" />
                       ) : (
                         <Minus className="w-3 h-3" />
                       )}
-                      {weekDeltaPct > 0 ? "+" : ""}
-                      {weekDeltaPct.toFixed(1)}% vs. semana anterior
+                      {periodDeltaPct > 0 ? "+" : ""}
+                      {periodDeltaPct.toFixed(1)}% {comparisonLabel}
                     </motion.span>
                   )}
                 </div>
@@ -595,7 +769,7 @@ export default function AdminDashboard() {
                       style={{ color: "var(--primary)" }}
                     >
                       <AnimatedNumber
-                        value={weekTotal}
+                        value={periodTotal}
                         prefix="R$ "
                         duration={1}
                       />
@@ -616,7 +790,7 @@ export default function AdminDashboard() {
                       className="text-sm font-bold"
                       style={{ color: "var(--foreground)" }}
                     >
-                      <AnimatedNumber value={weekSales} duration={0.8} />
+                      <AnimatedNumber value={periodSales} duration={0.8} />
                     </p>
                   </div>
                 </div>
