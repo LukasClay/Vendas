@@ -958,8 +958,6 @@ export async function getSalesByPeriod(params: {
       previous: null as { totalAmount: number; totalSales: number } | null,
     };
 
-  const trunc = params.granularity === "month" ? "month" : "day";
-
   let startStr = params.startDate?.toISOString().split("T")[0];
   const endStr = params.endDate?.toISOString().split("T")[0];
 
@@ -975,17 +973,20 @@ export async function getSalesByPeriod(params: {
     startStr = minDate;
   }
 
-  const conditions: SQL[] = [
-    sql`"deletedAt" IS NULL`,
-    sql`"saleDate" >= ${startStr}`,
-  ];
-  if (endStr) conditions.push(sql`"saleDate" <= ${endStr}`);
-  const where = sql.join(conditions, sql` AND `);
+  // Expressão de agrupamento: TO_CHAR é usado para gerar a chave (formato literal,
+  // não parametrizado) e também como GROUP BY/ORDER BY para evitar parametrizar
+  // a unidade de DATE_TRUNC (Postgres não resolve a função quando o 1º arg é $param
+  // e a coluna é date).
+  const keyExpr =
+    params.granularity === "month"
+      ? sql`TO_CHAR("saleDate", 'YYYY-MM')`
+      : sql`TO_CHAR("saleDate", 'YYYY-MM-DD')`;
+
+  let where = sql`"deletedAt" IS NULL AND "saleDate" >= ${startStr}`;
+  if (endStr) where = sql`${where} AND "saleDate" <= ${endStr}`;
 
   const result = await db.execute(
-    sql`SELECT TO_CHAR(DATE_TRUNC(${trunc}, "saleDate"), ${
-      trunc === "month" ? sql`'YYYY-MM'` : sql`'YYYY-MM-DD'`
-    }) AS "key", COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE ${where} GROUP BY DATE_TRUNC(${trunc}, "saleDate") ORDER BY DATE_TRUNC(${trunc}, "saleDate")`
+    sql`SELECT ${keyExpr} AS "key", COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE ${where} GROUP BY ${keyExpr} ORDER BY ${keyExpr}`
   );
   const rows = extractRows(result);
   const buckets = rows.map(r => ({
