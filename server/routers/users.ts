@@ -27,11 +27,16 @@ export const usersRouter = router({
         phone: z.string().optional(),
         role: z.enum(["user", "consultora", "admin"]).optional(),
         active: z.boolean().optional(),
+        monthlyGoal: z.number().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      await updateUser(id, data);
+      const { id, monthlyGoal, ...rest } = input;
+      const data: Record<string, unknown> = { ...rest };
+      if (monthlyGoal !== undefined) {
+        data.monthlyGoal = monthlyGoal === null ? null : String(monthlyGoal);
+      }
+      await updateUser(id, data as Parameters<typeof updateUser>[1]);
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({

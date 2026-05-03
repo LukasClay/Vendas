@@ -30,6 +30,9 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { PushNotificationButton } from "./PushNotificationButton";
 import { ShimmerText, PulseStar, FadeIn } from "./Animations";
 import CompanyThemeProvider from "./CompanyThemeProvider";
+import { useAdminSSE } from "@/hooks/useAdminSSE";
+import { CommandPalette } from "./CommandPalette";
+import { Search } from "lucide-react";
 
 // Cores clássicas (Consultora + Vendedor — âmbar fixo, NÃO muda)
 const CLASSIC_COLORS = {
@@ -266,6 +269,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
   const isConsultora = user?.role === "consultora";
   const C = isAdmin ? MODERN_COLORS : CLASSIC_COLORS;
+
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useAdminSSE();
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen(p => !p);
+      }
+      if (e.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isAdmin]);
+
   const menuItems = isAdmin
     ? adminMenuItems
     : isConsultora
@@ -335,6 +355,19 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {isAdmin && (
+              <motion.button
+                onClick={() => setPaletteOpen(true)}
+                className="w-10 h-10 flex items-center justify-center rounded-xl"
+                style={{ color: C.mutedFg }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Busca global (Ctrl+K)"
+                aria-label="Busca global"
+              >
+                <Search className="w-4 h-4" />
+              </motion.button>
+            )}
             {isAdmin && <ThemeToggle size="md" colors={C} />}
             {(isAdmin || isConsultora) && (
               <div style={{ color: C.mutedFg }}>
@@ -735,6 +768,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           children
         )}
       </main>
+
+      {isAdmin && (
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      )}
     </div>
   );
 }

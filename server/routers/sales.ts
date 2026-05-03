@@ -17,6 +17,7 @@ import {
   cleanupExpiredTrash,
 } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { emitSseEvent } from "../_core/sse";
 import { storageDelete, storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import {
@@ -430,12 +431,23 @@ export const salesRouter = router({
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
       });
+      emitSseEvent("sales");
       return { success: true, saleId };
     }),
 
-  // Vendedor vê suas próprias vendas
+  // Vendedor vê suas próprias vendas — apenas do mês corrente (fuso de Brasília).
+  // Ao virar o mês (00h Brasília do dia 1º), totais e lista zeram automaticamente.
+  // Vendas de meses anteriores continuam no banco e visíveis ao ADM.
   myHistory: protectedProcedure.query(async ({ ctx }) => {
-    const rows = await getSalesBySeller(ctx.user.id);
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t: string) =>
+      Number(parts.find(p => p.type === t)?.value ?? 0);
+    const firstOfMonth = new Date(get("year"), get("month") - 1, 1);
+    const rows = await getSalesBySeller(ctx.user.id, firstOfMonth);
     return rows.map(sale => toPublicSale(sale, { includeExtraMedia: false }));
   }),
 
@@ -848,6 +860,7 @@ export const salesRouter = router({
       }
 
       await safeDeleteAll(keysToDeleteAfterUpdate);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -870,6 +883,7 @@ export const salesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sale = await getSaleById(input.id);
       await deleteSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -1030,6 +1044,7 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await restoreSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -1047,6 +1062,7 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await permanentDeleteSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({

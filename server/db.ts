@@ -50,6 +50,7 @@ export interface AdminUserListItem extends LocalLoginHealthResult {
   username: string | null;
   createdAt: Date;
   lastSignedIn: Date;
+  monthlyGoal: string | null;
 }
 
 /** Extrai rows de resultado de db.execute() (compatível com diferentes versões do driver) */
@@ -184,6 +185,7 @@ export async function getAllUsers(): Promise<AdminUserListItem[]> {
       deletedAt: users.deletedAt,
       createdAt: users.createdAt,
       lastSignedIn: users.lastSignedIn,
+      monthlyGoal: users.monthlyGoal,
     })
     .from(users)
     .where(isNull(users.deletedAt))
@@ -483,6 +485,22 @@ export async function ensurePhotoColumns() {
   console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
 }
 
+export async function ensureMonthlyGoalColumn() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(
+      sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "monthlyGoal" numeric(12,2)`
+    );
+    console.log("[MonthlyGoal] Coluna monthlyGoal verificada/criada.");
+  } catch (e: unknown) {
+    console.warn(
+      "[MonthlyGoal] Aviso ao adicionar coluna:",
+      e instanceof Error ? e.message : String(e)
+    );
+  }
+}
+
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 export async function upsertClient(data: InsertClient) {
@@ -607,13 +625,19 @@ export async function getSaleById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getSalesBySeller(sellerId: number) {
+export async function getSalesBySeller(sellerId: number, fromDate?: Date) {
   const db = await getDb();
   if (!db) return [];
+  const conditions = [eq(sales.sellerId, sellerId), isNull(sales.deletedAt)];
+  if (fromDate) {
+    conditions.push(
+      sql`${sales.saleDate} >= ${fromDate.toISOString().split("T")[0]}`
+    );
+  }
   return db
     .select()
     .from(sales)
-    .where(and(eq(sales.sellerId, sellerId), isNull(sales.deletedAt)))
+    .where(and(...conditions))
     .orderBy(desc(sales.saleDate));
 }
 
@@ -934,6 +958,86 @@ export async function getSalesLast14Days() {
     totalAmount: Number(r.totalAmount),
     totalSales: Number(r.totalSales),
   }));
+}
+
+// Agrega vendas por dia ou mês, em qualquer janela de datas.
+// Quando startDate é omitido, usa a data da venda mais antiga (caso "Total").
+// Retorna também o total da janela anterior de mesmo tamanho (para o delta);
+// null quando não há janela anterior comparável (caso "Total").
+export async function getSalesByPeriod(params: {
+  startDate?: Date;
+  endDate?: Date;
+  granularity: "day" | "month";
+}) {
+  const db = await getDb();
+  if (!db)
+    return {
+      buckets: [] as { key: string; totalAmount: number; totalSales: number }[],
+      previous: null as { totalAmount: number; totalSales: number } | null,
+    };
+
+  let startStr = params.startDate?.toISOString().split("T")[0];
+  const endStr = params.endDate?.toISOString().split("T")[0];
+
+  if (!startStr) {
+    const earliest = await db.execute(
+      sql`SELECT MIN("saleDate")::date AS "minDate" FROM sales WHERE "deletedAt" IS NULL`
+    );
+    const earliestRows = extractRows(earliest);
+    const minDate = earliestRows[0]?.minDate
+      ? String(earliestRows[0].minDate).slice(0, 10)
+      : null;
+    if (!minDate) return { buckets: [], previous: null };
+    startStr = minDate;
+  }
+
+  // Expressão de agrupamento: TO_CHAR é usado para gerar a chave (formato literal,
+  // não parametrizado) e também como GROUP BY/ORDER BY para evitar parametrizar
+  // a unidade de DATE_TRUNC (Postgres não resolve a função quando o 1º arg é $param
+  // e a coluna é date).
+  const keyExpr =
+    params.granularity === "month"
+      ? sql`TO_CHAR("saleDate", 'YYYY-MM')`
+      : sql`TO_CHAR("saleDate", 'YYYY-MM-DD')`;
+
+  let where = sql`"deletedAt" IS NULL AND "saleDate" >= ${startStr}`;
+  if (endStr) where = sql`${where} AND "saleDate" <= ${endStr}`;
+
+  const result = await db.execute(
+    sql`SELECT ${keyExpr} AS "key", COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE ${where} GROUP BY ${keyExpr} ORDER BY ${keyExpr}`
+  );
+  const rows = extractRows(result);
+  const buckets = rows.map(r => ({
+    key: String(r.key),
+    totalAmount: Number(r.totalAmount),
+    totalSales: Number(r.totalSales),
+  }));
+
+  // Janela anterior: mesmo número de dias (inclusivo) imediatamente antes da janela atual.
+  // Só calculada quando o chamador passou um startDate explícito (não em "Total").
+  let previous: { totalAmount: number; totalSales: number } | null = null;
+  if (params.startDate && params.endDate) {
+    const start = new Date(params.startDate);
+    const end = new Date(params.endDate);
+    const days =
+      Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    const prevEnd = new Date(start);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - (days - 1));
+    const prevStartStr = prevStart.toISOString().split("T")[0];
+    const prevEndStr = prevEnd.toISOString().split("T")[0];
+    const prevResult = await db.execute(
+      sql`SELECT COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "deletedAt" IS NULL AND "saleDate" >= ${prevStartStr} AND "saleDate" <= ${prevEndStr}`
+    );
+    const prevRows = extractRows(prevResult);
+    previous = {
+      totalAmount: Number(prevRows[0]?.totalAmount ?? 0),
+      totalSales: Number(prevRows[0]?.totalSales ?? 0),
+    };
+  }
+
+  return { buckets, previous };
 }
 
 // ─── Report Schedules ─────────────────────────────────────────────────────────

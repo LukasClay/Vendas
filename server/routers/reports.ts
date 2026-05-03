@@ -10,13 +10,18 @@ import {
   getSales,
   getSalesByMonth,
   getSalesByMonthByCompany,
+  getSalesByPeriod,
   getSalesLast14Days,
   getTopClients,
   getTopProducts,
   getTopSellers,
   updateReportSchedule,
+  getDb,
 } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
+import { and, eq, gte, inArray, isNull, isNotNull, lte, ne, or, sql } from "drizzle-orm";
+import { sales, users } from "../../drizzle/schema";
+import { calcDeadline } from "../../shared/businessDays";
 
 export const reportsRouter = router({
   summary: adminProcedure
@@ -52,6 +57,24 @@ export const reportsRouter = router({
     return getSalesLast14Days();
   }),
 
+  // Gráfico do dashboard ADM: agrega vendas por dia ou mês em qualquer janela.
+  // Sem startDate/endDate = "Total" (desde a venda mais antiga, sem comparação).
+  salesByPeriod: adminProcedure
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        granularity: z.enum(["day", "month"]),
+      })
+    )
+    .query(async ({ input }) => {
+      return getSalesByPeriod({
+        startDate: input.startDate ? new Date(input.startDate) : undefined,
+        endDate: input.endDate ? new Date(input.endDate) : undefined,
+        granularity: input.granularity,
+      });
+    }),
+
   currentMonthMetrics: adminProcedure.query(async () => {
     // Calcula "mês atual" no fuso do Brasil, independente do TZ do servidor (Railway roda em UTC).
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -82,6 +105,140 @@ export const reportsRouter = router({
     .query(async ({ input }) => {
       return getSalesByMonthByCompany(input.year);
     }),
+
+  slaMetrics: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const [completedRows, inProgressRows] = await Promise.all([
+      db
+        .select({
+          saleDate: sales.saleDate,
+          completedAt: sales.completedAt,
+        })
+        .from(sales)
+        .where(
+          and(
+            eq(sales.workStatus, "feito"),
+            ne(sales.productName, "Consulta Cartas"),
+            ne(sales.productCategory, "coletivo"),
+            isNull(sales.deletedAt)
+          )
+        )
+        .limit(5000),
+      db
+        .select({ saleDate: sales.saleDate })
+        .from(sales)
+        .where(
+          and(
+            or(
+              eq(sales.workStatus, "para_escrever"),
+              eq(sales.workStatus, "pendente")
+            ),
+            ne(sales.productName, "Consulta Cartas"),
+            ne(sales.productCategory, "coletivo"),
+            isNull(sales.deletedAt)
+          )
+        )
+        .limit(5000),
+    ]);
+
+    let completedOnTime = 0;
+    let completedLate = 0;
+    for (const row of completedRows) {
+      if (!row.completedAt) { completedLate++; continue; }
+      const deadline = calcDeadline(String(row.saleDate));
+      deadline.setHours(0, 0, 0, 0);
+      const done = new Date(row.completedAt);
+      done.setHours(0, 0, 0, 0);
+      if (done <= deadline) completedOnTime++;
+      else completedLate++;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let overdueCount = 0;
+    for (const row of inProgressRows) {
+      const deadline = calcDeadline(String(row.saleDate));
+      deadline.setHours(0, 0, 0, 0);
+      if (today > deadline) overdueCount++;
+    }
+
+    const total = completedOnTime + completedLate;
+    const slaRate = total > 0 ? Math.round((completedOnTime / total) * 100) : null;
+
+    return {
+      completedOnTime,
+      completedLate,
+      slaRate,
+      inProgressCount: inProgressRows.length,
+      overdueCount,
+    };
+  }),
+
+  sellerGoalsCurrentMonth: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t: string) => Number(parts.find(p => p.type === t)?.value ?? 0);
+    const year = get("year");
+    const month = get("month");
+    const day = get("day");
+    const firstOfMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+    const today = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    const usersWithGoals = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        displayName: users.displayName,
+        role: users.role,
+        monthlyGoal: users.monthlyGoal,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.active, true),
+          isNull(users.deletedAt),
+          isNotNull(users.monthlyGoal)
+        )
+      );
+
+    if (usersWithGoals.length === 0) return [];
+
+    const sellerIds = usersWithGoals.map(u => u.id);
+    const salesRows = await db
+      .select({
+        sellerId: sales.sellerId,
+        total: sql<string>`SUM(${sales.amount})`,
+      })
+      .from(sales)
+      .where(
+        and(
+          gte(sales.saleDate, firstOfMonth),
+          lte(sales.saleDate, today),
+          isNull(sales.deletedAt),
+          inArray(sales.sellerId, sellerIds)
+        )
+      )
+      .groupBy(sales.sellerId);
+
+    const salesMap = new Map(salesRows.map(r => [r.sellerId, Number(r.total ?? 0)]));
+
+    return usersWithGoals.map(u => ({
+      id: u.id,
+      name: u.displayName || u.name || "Sem nome",
+      role: u.role,
+      monthlyGoal: Number(u.monthlyGoal),
+      currentMonthTotal: salesMap.get(u.id) ?? 0,
+    }));
+  }),
 
   exportData: adminProcedure
     .input(
