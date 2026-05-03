@@ -16,6 +16,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { emitSseEvent } from "../_core/sse";
 import { getSaleUrgency } from "../../shared/businessDays";
 import type { ProductCategory } from "../../shared/types";
 import { createAuditLog } from "../db";
@@ -312,6 +313,7 @@ export const consultoraRouter = router({
         .where(
           and(eq(sales.id, input.id), eq(sales.workStatus, "para_escrever"))
         );
+      emitSseEvent("consultora");
       return { success: true };
     }),
 
@@ -325,6 +327,7 @@ export const consultoraRouter = router({
         .update(sales)
         .set({ workStatus: "feito", completedAt: new Date() })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
+      emitSseEvent("consultora");
       return { success: true };
     }),
 
@@ -338,6 +341,7 @@ export const consultoraRouter = router({
         .update(sales)
         .set({ workStatus: "pendente", completedAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "feito")));
+      emitSseEvent("consultora");
       return { success: true };
     }),
 
@@ -351,6 +355,7 @@ export const consultoraRouter = router({
         .update(sales)
         .set({ workStatus: "para_escrever", writtenAt: null })
         .where(and(eq(sales.id, input.id), eq(sales.workStatus, "pendente")));
+      emitSseEvent("consultora");
       return { success: true };
     }),
 
@@ -719,6 +724,7 @@ export const consultoraRouter = router({
         userAgent: ctx.userAgent,
       });
 
+      emitSseEvent("consultora");
       return { success: true, updatedCount: total };
     }),
 });

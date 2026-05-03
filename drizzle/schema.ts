@@ -42,6 +42,7 @@ export const users = pgTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   // A2: versão de sessão — incrementada no logout para invalidar todos os JWTs anteriores
   sessionVersion: integer("sessionVersion").default(1).notNull(),
+  monthlyGoal: numeric("monthlyGoal", { precision: 12, scale: 2 }),
 });
 
 export type User = typeof users.$inferSelect;

@@ -11,7 +11,9 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
-import { ensureSystemProducts, ensurePhotoColumns, getDb } from "../db";
+import { ensureSystemProducts, ensurePhotoColumns, ensureMonthlyGoalColumn, getDb } from "../db";
+import { sseEmitter } from "./sse";
+import { sdk } from "./sdk";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
 
@@ -63,6 +65,41 @@ async function startServer() {
     }
   });
 
+  // ─── SSE — tempo real para ADM ────────────────────────────────────────────
+  app.get("/api/events", async (req, res) => {
+    try {
+      const sessionCookie = sdk.getSessionCookieFromRequest(req);
+      if (!sessionCookie) { res.status(401).end(); return; }
+      const user = await sdk.authenticateRequest(req, sessionCookie);
+      if (user.role !== "admin") { res.status(403).end(); return; }
+    } catch {
+      res.status(401).end();
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const send = (channel: string) => {
+      res.write(`data: ${channel}\n\n`);
+    };
+
+    sseEmitter.on("event", send);
+
+    // Heartbeat a cada 25s para evitar timeout do Railway
+    const heartbeat = setInterval(() => {
+      res.write(": heartbeat\n\n");
+    }, 25000);
+
+    req.on("close", () => {
+      sseEmitter.off("event", send);
+      clearInterval(heartbeat);
+    });
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   registerConsultoraPhotoDownloadRoute(app);
@@ -105,6 +142,7 @@ async function startServer() {
   // Garante que produtos do sistema existam no banco antes de aceitar requests
   await ensureSystemProducts();
   await ensurePhotoColumns();
+  await ensureMonthlyGoalColumn();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

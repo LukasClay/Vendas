@@ -30,6 +30,7 @@ type EditEmployeeForm = {
   username: string;
   role: "user" | "consultora" | "admin";
   active: boolean;
+  monthlyGoal: string;
 };
 type ResetForm = { newPassword: string };
 type LocalLoginHealth =
@@ -48,6 +49,7 @@ type AdminUser = {
   phone: string | null;
   active: boolean;
   username: string | null;
+  monthlyGoal: string | null;
   createdAt: Date | string;
   lastSignedIn: Date | string;
   canUseLocalLogin: boolean;
@@ -143,16 +145,20 @@ function UserCard({
       username: user.username ?? "",
       role: user.role,
       active: user.active ?? true,
+      monthlyGoal: user.monthlyGoal ? String(Number(user.monthlyGoal)) : "",
     });
     setIsEditing(true);
   };
 
   const handleSave = () => {
+    const goalVal = editForm.monthlyGoal.trim();
+    const monthlyGoal = goalVal === "" ? null : Number(goalVal);
     updateUserMutation.mutate({
       userId: user.id,
       name: editForm.name || undefined,
       username: editForm.username || undefined,
       role: editForm.role,
+      monthlyGoal: isNaN(monthlyGoal as number) ? null : monthlyGoal,
     });
   };
 
@@ -225,6 +231,18 @@ function UserCard({
               <option value="consultora">Consultora</option>
               <option value="admin">Administrador</option>
             </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editForm.monthlyGoal}
+              onChange={e =>
+                setEditForm(form => ({ ...form, monthlyGoal: e.target.value }))
+              }
+              placeholder="Meta mensal (R$) — opcional"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={inputStyle}
+            />
             <div className="flex items-center gap-2 mt-1">
               <button
                 onClick={handleSave}
@@ -284,6 +302,15 @@ function UserCard({
             <p className="text-xs mt-0.5 text-[var(--muted-foreground)]">
               @{user.username || "sem-usuario"}
             </p>
+            {user.monthlyGoal && Number(user.monthlyGoal) > 0 && (
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                Meta:{" "}
+                <span style={{ color: "var(--primary)", fontWeight: 600 }}>
+                  {Number(user.monthlyGoal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </span>
+                /mês
+              </p>
+            )}
             {showLocalLoginMessage && (
               <p
                 className="text-xs mt-1"

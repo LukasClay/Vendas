@@ -17,6 +17,7 @@ import {
   cleanupExpiredTrash,
 } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { emitSseEvent } from "../_core/sse";
 import { storageDelete, storagePut } from "../storage";
 import { nanoid } from "nanoid";
 import {
@@ -430,6 +431,7 @@ export const salesRouter = router({
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
       });
+      emitSseEvent("sales");
       return { success: true, saleId };
     }),
 
@@ -858,6 +860,7 @@ export const salesRouter = router({
       }
 
       await safeDeleteAll(keysToDeleteAfterUpdate);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -880,6 +883,7 @@ export const salesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sale = await getSaleById(input.id);
       await deleteSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -1040,6 +1044,7 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await restoreSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({
@@ -1057,6 +1062,7 @@ export const salesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       await permanentDeleteSale(input.id);
+      emitSseEvent("sales");
       const userName =
         ctx.user.displayName || ctx.user.name || ctx.user.username || "Admin";
       await createAuditLog({

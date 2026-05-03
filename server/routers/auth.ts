@@ -337,6 +337,7 @@ export const ownAuthRouter = router({
           .optional(),
         role: z.enum(["user", "consultora", "admin"]).optional(),
         active: z.boolean().optional(),
+        monthlyGoal: z.number().nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -369,6 +370,9 @@ export const ownAuthRouter = router({
       if (input.username !== undefined) updateData.username = input.username;
       if (input.role !== undefined) updateData.role = input.role;
       if (input.active !== undefined) updateData.active = input.active;
+      if (input.monthlyGoal !== undefined) {
+        updateData.monthlyGoal = input.monthlyGoal === null ? null : String(input.monthlyGoal);
+      }
 
       // Ao reativar: restaura username original removendo sufixo _XXXX
       if (input.active === true) {

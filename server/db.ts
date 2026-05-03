@@ -50,6 +50,7 @@ export interface AdminUserListItem extends LocalLoginHealthResult {
   username: string | null;
   createdAt: Date;
   lastSignedIn: Date;
+  monthlyGoal: string | null;
 }
 
 /** Extrai rows de resultado de db.execute() (compatível com diferentes versões do driver) */
@@ -184,6 +185,7 @@ export async function getAllUsers(): Promise<AdminUserListItem[]> {
       deletedAt: users.deletedAt,
       createdAt: users.createdAt,
       lastSignedIn: users.lastSignedIn,
+      monthlyGoal: users.monthlyGoal,
     })
     .from(users)
     .where(isNull(users.deletedAt))
@@ -481,6 +483,22 @@ export async function ensurePhotoColumns() {
     }
   }
   console.log("[PhotoColumns] Colunas de foto verificadas/criadas.");
+}
+
+export async function ensureMonthlyGoalColumn() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(
+      sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "monthlyGoal" numeric(12,2)`
+    );
+    console.log("[MonthlyGoal] Coluna monthlyGoal verificada/criada.");
+  } catch (e: unknown) {
+    console.warn(
+      "[MonthlyGoal] Aviso ao adicionar coluna:",
+      e instanceof Error ? e.message : String(e)
+    );
+  }
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────

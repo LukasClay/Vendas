@@ -25,6 +25,8 @@ import {
   ClipboardList,
   Receipt,
   CalendarDays,
+  Target,
+  Gauge,
 } from "lucide-react";
 import { formatDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -284,6 +286,14 @@ export default function AdminDashboard() {
     undefined,
     { staleTime: 3 * 60 * 1000 }
   );
+
+  const { data: slaData } = trpc.reports.slaMetrics.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: goalsData = [] } = trpc.reports.sellerGoalsCurrentMonth.useQuery(undefined, {
+    staleTime: 3 * 60 * 1000,
+  });
   const pendingWorks: WorksSummaryItem[] = worksSummary?.pending ?? [];
   const toWriteWorks: WorksSummaryItem[] = worksSummary?.toWrite ?? [];
 
@@ -1108,6 +1118,128 @@ export default function AdminDashboard() {
             </AnimatedCard>
           </StaggerItem>
         </StaggerList>
+
+        {/* SLA + Metas do Mês */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Card SLA */}
+          <FadeIn delay={0.35}>
+            <AnimatedCard
+              className="rounded-2xl p-6 shadow-xl"
+              style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            >
+              <h2
+                className="font-bold mb-4 flex items-center gap-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                <Gauge className="w-4 h-4" style={{ color: "var(--primary)" }} />
+                SLA de Trabalhos
+              </h2>
+              {slaData == null ? (
+                <div className="space-y-3">
+                  {[1, 2].map(i => (
+                    <div key={i} className="h-10 rounded-xl animate-pulse bg-[var(--secondary)]" />
+                  ))}
+                </div>
+              ) : slaData.slaRate === null ? (
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  Nenhum trabalho concluído ainda.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Taxa */}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: slaData.slaRate >= 80 ? "oklch(0.55 0.18 150)" : slaData.slaRate >= 50 ? "oklch(0.60 0.20 60)" : "oklch(0.55 0.22 25)" }}>
+                        {slaData.slaRate}%
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>no prazo</p>
+                    </div>
+                    <div className="text-right text-xs space-y-1" style={{ color: "var(--muted-foreground)" }}>
+                      <p><span className="font-semibold" style={{ color: "oklch(0.55 0.18 150)" }}>{slaData.completedOnTime}</span> no prazo</p>
+                      <p><span className="font-semibold" style={{ color: "oklch(0.55 0.22 25)" }}>{slaData.completedLate}</span> em atraso</p>
+                    </div>
+                  </div>
+                  {/* Barra de progresso */}
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--secondary)" }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: slaData.slaRate >= 80 ? "oklch(0.55 0.18 150)" : slaData.slaRate >= 50 ? "oklch(0.60 0.20 60)" : "oklch(0.55 0.22 25)" }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${slaData.slaRate}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                    />
+                  </div>
+                  {/* Em andamento */}
+                  <div className="flex gap-3 pt-1">
+                    <div className="flex-1 p-3 rounded-xl" style={{ background: "var(--secondary)" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Em Andamento</p>
+                      <p className="text-lg font-bold" style={{ color: "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>{slaData.inProgressCount}</p>
+                    </div>
+                    <div className="flex-1 p-3 rounded-xl" style={{ background: slaData.overdueCount > 0 ? "oklch(0.95 0.04 25)" : "var(--secondary)" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--muted-foreground)" }}>Em Atraso</p>
+                      <p className="text-lg font-bold" style={{ color: slaData.overdueCount > 0 ? "oklch(0.55 0.22 25)" : "var(--foreground)", fontFamily: "'Playfair Display', serif" }}>{slaData.overdueCount}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </AnimatedCard>
+          </FadeIn>
+
+          {/* Card Metas do Mês */}
+          <FadeIn delay={0.4}>
+            <AnimatedCard
+              className="rounded-2xl p-6 shadow-xl"
+              style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            >
+              <h2
+                className="font-bold mb-4 flex items-center gap-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                <Target className="w-4 h-4" style={{ color: "var(--primary)" }} />
+                Metas do Mês
+              </h2>
+              {goalsData.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  Nenhuma meta configurada. Defina metas na página de Funcionários.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {goalsData.map(seller => {
+                    const pct = seller.monthlyGoal > 0
+                      ? Math.min(Math.round((seller.currentMonthTotal / seller.monthlyGoal) * 100), 100)
+                      : 0;
+                    const barColor = pct >= 100
+                      ? "oklch(0.55 0.18 150)"
+                      : pct >= 50
+                        ? "var(--primary)"
+                        : "oklch(0.60 0.20 60)";
+                    return (
+                      <div key={seller.id}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-sm font-medium truncate max-w-[55%]" style={{ color: "var(--foreground)" }}>{seller.name}</p>
+                          <p className="text-xs font-semibold shrink-0" style={{ color: barColor }}>
+                            {formatCurrency(seller.currentMonthTotal)}
+                            <span className="font-normal" style={{ color: "var(--muted-foreground)" }}> / {formatCurrency(seller.monthlyGoal)}</span>
+                          </p>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--secondary)" }}>
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: barColor }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.9, ease: "easeOut" }}
+                          />
+                        </div>
+                        <p className="text-[10px] mt-0.5 text-right" style={{ color: "var(--muted-foreground)" }}>{pct}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </AnimatedCard>
+          </FadeIn>
+        </div>
 
         {/* Top Clientes + Vendas Recentes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
