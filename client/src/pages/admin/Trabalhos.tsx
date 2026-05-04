@@ -1484,7 +1484,11 @@ export default function Trabalhos() {
                 type="text"
                 value={search}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder="Buscar cliente ou trabalho..."
+                placeholder={
+                  isAdmin
+                    ? "Buscar cliente, trabalho ou observação..."
+                    : "Buscar cliente ou trabalho..."
+                }
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl outline-none border border-[var(--border)] text-sm transition-all focus:ring-2 focus:ring-[var(--primary)]/20"
                 style={{
                   background: "var(--card)",

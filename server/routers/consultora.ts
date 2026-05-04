@@ -110,7 +110,7 @@ export const consultoraRouter = router({
   // Aba 1: Para Escrever
   toWrite: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -121,12 +121,15 @@ export const consultoraRouter = router({
       ];
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
-        conditions.push(
-          or(
-            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
-          )!
-        );
+        const like = "%" + escaped + "%";
+        const fields = [
+          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+        ];
+        if (ctx.user.role === "admin") {
+          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
+        }
+        conditions.push(or(...fields)!);
       }
 
       const rows = await db
@@ -175,7 +178,7 @@ export const consultoraRouter = router({
   // Aba 2: Pendentes (com prazo e urgência)
   pending: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -186,12 +189,15 @@ export const consultoraRouter = router({
       ];
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
-        conditions.push(
-          or(
-            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
-          )!
-        );
+        const like = "%" + escaped + "%";
+        const fields = [
+          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+        ];
+        if (ctx.user.role === "admin") {
+          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
+        }
+        conditions.push(or(...fields)!);
       }
 
       const rows = await db
@@ -242,7 +248,7 @@ export const consultoraRouter = router({
   // Aba 3: Feitos (mais recentes no topo para fácil reversão)
   done: consultoraProcedure
     .input(z.object({ search: z.string().optional() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -253,12 +259,15 @@ export const consultoraRouter = router({
       ];
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
-        conditions.push(
-          or(
-            sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`,
-            sql`${sales.clientName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
-          )!
-        );
+        const like = "%" + escaped + "%";
+        const fields = [
+          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+        ];
+        if (ctx.user.role === "admin") {
+          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
+        }
+        conditions.push(or(...fields)!);
       }
 
       const rows = await db
