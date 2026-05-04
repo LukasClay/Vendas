@@ -122,13 +122,17 @@ export const consultoraRouter = router({
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         const like = "%" + escaped + "%";
-        const fields = [
-          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
-          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
-        ];
-        if (ctx.user.role === "admin") {
-          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
-        }
+        const fields =
+          ctx.user.role === "admin"
+            ? [
+                sql`${sales.productName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.notes} ILIKE ${like} ESCAPE '\\'`,
+              ]
+            : [
+                sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+              ];
         conditions.push(or(...fields)!);
       }
 
@@ -190,13 +194,17 @@ export const consultoraRouter = router({
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         const like = "%" + escaped + "%";
-        const fields = [
-          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
-          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
-        ];
-        if (ctx.user.role === "admin") {
-          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
-        }
+        const fields =
+          ctx.user.role === "admin"
+            ? [
+                sql`${sales.productName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.notes} ILIKE ${like} ESCAPE '\\'`,
+              ]
+            : [
+                sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+              ];
         conditions.push(or(...fields)!);
       }
 
@@ -260,13 +268,17 @@ export const consultoraRouter = router({
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
         const like = "%" + escaped + "%";
-        const fields = [
-          sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
-          sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
-        ];
-        if (ctx.user.role === "admin") {
-          fields.push(sql`${sales.notes} LIKE ${like} ESCAPE '\\'`);
-        }
+        const fields =
+          ctx.user.role === "admin"
+            ? [
+                sql`${sales.productName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} ILIKE ${like} ESCAPE '\\'`,
+                sql`${sales.notes} ILIKE ${like} ESCAPE '\\'`,
+              ]
+            : [
+                sql`${sales.productName} LIKE ${like} ESCAPE '\\'`,
+                sql`${sales.clientName} LIKE ${like} ESCAPE '\\'`,
+              ];
         conditions.push(or(...fields)!);
       }
 
