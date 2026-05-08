@@ -1239,6 +1239,11 @@ function DoneCard({
   );
 }
 
+const MONTH_NAMES = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
+
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function ConsultoraPage() {
   const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
@@ -1247,6 +1252,11 @@ export default function ConsultoraPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
+  const _now = new Date();
+  const [selectedDoneMonth, setSelectedDoneMonth] = useState({
+    month: _now.getMonth() + 1,
+    year: _now.getFullYear(),
+  });
   const topRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -1259,6 +1269,14 @@ export default function ConsultoraPage() {
   const queryInput = useMemo(
     () => ({ search: debouncedSearch || undefined }),
     [debouncedSearch]
+  );
+  const doneQueryInput = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      month: selectedDoneMonth.month,
+      year: selectedDoneMonth.year,
+    }),
+    [debouncedSearch, selectedDoneMonth]
   );
 
   const { data: counts } = trpc.consultora.statusCounts.useQuery(undefined, {
@@ -1277,10 +1295,14 @@ export default function ConsultoraPage() {
       refetchOnMount: "always",
     });
   const { data: doneItems = [], isLoading: loadingDone } =
-    trpc.consultora.done.useQuery(queryInput, {
+    trpc.consultora.done.useQuery(doneQueryInput, {
       enabled: activeTab === "feito",
       refetchOnMount: "always",
     });
+  const { data: doneMonths = [] } = trpc.consultora.doneMonths.useQuery(
+    undefined,
+    { enabled: activeTab === "feito", staleTime: 5 * 60 * 1000 }
+  );
   const {
     data: alertItems = [],
     isLoading: loadingAlerts,
@@ -1296,6 +1318,7 @@ export default function ConsultoraPage() {
     utils.consultora.toWrite.invalidate();
     utils.consultora.pending.invalidate();
     utils.consultora.done.invalidate();
+    utils.consultora.doneMonths.invalidate();
     utils.consultora.statusCounts.invalidate();
     utils.consultora.alerts.invalidate();
   };
@@ -1474,6 +1497,10 @@ export default function ConsultoraPage() {
     setSelectedType(null);
     setSelectedCategory(null);
     setOnlyWithPhotos(false);
+    if (tab !== "feito") {
+      const n = new Date();
+      setSelectedDoneMonth({ month: n.getMonth() + 1, year: n.getFullYear() });
+    }
   }
 
   return (
@@ -1542,6 +1569,37 @@ export default function ConsultoraPage() {
             </button>
           ))}
         </div>
+
+        {/* Seletor de mês — somente na aba Feitos */}
+        {activeTab === "feito" && doneMonths.length > 0 && (
+          <div className="flex gap-2 flex-wrap items-center mb-1">
+            <span className="text-xs font-semibold shrink-0" style={{ color: "#737390" }}>
+              Mês:
+            </span>
+            {doneMonths.map(m => {
+              const isSelected =
+                m.month === selectedDoneMonth.month &&
+                m.year === selectedDoneMonth.year;
+              const label = `${MONTH_NAMES[m.month - 1]} ${m.year}`;
+              return (
+                <button
+                  key={`${m.year}-${m.month}`}
+                  onClick={() =>
+                    setSelectedDoneMonth({ month: m.month, year: m.year })
+                  }
+                  className="px-3 py-1 rounded-full text-xs font-semibold active:scale-95"
+                  style={
+                    isSelected
+                      ? { background: "#6d28d9", color: "white" }
+                      : { background: "#ddd5c4", color: "#2a2a40" }
+                  }
+                >
+                  {label} ({m.count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Sub-filtro por categoria */}
         {!isLoading && shouldShowCategoryFilter && (

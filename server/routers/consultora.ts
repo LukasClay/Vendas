@@ -9,8 +9,11 @@ import {
   count,
   desc,
   eq,
+  gte,
   inArray,
+  isNotNull,
   isNull,
+  lt,
   ne,
   or,
   sql,
@@ -253,17 +256,33 @@ export const consultoraRouter = router({
         .sort((a: any, b: any) => b.urgencyScore - a.urgencyScore);
     }),
 
-  // Aba 3: Feitos (mais recentes no topo para fácil reversão)
+  // Aba 3: Feitos — filtrado por mês/ano (padrão: mês atual)
   done: consultoraProcedure
-    .input(z.object({ search: z.string().optional() }).optional())
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+          month: z.number().int().min(1).max(12).optional(),
+          year: z.number().int().min(2020).optional(),
+        })
+        .optional()
+    )
     .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const now = new Date();
+      const month = input?.month ?? now.getMonth() + 1;
+      const year = input?.year ?? now.getFullYear();
+      const periodStart = new Date(year, month - 1, 1);
+      const periodEnd = new Date(year, month, 1);
 
       const conditions = [
         eq(sales.workStatus, "feito"),
         ne(sales.productName, "Consulta Cartas"),
         isNull(sales.deletedAt),
+        gte(sales.completedAt, periodStart),
+        lt(sales.completedAt, periodEnd),
       ];
       if (input?.search) {
         const escaped = input.search.replace(/[%_\\]/g, "\\$&");
@@ -300,7 +319,7 @@ export const consultoraRouter = router({
         })
         .from(sales)
         .where(and(...conditions))
-        .orderBy(desc(sales.completedAt)) // mais recentes no topo
+        .orderBy(desc(sales.completedAt))
         .limit(500);
 
       return rows.map(s => ({
@@ -319,6 +338,42 @@ export const consultoraRouter = router({
         clientPhotos: getSaleClientPhotos(s),
       }));
     }),
+
+  // Meses disponíveis na aba Feitos (para montar o seletor)
+  doneMonths: consultoraProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const rows = await db
+      .select({
+        month: sql<number>`EXTRACT(MONTH FROM ${sales.completedAt})::int`,
+        year: sql<number>`EXTRACT(YEAR FROM ${sales.completedAt})::int`,
+        total: count(),
+      })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.workStatus, "feito"),
+          ne(sales.productName, "Consulta Cartas"),
+          isNull(sales.deletedAt),
+          isNotNull(sales.completedAt)
+        )
+      )
+      .groupBy(
+        sql`EXTRACT(YEAR FROM ${sales.completedAt})`,
+        sql`EXTRACT(MONTH FROM ${sales.completedAt})`
+      )
+      .orderBy(
+        desc(sql`EXTRACT(YEAR FROM ${sales.completedAt})`),
+        desc(sql`EXTRACT(MONTH FROM ${sales.completedAt})`)
+      );
+
+    return rows.map(r => ({
+      month: r.month,
+      year: r.year,
+      count: Number(r.total),
+    }));
+  }),
 
   // Transições de status
 
