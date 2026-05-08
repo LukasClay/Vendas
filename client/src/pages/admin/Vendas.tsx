@@ -228,7 +228,7 @@ function ViewSaleModal({
                 <span className="text-xs text-[var(--muted-foreground)] w-20 shrink-0">
                   Observações
                 </span>
-                <span className="text-sm text-[var(--foreground)] flex-1">
+                <span className="text-sm text-[var(--foreground)] flex-1 whitespace-pre-wrap">
                   {sale.notes}
                 </span>
               </div>

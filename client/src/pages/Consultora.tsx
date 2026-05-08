@@ -367,7 +367,7 @@ function ToWriteCard({
                     <p className="text-xs" style={{ color: "#737390" }}>
                       Observação
                     </p>
-                    <p className="text-sm" style={{ color: "#1a1a2e" }}>
+                    <p className="text-sm whitespace-pre-wrap" style={{ color: "#1a1a2e" }}>
                       {item.notes}
                     </p>
                   </div>
@@ -856,7 +856,7 @@ function PendingCard({
                     <p className="text-xs" style={{ color: "#737390" }}>
                       Observação
                     </p>
-                    <p className="text-sm" style={{ color: "#1a1a2e" }}>
+                    <p className="text-sm whitespace-pre-wrap" style={{ color: "#1a1a2e" }}>
                       {item.notes}
                     </p>
                   </div>
