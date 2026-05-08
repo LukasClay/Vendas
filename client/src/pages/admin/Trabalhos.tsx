@@ -1389,6 +1389,15 @@ export default function Trabalhos() {
     undefined,
     { enabled: activeTab === "feito", staleTime: 5 * 60 * 1000 }
   );
+  useEffect(() => {
+    if (doneMonths.length === 0) return;
+    const exists = doneMonths.some(
+      m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+    );
+    if (!exists) {
+      setSelectedDoneMonth({ month: doneMonths[0].month, year: doneMonths[0].year });
+    }
+  }, [doneMonths]);
   const invalidateWorkQueries = () => {
     utils.consultora.toWrite.invalidate();
     utils.consultora.pending.invalidate();

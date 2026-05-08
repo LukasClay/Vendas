@@ -1314,6 +1314,16 @@ export default function ConsultoraPage() {
     refetchOnMount: "always",
   });
 
+  useEffect(() => {
+    if (doneMonths.length === 0) return;
+    const exists = doneMonths.some(
+      m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+    );
+    if (!exists) {
+      setSelectedDoneMonth({ month: doneMonths[0].month, year: doneMonths[0].year });
+    }
+  }, [doneMonths]);
+
   const invalidateAll = () => {
     utils.consultora.toWrite.invalidate();
     utils.consultora.pending.invalidate();
@@ -1471,7 +1481,11 @@ export default function ConsultoraPage() {
       id: "feito" as Tab,
       label: "Feitos",
       icon: <BookCheck className="w-4 h-4" />,
-      count: counts?.feito ?? 0,
+      count: activeTab === "feito"
+        ? (doneMonths.find(
+            m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+          )?.count ?? doneItems.length)
+        : counts?.feito ?? 0,
     },
     {
       id: "alertas" as Tab,
