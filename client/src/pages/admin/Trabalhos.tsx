@@ -609,7 +609,7 @@ function PendingCard({
                     className="w-4 h-4 shrink-0 mt-0.5"
                     style={{ color: "var(--primary)" }}
                   />
-                  <p className="text-sm" style={{ color: "var(--foreground)" }}>
+                  <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>
                     {item.notes}
                   </p>
                 </div>
