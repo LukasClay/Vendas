@@ -35,6 +35,11 @@ import { motion, AnimatePresence } from "framer-motion";
 type Tab = "para_escrever" | "pendente" | "feito";
 type Seller = { id: number; name: string | null };
 
+const MONTH_NAMES = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
+
 function formatBirthDate(d: Date | string | null | undefined): string {
   return formatDate(d);
 }
@@ -1347,6 +1352,11 @@ export default function Trabalhos() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const now = new Date();
+  const [selectedDoneMonth, setSelectedDoneMonth] = useState({
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  });
   const topRef = useRef<HTMLDivElement>(null);
   // Debounce simples
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1361,16 +1371,38 @@ export default function Trabalhos() {
     () => ({ search: debouncedSearch || undefined }),
     [debouncedSearch]
   );
+  const doneQueryInput = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      month: selectedDoneMonth.month,
+      year: selectedDoneMonth.year,
+    }),
+    [debouncedSearch, selectedDoneMonth]
+  );
   const { data: toWrite = [], isLoading: load1 } =
     trpc.consultora.toWrite.useQuery(queryInput);
   const { data: pending = [], isLoading: load2 } =
     trpc.consultora.pending.useQuery(queryInput);
   const { data: done = [], isLoading: load3 } =
-    trpc.consultora.done.useQuery(queryInput);
+    trpc.consultora.done.useQuery(doneQueryInput);
+  const { data: doneMonths = [] } = trpc.consultora.doneMonths.useQuery(
+    undefined,
+    { enabled: activeTab === "feito", staleTime: 5 * 60 * 1000 }
+  );
+  useEffect(() => {
+    if (doneMonths.length === 0) return;
+    const exists = doneMonths.some(
+      m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+    );
+    if (!exists) {
+      setSelectedDoneMonth({ month: doneMonths[0].month, year: doneMonths[0].year });
+    }
+  }, [doneMonths]);
   const invalidateWorkQueries = () => {
     utils.consultora.toWrite.invalidate();
     utils.consultora.pending.invalidate();
     utils.consultora.done.invalidate();
+    utils.consultora.doneMonths.invalidate();
     utils.consultora.statusCounts.invalidate();
     utils.consultora.distinctProducts.invalidate();
     utils.consultora.alerts.invalidate();
@@ -1454,6 +1486,10 @@ export default function Trabalhos() {
     setDebouncedSearch("");
     setSelectedType(null);
     setSelectedCategory(null);
+    if (tab !== "feito") {
+      const n = new Date();
+      setSelectedDoneMonth({ month: n.getMonth() + 1, year: n.getFullYear() });
+    }
   }
 
   return (
@@ -1543,6 +1579,43 @@ export default function Trabalhos() {
             </button>
           ))}
         </div>
+
+        {/* Seletor de mês — somente na aba Feitos */}
+        {activeTab === "feito" && doneMonths.length > 0 && (
+          <div className="flex gap-2 flex-wrap items-center">
+            <span
+              className="text-xs font-semibold shrink-0"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              Mês:
+            </span>
+            {doneMonths.map(m => {
+              const isSelected =
+                m.month === selectedDoneMonth.month &&
+                m.year === selectedDoneMonth.year;
+              const label = `${MONTH_NAMES[m.month - 1]} ${m.year}`;
+              return (
+                <button
+                  key={`${m.year}-${m.month}`}
+                  onClick={() =>
+                    setSelectedDoneMonth({ month: m.month, year: m.year })
+                  }
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                  style={
+                    isSelected
+                      ? { background: "var(--primary)", color: "white" }
+                      : {
+                          background: "var(--border)",
+                          color: "var(--foreground)",
+                        }
+                  }
+                >
+                  {label} ({m.count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Sub-filtro por categoria */}
         {!isLoading &&
