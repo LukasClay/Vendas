@@ -107,6 +107,148 @@ function spanInDays(startDate: string, endDate: string): number | null {
   return Math.round((e.getTime() - s.getTime()) / 86_400_000) + 1;
 }
 
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Para cada chave de bucket atual, devolve a chave equivalente no período
+// anterior — usado para sobrepor a linha "período anterior" no gráfico.
+// Retorna null quando não há equivalente (ex: 31/mai não existe em abril).
+function previousKeyFor(
+  currentKey: string,
+  preset: FilterPreset,
+  granularity: "day" | "month"
+): string | null {
+  if (granularity === "month") {
+    // chave YYYY-MM → mesmo mês ano anterior (preset "ano")
+    const [y, m] = currentKey.split("-").map(Number);
+    if (!y || !m) return null;
+    return `${y - 1}-${String(m).padStart(2, "0")}`;
+  }
+  const [y, m, d] = currentKey.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  switch (preset) {
+    case "hoje":
+      date.setDate(date.getDate() - 1);
+      return toISODate(date);
+    case "semana":
+      date.setDate(date.getDate() - 7);
+      return toISODate(date);
+    case "mes":
+    case "mesPassado": {
+      // mesmo dia do mês imediatamente anterior; null se não existir
+      const prevMonth = m - 2; // m é 1-indexed; -1 vira mês anterior 0-indexed
+      const prevYear = prevMonth < 0 ? y - 1 : y;
+      const prevMonthAdj = (prevMonth + 12) % 12;
+      const lastDay = new Date(prevYear, prevMonthAdj + 1, 0).getDate();
+      if (d > lastDay) return null;
+      return `${prevYear}-${String(prevMonthAdj + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+    case "ano":
+      // chega aqui se granularity for "day" e preset "ano" (período < 31 dias,
+      // raro). Mesmo dia do ano passado.
+      date.setFullYear(date.getFullYear() - 1);
+      return toISODate(date);
+    default:
+      return null;
+  }
+}
+
+// Calcula, para o preset selecionado, qual é a janela "anterior alinhada" e
+// o corte de "atual decorrido" (compareEndDate). Quando o preset é custom ou
+// total, retorna nulos e o backend cai no fallback (mesma duração imediatamente
+// antes).
+function getComparisonRanges(
+  preset: FilterPreset,
+  dateFilter: { startDate: string; endDate: string }
+): {
+  compareEndDate?: string;
+  previousStartDate?: string;
+  previousEndDate?: string;
+} {
+  if (!dateFilter.startDate || !dateFilter.endDate) return {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayISO = toISODate(today);
+  const start = new Date(`${dateFilter.startDate}T00:00:00`);
+  const end = new Date(`${dateFilter.endDate}T00:00:00`);
+
+  // Quando o período termina no futuro (em andamento), corta em hoje.
+  const inProgress = end.getTime() > today.getTime();
+  const compareEndDate = inProgress ? todayISO : undefined;
+  const effectiveEnd = inProgress ? today : end;
+
+  switch (preset) {
+    case "hoje": {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return {
+        compareEndDate,
+        previousStartDate: toISODate(yesterday),
+        previousEndDate: toISODate(yesterday),
+      };
+    }
+    case "semana": {
+      // Mesma janela seg→dia-equivalente, mas na semana passada
+      const prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 7);
+      const prevEnd = new Date(effectiveEnd);
+      prevEnd.setDate(prevEnd.getDate() - 7);
+      return {
+        compareEndDate,
+        previousStartDate: toISODate(prevStart),
+        previousEndDate: toISODate(prevEnd),
+      };
+    }
+    case "mes":
+    case "mesPassado": {
+      // 1º até "mesmo dia" do mês imediatamente anterior. Se o effectiveEnd
+      // é o último dia do seu mês (caso típico de "mesPassado"), compara com
+      // o último dia do mês anterior — janelas equivalentes "mês inteiro".
+      const prevStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      const lastDayPrevMonth = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        0
+      ).getDate();
+      const lastDayCurrentMonth = new Date(
+        effectiveEnd.getFullYear(),
+        effectiveEnd.getMonth() + 1,
+        0
+      ).getDate();
+      const isLastDay = effectiveEnd.getDate() === lastDayCurrentMonth;
+      const targetDay = isLastDay
+        ? lastDayPrevMonth
+        : Math.min(effectiveEnd.getDate(), lastDayPrevMonth);
+      const prevEnd = new Date(
+        start.getFullYear(),
+        start.getMonth() - 1,
+        targetDay
+      );
+      return {
+        compareEndDate,
+        previousStartDate: toISODate(prevStart),
+        previousEndDate: toISODate(prevEnd),
+      };
+    }
+    case "ano": {
+      // 1º jan até hoje, comparado com 1º jan até hoje do ano passado
+      const prevStart = new Date(start.getFullYear() - 1, 0, 1);
+      const prevEnd = new Date(effectiveEnd);
+      prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+      return {
+        compareEndDate,
+        previousStartDate: toISODate(prevStart),
+        previousEndDate: toISODate(prevEnd),
+      };
+    }
+    default:
+      // total/custom — backend cai no comportamento antigo
+      return {};
+  }
+}
+
 export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState(getCurrentMonthDateFilter);
   const [preset, setPreset] = useState<FilterPreset>("mes");
@@ -124,13 +266,28 @@ export default function AdminDashboard() {
   const granularity: "day" | "month" =
     span !== null && span <= 31 ? "day" : "month";
 
+  const comparisonRanges = useMemo(
+    () => getComparisonRanges(preset, dateFilter),
+    [preset, dateFilter.startDate, dateFilter.endDate]
+  );
+
   const periodInput = useMemo(
     () => ({
       startDate: dateFilter.startDate || undefined,
       endDate: dateFilter.endDate || undefined,
       granularity,
+      compareEndDate: comparisonRanges.compareEndDate,
+      previousStartDate: comparisonRanges.previousStartDate,
+      previousEndDate: comparisonRanges.previousEndDate,
     }),
-    [dateFilter.startDate, dateFilter.endDate, granularity]
+    [
+      dateFilter.startDate,
+      dateFilter.endDate,
+      granularity,
+      comparisonRanges.compareEndDate,
+      comparisonRanges.previousStartDate,
+      comparisonRanges.previousEndDate,
+    ]
   );
 
   const { data: reportData, isLoading } =
@@ -148,9 +305,16 @@ export default function AdminDashboard() {
       name: string;
       total: number;
       vendas: number;
+      anterior: number | null;
       fullDate: string;
+      isFuture: boolean;
     };
     const buckets = periodData?.buckets ?? [];
+    const prevBuckets = periodData?.previousBuckets ?? [];
+    const prevMap = new Map(prevBuckets.map(b => [b.key, b]));
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const todayISO = toISODate(todayDate);
 
     if (granularity === "month") {
       // Preenche meses faltantes entre primeiro e último bucket (ou janela do filtro).
@@ -166,14 +330,19 @@ export default function AdminDashboard() {
       const [ey, em] = endKey.split("-").map(Number);
       let y = sy;
       let m = sm;
+      const todayMonthKey = todayISO.slice(0, 7);
       while (y < ey || (y === ey && m <= em)) {
         const key = `${y}-${String(m).padStart(2, "0")}`;
         const b = map.get(key);
+        const prevKey = previousKeyFor(key, preset, "month");
+        const prev = prevKey ? prevMap.get(prevKey) : undefined;
         out.push({
           name: MONTHS_SHORT[m - 1],
           total: b ? b.totalAmount : 0,
           vendas: b ? b.totalSales : 0,
+          anterior: prev ? prev.totalAmount : prevKey ? 0 : null,
           fullDate: `${String(m).padStart(2, "0")}/${y}`,
+          isFuture: key > todayMonthKey,
         });
         m += 1;
         if (m > 12) {
@@ -188,18 +357,16 @@ export default function AdminDashboard() {
     if (!dateFilter.startDate || !dateFilter.endDate) return [] as Point[];
     const start = new Date(`${dateFilter.startDate}T00:00:00`);
     const end = new Date(`${dateFilter.endDate}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const useWeekdayLabels = (span ?? 0) <= 7;
 
     const map = new Map(buckets.map(b => [b.key, b]));
     const out: Point[] = [];
     const cursor = new Date(start);
     while (cursor.getTime() <= end.getTime()) {
-      const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+      const iso = toISODate(cursor);
       const b = map.get(iso);
       const diffDays = Math.round(
-        (today.getTime() - cursor.getTime()) / 86_400_000
+        (todayDate.getTime() - cursor.getTime()) / 86_400_000
       );
       let name: string;
       if (useWeekdayLabels) {
@@ -212,23 +379,43 @@ export default function AdminDashboard() {
       } else {
         name = `${String(cursor.getDate()).padStart(2, "0")}/${String(cursor.getMonth() + 1).padStart(2, "0")}`;
       }
+      const prevKey = previousKeyFor(iso, preset, "day");
+      const prev = prevKey ? prevMap.get(prevKey) : undefined;
       out.push({
         name,
         total: b ? b.totalAmount : 0,
         vendas: b ? b.totalSales : 0,
+        anterior: prev ? prev.totalAmount : prevKey ? 0 : null,
         fullDate: cursor.toLocaleDateString("pt-BR", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
         }),
+        isFuture: iso > todayISO,
       });
       cursor.setDate(cursor.getDate() + 1);
     }
     return out;
-  }, [periodData, granularity, dateFilter.startDate, dateFilter.endDate, span]);
+  }, [
+    periodData,
+    granularity,
+    dateFilter.startDate,
+    dateFilter.endDate,
+    span,
+    preset,
+  ]);
 
-  const periodTotal = chartData.reduce((s, d) => s + d.total, 0);
-  const periodSales = chartData.reduce((s, d) => s + d.vendas, 0);
+  // Quando o período está em andamento (ex: "Este mês" no dia 10), o backend
+  // devolve `current` somando só até hoje — usado para a comparação justa
+  // contra o período anterior alinhado.
+  const fairCurrentTotal =
+    periodData?.current?.totalAmount ??
+    chartData.reduce((s, d) => s + d.total, 0);
+  const fairCurrentSales =
+    periodData?.current?.totalSales ??
+    chartData.reduce((s, d) => s + d.vendas, 0);
+  const periodTotal = fairCurrentTotal;
+  const periodSales = fairCurrentSales;
 
   const previousTotal = periodData?.previous?.totalAmount ?? null;
   const periodDeltaPct =
@@ -258,18 +445,19 @@ export default function AdminDashboard() {
   const comparisonLabel = useMemo(() => {
     switch (preset) {
       case "hoje":
-        return "vs. dia anterior";
+        return "vs. ontem";
       case "semana":
-        return "vs. semana anterior";
+        return "vs. mesma janela da semana passada";
       case "mes":
+        return "vs. mesmo período do mês passado";
       case "mesPassado":
         return "vs. mês anterior";
       case "ano":
-        return "vs. ano anterior";
+        return "vs. mesmo período do ano passado";
       case "total":
         return null;
       default:
-        return "vs. período anterior";
+        return "vs. período anterior de mesma duração";
     }
   }, [preset]);
 
@@ -282,6 +470,20 @@ export default function AdminDashboard() {
   const totalSales = Number(summary?.totalSales ?? 0);
   const ticketMedio = totalSales > 0 ? totalAmount / totalSales : 0;
   const dailyAverage = Number(currentMonthMetrics?.dailyAverage ?? 0);
+  const lastMonthDailyAverage = Number(
+    currentMonthMetrics?.lastMonthDailyAverage ?? 0
+  );
+  const projectedTotal = Number(currentMonthMetrics?.projectedTotal ?? 0);
+  const lastMonthTotal = Number(currentMonthMetrics?.lastMonthTotal ?? 0);
+  const dailyAverageDeltaPct =
+    lastMonthDailyAverage > 0
+      ? ((dailyAverage - lastMonthDailyAverage) / lastMonthDailyAverage) * 100
+      : null;
+  // Mostra projeção/comparativo de média diária só quando o filtro é o mês
+  // atual (faz sentido contextual). Em outros presets, currentMonthMetrics
+  // ainda mostra dados do mês corrente, mas escondemos os comparativos para
+  // não confundir.
+  const showCurrentMonthExtras = preset === "mes";
 
   const magiaData = summaryByCompany.find(
     (c: { company: string | null }) => c.company === "mundo_da_magia"
@@ -314,6 +516,15 @@ export default function AdminDashboard() {
   const salesLineColor = isDark
     ? "oklch(0.70 0.16 160)"
     : "oklch(0.55 0.15 160)";
+  // Cinza neutro p/ a linha "período anterior" — fica em segundo plano
+  const previousLineColor = isDark
+    ? "oklch(0.65 0.02 250)"
+    : "oklch(0.55 0.02 250)";
+
+  // Mostra a linha de período anterior quando há ao menos 1 ponto com dado
+  // anterior conhecido (não-null). Em "total" e "custom" não computamos prev,
+  // então `anterior` será null em todos os pontos e a linha some.
+  const hasPreviousLine = chartData.some(p => p.anterior !== null);
 
   return (
     <DashboardLayout>
@@ -515,40 +726,82 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <StaggerList className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              {
-                icon: DollarSign,
-                label: "Total Vendido",
-                value: totalAmount,
-                prefix: "R$ ",
-                color: "var(--primary)",
-                bg: "var(--secondary)",
-              },
-              {
-                icon: ShoppingBag,
-                label: "Nº de Vendas",
-                value: totalSales,
-                prefix: "",
-                color: isDark ? "oklch(0.65 0.18 160)" : "oklch(0.55 0.15 160)",
-                bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 160)",
-              },
-              {
-                icon: Receipt,
-                label: "Ticket Médio",
-                value: ticketMedio,
-                prefix: "R$ ",
-                color: isDark ? "oklch(0.68 0.17 300)" : "oklch(0.52 0.18 300)",
-                bg: isDark ? "var(--secondary)" : "oklch(0.94 0.04 300)",
-              },
-              {
-                icon: CalendarDays,
-                label: "Média Diária (Mês)",
-                value: dailyAverage,
-                prefix: "R$ ",
-                color: isDark ? "oklch(0.68 0.14 200)" : "oklch(0.52 0.15 200)",
-                bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 200)",
-              },
-            ].map((card, i) => (
+            {(
+              [
+                {
+                  icon: DollarSign,
+                  label: "Total Vendido",
+                  value: totalAmount,
+                  prefix: "R$ ",
+                  color: "var(--primary)",
+                  bg: "var(--secondary)",
+                  // Projeção do mês: só aparece no preset "mes" e quando o
+                  // mês ainda não terminou — explicita "para onde vamos" em
+                  // vez de mostrar um total parcial sem contexto.
+                  subtitle:
+                    showCurrentMonthExtras &&
+                    projectedTotal > 0 &&
+                    (currentMonthMetrics?.daysElapsed ?? 0) <
+                      (currentMonthMetrics?.daysInMonth ?? 0)
+                      ? `Projetado: ${formatCurrency(projectedTotal)}`
+                      : null,
+                  subtitleHint: showCurrentMonthExtras
+                    ? `Mês passado fechou em ${formatCurrency(lastMonthTotal)}`
+                    : null,
+                },
+                {
+                  icon: ShoppingBag,
+                  label: "Nº de Vendas",
+                  value: totalSales,
+                  prefix: "",
+                  color: isDark
+                    ? "oklch(0.65 0.18 160)"
+                    : "oklch(0.55 0.15 160)",
+                  bg: isDark ? "var(--secondary)" : "oklch(0.92 0.04 160)",
+                  subtitle: null,
+                  subtitleHint: null,
+                },
+                {
+                  icon: Receipt,
+                  label: "Ticket Médio",
+                  value: ticketMedio,
+                  prefix: "R$ ",
+                  color: isDark
+                    ? "oklch(0.68 0.17 300)"
+                    : "oklch(0.52 0.18 300)",
+                  bg: isDark ? "var(--secondary)" : "oklch(0.94 0.04 300)",
+                  subtitle: null,
+                  subtitleHint: null,
+                },
+                {
+                  icon: CalendarDays,
+                  label: "Média Diária (Mês)",
+                  value: dailyAverage,
+                  prefix: "R$ ",
+                  color: isDark
+                    ? "oklch(0.68 0.14 200)"
+                    : "oklch(0.52 0.15 200)",
+                  bg: isDark ? "var(--secondary)" : "oklch(0.93 0.04 200)",
+                  // Comparação 100% justa porque ambos os lados são por dia.
+                  delta: showCurrentMonthExtras ? dailyAverageDeltaPct : null,
+                  subtitle:
+                    showCurrentMonthExtras && lastMonthDailyAverage > 0
+                      ? `Mês passado: ${formatCurrency(lastMonthDailyAverage)}/dia`
+                      : null,
+                  subtitleHint: null,
+                },
+              ] as Array<{
+                icon: typeof DollarSign;
+                label: string;
+                value: number;
+                prefix: string;
+                color: string;
+                bg: string;
+                subtitle: string | null;
+                subtitleHint?: string | null;
+                delta?: number | null;
+              }>
+            ).map((card, i) => (
               <StaggerItem key={i}>
                 <AnimatedCard
                   className="rounded-2xl p-4 shadow-xl"
@@ -589,6 +842,53 @@ export default function AdminDashboard() {
                       duration={1}
                     />
                   </p>
+                  {card.delta !== null && card.delta !== undefined && (
+                    <div
+                      className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
+                      style={{
+                        background:
+                          card.delta > 0
+                            ? isDark
+                              ? "oklch(0.28 0.08 160)"
+                              : "oklch(0.94 0.06 160)"
+                            : card.delta < 0
+                              ? isDark
+                                ? "oklch(0.30 0.08 25)"
+                                : "oklch(0.95 0.05 25)"
+                              : "var(--secondary)",
+                        color:
+                          card.delta > 0
+                            ? isDark
+                              ? "oklch(0.78 0.18 160)"
+                              : "oklch(0.45 0.15 160)"
+                            : card.delta < 0
+                              ? isDark
+                                ? "oklch(0.78 0.18 25)"
+                                : "oklch(0.50 0.20 25)"
+                              : "var(--muted-foreground)",
+                      }}
+                      title="Comparação por dia (justa): média diária deste mês vs média diária do mês passado inteiro"
+                    >
+                      {card.delta > 0 ? (
+                        <TrendingUp className="w-2.5 h-2.5" />
+                      ) : card.delta < 0 ? (
+                        <TrendingDown className="w-2.5 h-2.5" />
+                      ) : (
+                        <Minus className="w-2.5 h-2.5" />
+                      )}
+                      {card.delta > 0 ? "+" : ""}
+                      {card.delta.toFixed(1)}% vs mês passado
+                    </div>
+                  )}
+                  {card.subtitle && (
+                    <p
+                      className="text-[11px] mt-1 leading-tight"
+                      style={{ color: "var(--muted-foreground)" }}
+                      title={card.subtitleHint ?? undefined}
+                    >
+                      {card.subtitle}
+                    </p>
+                  )}
                 </AnimatedCard>
               </StaggerItem>
             ))}
@@ -745,7 +1045,7 @@ export default function AdminDashboard() {
                                 : "oklch(0.50 0.20 25)"
                               : "var(--muted-foreground)",
                       }}
-                      title={`Faturamento do período comparado com o período anterior de mesmo tamanho`}
+                      title="Faturamento já realizado neste período comparado com o mesmo intervalo do período anterior — comparação justa, sem contar dias futuros."
                     >
                       {periodDeltaPct > 0 ? (
                         <TrendingUp className="w-3 h-3" />
@@ -800,6 +1100,30 @@ export default function AdminDashboard() {
                       <AnimatedNumber value={periodSales} duration={0.8} />
                     </p>
                   </div>
+                  {hasPreviousLine && (
+                    <div className="text-right">
+                      <p
+                        className="text-xs font-medium flex items-center gap-1.5 justify-end"
+                        style={{ color: "var(--muted-foreground)" }}
+                      >
+                        <span
+                          className="inline-block w-2 h-0.5"
+                          style={{ background: previousLineColor }}
+                        />
+                        Período anterior
+                      </p>
+                      <p
+                        className="text-sm font-bold"
+                        style={{ color: previousLineColor }}
+                      >
+                        <AnimatedNumber
+                          value={previousTotal ?? 0}
+                          prefix="R$ "
+                          duration={1}
+                        />
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
@@ -857,7 +1181,7 @@ export default function AdminDashboard() {
                       opacity: 0.5,
                     }}
                     formatter={(value: number, name: string) =>
-                      name === "Faturamento"
+                      name === "Faturamento" || name === "Período anterior"
                         ? [formatCurrency(value), name]
                         : [value, name]
                     }
@@ -897,6 +1221,28 @@ export default function AdminDashboard() {
                     animationDuration={1200}
                     animationEasing="ease-out"
                   />
+                  {hasPreviousLine && (
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="anterior"
+                      name="Período anterior"
+                      stroke={previousLineColor}
+                      strokeWidth={1.5}
+                      strokeDasharray="2 4"
+                      strokeOpacity={0.8}
+                      dot={false}
+                      activeDot={{
+                        r: 4,
+                        strokeWidth: 2,
+                        stroke: "var(--card)",
+                        fill: previousLineColor,
+                      }}
+                      connectNulls={false}
+                      animationDuration={1400}
+                      animationEasing="ease-out"
+                    />
+                  )}
                   <Line
                     yAxisId="right"
                     type="monotone"
