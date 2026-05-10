@@ -968,12 +968,27 @@ export async function getSalesByPeriod(params: {
   startDate?: Date;
   endDate?: Date;
   granularity: "day" | "month";
+  // Quando o período atual ainda está em andamento (ex: "Este mês" no dia 10),
+  // o cliente passa compareEndDate = hoje para que `current` (e a comparação)
+  // reflita só os dias já decorridos — evitando comparações injustas tipo
+  // "mês passado fez R$ 80k vs este mês ainda só R$ 10k".
+  compareEndDate?: Date;
+  // Janela explícita do período anterior. Quando ausente, cai no comportamento
+  // antigo (mesmo número de dias imediatamente antes do período atual).
+  previousStartDate?: Date;
+  previousEndDate?: Date;
 }) {
   const db = await getDb();
   if (!db)
     return {
       buckets: [] as { key: string; totalAmount: number; totalSales: number }[],
+      previousBuckets: [] as {
+        key: string;
+        totalAmount: number;
+        totalSales: number;
+      }[],
       previous: null as { totalAmount: number; totalSales: number } | null,
+      current: null as { totalAmount: number; totalSales: number } | null,
     };
 
   let startStr = params.startDate?.toISOString().split("T")[0];
@@ -987,7 +1002,13 @@ export async function getSalesByPeriod(params: {
     const minDate = earliestRows[0]?.minDate
       ? String(earliestRows[0].minDate).slice(0, 10)
       : null;
-    if (!minDate) return { buckets: [], previous: null };
+    if (!minDate)
+      return {
+        buckets: [],
+        previousBuckets: [],
+        previous: null,
+        current: null,
+      };
     startStr = minDate;
   }
 
@@ -1013,18 +1034,49 @@ export async function getSalesByPeriod(params: {
     totalSales: Number(r.totalSales),
   }));
 
-  // Janela anterior: mesmo número de dias (inclusivo) imediatamente antes da janela atual.
-  // Só calculada quando o chamador passou um startDate explícito (não em "Total").
+  // ── Janela "atual decorrida" ───────────────────────────────────────────────
+  // Se o cliente passou compareEndDate (período em andamento), some apenas até
+  // essa data para a comparação justa.
+  let current: { totalAmount: number; totalSales: number } | null = null;
+  if (params.compareEndDate && params.startDate) {
+    const compareEndStr = params.compareEndDate.toISOString().split("T")[0];
+    const curResult = await db.execute(
+      sql`SELECT COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "deletedAt" IS NULL AND "saleDate" >= ${startStr} AND "saleDate" <= ${compareEndStr}`
+    );
+    const curRows = extractRows(curResult);
+    current = {
+      totalAmount: Number(curRows[0]?.totalAmount ?? 0),
+      totalSales: Number(curRows[0]?.totalSales ?? 0),
+    };
+  }
+
+  // ── Janela anterior ────────────────────────────────────────────────────────
+  // Se o cliente passou previousStartDate/EndDate explícitos (preset
+  // alinhado, ex: 1º a 10 do mês passado), usa essa janela. Senão, mantém o
+  // comportamento antigo (mesmo nº de dias imediatamente antes do atual).
   let previous: { totalAmount: number; totalSales: number } | null = null;
-  if (params.startDate && params.endDate) {
+  let prevStart: Date | null = null;
+  let prevEnd: Date | null = null;
+  if (params.previousStartDate && params.previousEndDate) {
+    prevStart = new Date(params.previousStartDate);
+    prevEnd = new Date(params.previousEndDate);
+  } else if (params.startDate && params.endDate) {
     const start = new Date(params.startDate);
     const end = new Date(params.endDate);
     const days =
       Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-    const prevEnd = new Date(start);
+    prevEnd = new Date(start);
     prevEnd.setDate(prevEnd.getDate() - 1);
-    const prevStart = new Date(prevEnd);
+    prevStart = new Date(prevEnd);
     prevStart.setDate(prevStart.getDate() - (days - 1));
+  }
+
+  let previousBuckets: {
+    key: string;
+    totalAmount: number;
+    totalSales: number;
+  }[] = [];
+  if (prevStart && prevEnd) {
     const prevStartStr = prevStart.toISOString().split("T")[0];
     const prevEndStr = prevEnd.toISOString().split("T")[0];
     const prevResult = await db.execute(
@@ -1035,9 +1087,20 @@ export async function getSalesByPeriod(params: {
       totalAmount: Number(prevRows[0]?.totalAmount ?? 0),
       totalSales: Number(prevRows[0]?.totalSales ?? 0),
     };
+
+    // Buckets anteriores agregados, mesma granularidade — usado para sobrepor
+    // linha do "período anterior" no gráfico.
+    const prevBucketResult = await db.execute(
+      sql`SELECT ${keyExpr} AS "key", COALESCE(SUM(amount), 0) AS "totalAmount", COUNT(*)::int AS "totalSales" FROM sales WHERE "deletedAt" IS NULL AND "saleDate" >= ${prevStartStr} AND "saleDate" <= ${prevEndStr} GROUP BY ${keyExpr} ORDER BY ${keyExpr}`
+    );
+    previousBuckets = extractRows(prevBucketResult).map(r => ({
+      key: String(r.key),
+      totalAmount: Number(r.totalAmount),
+      totalSales: Number(r.totalSales),
+    }));
   }
 
-  return { buckets, previous };
+  return { buckets, previousBuckets, previous, current };
 }
 
 // ─── Report Schedules ─────────────────────────────────────────────────────────

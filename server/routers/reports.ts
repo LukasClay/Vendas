@@ -59,12 +59,19 @@ export const reportsRouter = router({
 
   // Gráfico do dashboard ADM: agrega vendas por dia ou mês em qualquer janela.
   // Sem startDate/endDate = "Total" (desde a venda mais antiga, sem comparação).
+  // compareEndDate: corte de "atual decorrido" para comparação justa quando
+  //   o período está em andamento (ex: hoje no dia 10 → soma só 1..10).
+  // previousStartDate/EndDate: janela explícita do período anterior (ex: para
+  //   "Este mês" no dia 10 → 1..10 do mês passado, em vez do mês todo).
   salesByPeriod: adminProcedure
     .input(
       z.object({
         startDate: z.string().optional(),
         endDate: z.string().optional(),
         granularity: z.enum(["day", "month"]),
+        compareEndDate: z.string().optional(),
+        previousStartDate: z.string().optional(),
+        previousEndDate: z.string().optional(),
       })
     )
     .query(async ({ input }) => {
@@ -72,6 +79,15 @@ export const reportsRouter = router({
         startDate: input.startDate ? new Date(input.startDate) : undefined,
         endDate: input.endDate ? new Date(input.endDate) : undefined,
         granularity: input.granularity,
+        compareEndDate: input.compareEndDate
+          ? new Date(input.compareEndDate)
+          : undefined,
+        previousStartDate: input.previousStartDate
+          ? new Date(input.previousStartDate)
+          : undefined,
+        previousEndDate: input.previousEndDate
+          ? new Date(input.previousEndDate)
+          : undefined,
       });
     }),
 
@@ -91,13 +107,60 @@ export const reportsRouter = router({
 
     const firstOfMonth = new Date(year, month - 1, 1);
     const today = new Date(year, month - 1, day);
+    const daysInMonth = new Date(year, month, 0).getDate();
 
-    const summary = await getReportSummary(firstOfMonth, today);
+    // Mês passado: 1º até último dia, e 1º até o "mesmo dia" do mês passado
+    // (limitado ao último dia daquele mês, p/ casos como 31/jan vs fev).
+    const firstOfLastMonth = new Date(year, month - 2, 1);
+    const lastOfLastMonth = new Date(year, month - 1, 0);
+    const daysInLastMonth = lastOfLastMonth.getDate();
+    const sameDayLastMonth = new Date(
+      year,
+      month - 2,
+      Math.min(day, daysInLastMonth)
+    );
+
+    const [summary, lastMonthSummary, lastMonthSamePeriodSummary] =
+      await Promise.all([
+        getReportSummary(firstOfMonth, today),
+        getReportSummary(firstOfLastMonth, lastOfLastMonth),
+        getReportSummary(firstOfLastMonth, sameDayLastMonth),
+      ]);
+
     const totalAmount = Number(summary.totalAmount ?? 0);
     const totalSales = Number(summary.totalSales ?? 0);
     const daysElapsed = day;
     const dailyAverage = daysElapsed > 0 ? totalAmount / daysElapsed : 0;
-    return { totalAmount, totalSales, daysElapsed, dailyAverage };
+    const projectedTotal = dailyAverage * daysInMonth;
+
+    const lastMonthTotal = Number(lastMonthSummary.totalAmount ?? 0);
+    const lastMonthSales = Number(lastMonthSummary.totalSales ?? 0);
+    const lastMonthDailyAverage =
+      daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
+
+    const lastMonthSamePeriodTotal = Number(
+      lastMonthSamePeriodSummary.totalAmount ?? 0
+    );
+    const lastMonthSamePeriodSales = Number(
+      lastMonthSamePeriodSummary.totalSales ?? 0
+    );
+    const lastMonthSamePeriodDailyAverage =
+      daysElapsed > 0 ? lastMonthSamePeriodTotal / daysElapsed : 0;
+
+    return {
+      totalAmount,
+      totalSales,
+      daysElapsed,
+      daysInMonth,
+      dailyAverage,
+      projectedTotal,
+      lastMonthTotal,
+      lastMonthSales,
+      lastMonthDailyAverage,
+      lastMonthSamePeriodTotal,
+      lastMonthSamePeriodSales,
+      lastMonthSamePeriodDailyAverage,
+    };
   }),
 
   salesByMonthByCompany: adminProcedure
