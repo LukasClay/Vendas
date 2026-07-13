@@ -45,7 +45,8 @@ export const searchRouter = router({
               isNull(sales.deletedAt),
               or(
                 sql`${sales.clientName} ILIKE ${like}`,
-                sql`${sales.productName} ILIKE ${like}`
+                sql`${sales.productName} ILIKE ${like}`,
+                sql`${sales.notes} ILIKE ${like}`
               )
             )
           )

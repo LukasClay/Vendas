@@ -112,6 +112,7 @@ function UserCard({
     username: "",
     role: "user",
     active: true,
+    monthlyGoal: "",
   });
   const [isResetting, setIsResetting] = useState(false);
   const [resetForm, setResetForm] = useState<ResetForm>({ newPassword: "" });
@@ -303,10 +304,16 @@ function UserCard({
               @{user.username || "sem-usuario"}
             </p>
             {user.monthlyGoal && Number(user.monthlyGoal) > 0 && (
-              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 Meta:{" "}
                 <span style={{ color: "var(--primary)", fontWeight: 600 }}>
-                  {Number(user.monthlyGoal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {Number(user.monthlyGoal).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
                 </span>
                 /mês
               </p>

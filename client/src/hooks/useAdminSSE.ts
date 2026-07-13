@@ -12,7 +12,7 @@ export function useAdminSSE() {
     if (user?.role !== "admin") return;
 
     const flush = () => {
-      const channels = new Set(pending.current);
+      const channels = Array.from(pending.current);
       pending.current.clear();
 
       for (const ch of channels) {

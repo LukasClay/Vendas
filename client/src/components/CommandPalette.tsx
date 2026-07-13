@@ -29,7 +29,13 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
 };
 
-export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CommandPalette({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
@@ -59,7 +65,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     (data.clients.length > 0 || data.sales.length > 0 || data.users.length > 0);
 
   return (
-    <CommandDialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+    <CommandDialog
+      open={open}
+      onOpenChange={v => {
+        if (!v) onClose();
+      }}
+      commandProps={{ shouldFilter: false }}
+    >
       <div className="flex items-center px-3 border-b border-[var(--border)]">
         <CommandInput
           placeholder="Buscar clientes, vendas, funcionários..."
@@ -68,12 +80,18 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           className="flex-1"
         />
         {isFetching && (
-          <Loader2 className="w-4 h-4 animate-spin shrink-0 ml-2" style={{ color: "var(--muted-foreground)" }} />
+          <Loader2
+            className="w-4 h-4 animate-spin shrink-0 ml-2"
+            style={{ color: "var(--muted-foreground)" }}
+          />
         )}
       </div>
       <CommandList>
         {debouncedQuery.length < 2 ? (
-          <div className="py-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+          <div
+            className="py-6 text-center text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
             Digite ao menos 2 caracteres para buscar.
           </div>
         ) : !hasResults && !isFetching ? (
@@ -85,14 +103,24 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             {data.clients.map(c => (
               <CommandItem
                 key={`client-${c.id}`}
-                onSelect={() => go(`/admin/vendas?cliente=${encodeURIComponent(c.fullName)}`)}
+                onSelect={() =>
+                  go(`/admin/vendas?cliente=${encodeURIComponent(c.fullName)}`)
+                }
                 className="cursor-pointer"
               >
-                <Users className="w-4 h-4 mr-2 shrink-0" style={{ color: "var(--primary)" }} />
+                <Users
+                  className="w-4 h-4 mr-2 shrink-0"
+                  style={{ color: "var(--primary)" }}
+                />
                 <div className="min-w-0">
                   <p className="font-medium truncate">{c.fullName}</p>
                   {c.phone && (
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{c.phone}</p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      {c.phone}
+                    </p>
                   )}
                 </div>
               </CommandItem>
@@ -100,9 +128,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           </CommandGroup>
         )}
 
-        {data?.clients && data.clients.length > 0 && data.sales && data.sales.length > 0 && (
-          <CommandSeparator />
-        )}
+        {data?.clients &&
+          data.clients.length > 0 &&
+          data.sales &&
+          data.sales.length > 0 && <CommandSeparator />}
 
         {data?.sales && data.sales.length > 0 && (
           <CommandGroup heading="Vendas">
@@ -112,11 +141,18 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 onSelect={() => go(`/admin/vendas`)}
                 className="cursor-pointer"
               >
-                <ShoppingBag className="w-4 h-4 mr-2 shrink-0" style={{ color: "var(--primary)" }} />
+                <ShoppingBag
+                  className="w-4 h-4 mr-2 shrink-0"
+                  style={{ color: "var(--primary)" }}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{s.clientName}</p>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    {s.productName} · {formatCurrency(s.amount)} · {formatDate(s.saleDate)}
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    {s.productName} · {formatCurrency(s.amount)} ·{" "}
+                    {formatDate(s.saleDate)}
                   </p>
                 </div>
               </CommandItem>
@@ -124,9 +160,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           </CommandGroup>
         )}
 
-        {data?.sales && data.sales.length > 0 && data.users && data.users.length > 0 && (
-          <CommandSeparator />
-        )}
+        {data?.sales &&
+          data.sales.length > 0 &&
+          data.users &&
+          data.users.length > 0 && <CommandSeparator />}
 
         {data?.users && data.users.length > 0 && (
           <CommandGroup heading="Funcionários">
@@ -136,10 +173,18 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 onSelect={() => go("/admin/vendedores")}
                 className="cursor-pointer"
               >
-                <User className="w-4 h-4 mr-2 shrink-0" style={{ color: "var(--primary)" }} />
+                <User
+                  className="w-4 h-4 mr-2 shrink-0"
+                  style={{ color: "var(--primary)" }}
+                />
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{u.displayName || u.name || u.username}</p>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  <p className="font-medium truncate">
+                    {u.displayName || u.name || u.username}
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
                     {ROLE_LABELS[u.role] ?? u.role}
                     {u.username ? ` · @${u.username}` : ""}
                   </p>
