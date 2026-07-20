@@ -1925,7 +1925,7 @@ export default function AdminVendas() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="max-w-[1600px] mx-auto space-y-6 pb-20">
         <FadeIn>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -2089,7 +2089,7 @@ export default function AdminVendas() {
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
                     Comprovante
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] text-right">
+                  <th className="sticky right-0 z-20 min-w-[190px] border-l border-[var(--border)] bg-[var(--secondary)] px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)]">
                     Ações
                   </th>
                 </tr>
@@ -2196,7 +2196,7 @@ export default function AdminVendas() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="sticky right-0 z-10 min-w-[190px] border-l border-[var(--border)] bg-[var(--card)] px-6 py-4 text-right shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)] transition-colors group-hover:bg-[var(--secondary)]">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setViewSale(sale)}
