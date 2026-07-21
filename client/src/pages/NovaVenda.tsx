@@ -19,6 +19,7 @@ import {
 import {
   COUNTRIES,
   applyPhoneMask,
+  parsePhoneForInput,
   type CountryPhone,
 } from "@/lib/phoneCountries";
 import { useIsMobile } from "@/hooks/useMobile";
@@ -121,6 +122,11 @@ export default function NovaVenda() {
   const [productQuery, setProductQuery] = useState("");
   const [productDropdownOpen, setProductDropdownOpen] = useState(false);
   const productInputRef = useRef<HTMLInputElement>(null);
+  const clientInputRef = useRef<HTMLInputElement>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [debouncedClientSearch, setDebouncedClientSearch] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [activeClientIndex, setActiveClientIndex] = useState(-1);
 
   const [form, setForm] = useState({
     clientName: "",
@@ -135,6 +141,29 @@ export default function NovaVenda() {
   });
   const [consultationSlotId, setConsultationSlotId] = useState<number | null>(
     null
+  );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedClientSearch(clientSearch.trim());
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [clientSearch]);
+
+  const clientSearchTerm = debouncedClientSearch.trim();
+  const canSearchClients =
+    clientSearchTerm.length >= 2 && clientSearchTerm.length <= 100;
+  const {
+    data: clientSuggestions = [],
+    isFetching: loadingClientSuggestions,
+    isError: clientSearchError,
+  } = trpc.clients.search.useQuery(
+    { query: clientSearchTerm },
+    {
+      enabled: canSearchClients && clientDropdownOpen,
+      retry: false,
+      staleTime: 30_000,
+    }
   );
 
   const isConsultaCartas = form.productName === CONSULTA_CARTAS;
@@ -297,6 +326,61 @@ export default function NovaVenda() {
     setForm(f => ({ ...f, clientPhone: applyPhoneMask(local, country.mask) }));
   };
 
+  const selectClientSuggestion = (
+    client: (typeof clientSuggestions)[number]
+  ) => {
+    const birthDate = client.birthDate
+      ? String(client.birthDate).slice(0, 10)
+      : "";
+    const { country, localDigits } = parsePhoneForInput(
+      client.phone ?? "",
+      COUNTRIES[0]
+    );
+
+    setSelectedCountry(country);
+    setBirthDateMasked(fmtDate(birthDate));
+    setForm(current => ({
+      ...current,
+      clientName: client.fullName,
+      clientBirthDate: birthDate,
+      clientPhone: applyPhoneMask(localDigits, country.mask),
+    }));
+    setClientSearch(client.fullName);
+    setClientDropdownOpen(false);
+    setActiveClientIndex(-1);
+  };
+
+  const handleClientKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setClientDropdownOpen(false);
+      setActiveClientIndex(-1);
+      return;
+    }
+
+    if (
+      !clientDropdownOpen ||
+      clientSearch.trim() !== clientSearchTerm ||
+      clientSuggestions.length === 0
+    ) {
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveClientIndex(current =>
+        current >= clientSuggestions.length - 1 ? 0 : current + 1
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveClientIndex(current =>
+        current <= 0 ? clientSuggestions.length - 1 : current - 1
+      );
+    } else if (e.key === "Enter" && activeClientIndex >= 0) {
+      e.preventDefault();
+      selectClientSuggestion(clientSuggestions[activeClientIndex]);
+    }
+  };
+
   // Handler da máscara de data de nascimento
   const handleBirthDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = applyDateMask(e.target.value);
@@ -455,6 +539,12 @@ export default function NovaVenda() {
       notes: "",
     });
     setBirthDateMasked("");
+    setSelectedCountry(COUNTRIES[0]);
+    setClientSearch("");
+    setDebouncedClientSearch("");
+    setClientDropdownOpen(false);
+    setActiveClientIndex(-1);
+    clientInputRef.current?.blur();
     setProductQuery("");
     setProductDropdownOpen(false);
     setFile(null);
@@ -583,7 +673,7 @@ export default function NovaVenda() {
             </h2>
             <div className="space-y-4">
               {/* Nome */}
-              <div>
+              <div className="relative">
                 <label
                   className="block text-sm font-medium mb-2"
                   style={dynLabelStyle}
@@ -591,17 +681,136 @@ export default function NovaVenda() {
                   Nome Completo {requiredStar}
                 </label>
                 <input
+                  ref={clientInputRef}
                   type="text"
-                  value={form.clientName}
-                  onChange={e =>
-                    setForm(f => ({ ...f, clientName: e.target.value }))
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="client-suggestions"
+                  aria-expanded={clientDropdownOpen}
+                  aria-activedescendant={
+                    activeClientIndex >= 0
+                      ? `client-suggestion-${activeClientIndex}`
+                      : undefined
                   }
+                  value={form.clientName}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setForm(current => ({
+                      ...current,
+                      clientName: value,
+                    }));
+                    setClientSearch(value);
+                    setClientDropdownOpen(
+                      value.trim().length >= 2 && value.trim().length <= 100
+                    );
+                    setActiveClientIndex(-1);
+                  }}
+                  onFocus={() => {
+                    setClientSearch(form.clientName);
+                    setClientDropdownOpen(
+                      form.clientName.trim().length >= 2 &&
+                        form.clientName.trim().length <= 100
+                    );
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => {
+                      setClientDropdownOpen(false);
+                      setActiveClientIndex(-1);
+                    }, 150);
+                  }}
+                  onKeyDown={handleClientKeyDown}
                   placeholder="Ex: Maria da Silva"
                   className={inputClass}
                   style={dynInputStyle}
                   autoComplete="off"
+                  maxLength={256}
                   required
                 />
+
+                {clientDropdownOpen &&
+                  clientSearch.trim().length >= 2 &&
+                  clientSearch.trim().length <= 100 && (
+                    <div
+                      id="client-suggestions"
+                      role="listbox"
+                      className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
+                      style={{
+                        background: isDark ? "var(--card)" : "white",
+                        border: isDark
+                          ? "1.5px solid var(--border)"
+                          : "1.5px solid #ddd5c4",
+                        maxHeight: 260,
+                        overflowY: "auto",
+                      }}
+                    >
+                      {clientSearch.trim() !== clientSearchTerm ||
+                      loadingClientSuggestions ? (
+                        <div
+                          className="px-4 py-3 text-sm flex items-center gap-2"
+                          style={{ color: dynSubColor }}
+                        >
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Buscando clientes...
+                        </div>
+                      ) : clientSearchError ? (
+                        <div
+                          className="px-4 py-3 text-sm"
+                          style={{ color: dynSubColor }}
+                        >
+                          {"N\u00e3o foi poss\u00edvel buscar clientes agora."}
+                        </div>
+                      ) : clientSuggestions.length === 0 ? (
+                        <div
+                          className="px-4 py-3 text-sm"
+                          style={{ color: dynSubColor }}
+                        >
+                          Nenhum cliente encontrado. Continue preenchendo para
+                          cadastrar um novo.
+                        </div>
+                      ) : (
+                        clientSuggestions.map((client, index) => (
+                          <button
+                            id={`client-suggestion-${index}`}
+                            key={client.id}
+                            type="button"
+                            role="option"
+                            aria-selected={activeClientIndex === index}
+                            onMouseDown={e => e.preventDefault()}
+                            onMouseEnter={() => setActiveClientIndex(index)}
+                            onClick={() => selectClientSuggestion(client)}
+                            className="w-full px-4 py-3 text-left transition-colors"
+                            style={{
+                              background:
+                                activeClientIndex === index
+                                  ? isDark
+                                    ? "var(--accent)"
+                                    : "#ede8de"
+                                  : isDark
+                                    ? "var(--card)"
+                                    : "white",
+                              color: isDark ? "var(--foreground)" : "#1a1a2e",
+                              borderBottom: isDark
+                                ? "1px solid var(--border)"
+                                : "1px solid #eee8dc",
+                            }}
+                          >
+                            <span className="block text-sm font-semibold">
+                              {client.fullName}
+                            </span>
+                            <span
+                              className="block text-xs mt-0.5"
+                              style={{ color: dynSubColor }}
+                            >
+                              {client.phone || "Telefone n\u00e3o informado"}
+                              {client.birthDate
+                                ? ` - ${fmtDate(String(client.birthDate))}`
+                                : ""}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* Data de Nascimento — input text com máscara dd/mm/aaaa + botão calendário */}

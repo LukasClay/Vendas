@@ -13,6 +13,7 @@ import { pushRouter } from "./routers/push";
 import { settingsRouter } from "./routers/settings";
 import { securityRouter } from "./routers/security";
 import { searchRouter } from "./routers/search";
+import { clientsRouter } from "./routers/clients";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
@@ -49,6 +50,7 @@ export const appRouter = router({
   settings: settingsRouter,
   security: securityRouter,
   search: searchRouter,
+  clients: clientsRouter,
 });
 
 export type AppRouter = typeof appRouter;

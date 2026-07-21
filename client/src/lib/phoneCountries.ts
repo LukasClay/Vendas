@@ -176,3 +176,35 @@ export const COUNTRIES: CountryPhone[] = [
   VN,
   ZA,
 ].filter((c, i, arr) => arr.findIndex(x => x.code === c.code) === i); // deduplica (BR aparece uma vez)
+
+export function parsePhoneForInput(
+  rawPhone: string,
+  fallbackCountry: CountryPhone = COUNTRIES[0]
+): { country: CountryPhone; localDigits: string } {
+  const trimmed = rawPhone.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  const mayIncludeDdi =
+    trimmed.startsWith("+") || digits.length > fallbackCountry.maxDigits;
+
+  let country = fallbackCountry;
+  let localDigits = digits;
+
+  if (mayIncludeDdi) {
+    const countriesByDdiLength = [...COUNTRIES].sort(
+      (a, b) => b.ddi.length - a.ddi.length
+    );
+    const detected = countriesByDdiLength.find(candidate =>
+      digits.startsWith(candidate.ddi)
+    );
+
+    if (detected) {
+      country = detected;
+      localDigits = digits.slice(detected.ddi.length);
+    }
+  }
+
+  return {
+    country,
+    localDigits: localDigits.slice(0, country.maxDigits),
+  };
+}
