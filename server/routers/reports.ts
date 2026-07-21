@@ -19,7 +19,18 @@ import {
   getDb,
 } from "../db";
 import { adminProcedure, router } from "../_core/trpc";
-import { and, eq, gte, inArray, isNull, isNotNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  isNotNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { sales, users } from "../../drizzle/schema";
 import { calcDeadline } from "../../shared/businessDays";
 
@@ -209,7 +220,10 @@ export const reportsRouter = router({
     let completedOnTime = 0;
     let completedLate = 0;
     for (const row of completedRows) {
-      if (!row.completedAt) { completedLate++; continue; }
+      if (!row.completedAt) {
+        completedLate++;
+        continue;
+      }
       const deadline = calcDeadline(String(row.saleDate));
       deadline.setHours(0, 0, 0, 0);
       const done = new Date(row.completedAt);
@@ -228,7 +242,8 @@ export const reportsRouter = router({
     }
 
     const total = completedOnTime + completedLate;
-    const slaRate = total > 0 ? Math.round((completedOnTime / total) * 100) : null;
+    const slaRate =
+      total > 0 ? Math.round((completedOnTime / total) * 100) : null;
 
     return {
       completedOnTime,
@@ -249,7 +264,8 @@ export const reportsRouter = router({
       month: "2-digit",
       day: "2-digit",
     }).formatToParts(new Date());
-    const get = (t: string) => Number(parts.find(p => p.type === t)?.value ?? 0);
+    const get = (t: string) =>
+      Number(parts.find(p => p.type === t)?.value ?? 0);
     const year = get("year");
     const month = get("month");
     const day = get("day");
@@ -292,7 +308,9 @@ export const reportsRouter = router({
       )
       .groupBy(sales.sellerId);
 
-    const salesMap = new Map(salesRows.map(r => [r.sellerId, Number(r.total ?? 0)]));
+    const salesMap = new Map(
+      salesRows.map(r => [r.sellerId, Number(r.total ?? 0)])
+    );
 
     return usersWithGoals.map(u => ({
       id: u.id,

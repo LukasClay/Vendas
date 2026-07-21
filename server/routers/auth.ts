@@ -371,7 +371,8 @@ export const ownAuthRouter = router({
       if (input.role !== undefined) updateData.role = input.role;
       if (input.active !== undefined) updateData.active = input.active;
       if (input.monthlyGoal !== undefined) {
-        updateData.monthlyGoal = input.monthlyGoal === null ? null : String(input.monthlyGoal);
+        updateData.monthlyGoal =
+          input.monthlyGoal === null ? null : String(input.monthlyGoal);
       }
 
       // Ao reativar: restaura username original removendo sufixo _XXXX

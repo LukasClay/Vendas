@@ -367,7 +367,10 @@ function ToWriteCard({
                     <p className="text-xs" style={{ color: "#737390" }}>
                       Observação
                     </p>
-                    <p className="text-sm whitespace-pre-wrap" style={{ color: "#1a1a2e" }}>
+                    <p
+                      className="text-sm whitespace-pre-wrap"
+                      style={{ color: "#1a1a2e" }}
+                    >
                       {item.notes}
                     </p>
                   </div>
@@ -856,7 +859,10 @@ function PendingCard({
                     <p className="text-xs" style={{ color: "#737390" }}>
                       Observação
                     </p>
-                    <p className="text-sm whitespace-pre-wrap" style={{ color: "#1a1a2e" }}>
+                    <p
+                      className="text-sm whitespace-pre-wrap"
+                      style={{ color: "#1a1a2e" }}
+                    >
                       {item.notes}
                     </p>
                   </div>
@@ -1240,8 +1246,18 @@ function DoneCard({
 }
 
 const MONTH_NAMES = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
 ];
 
 // ─── Página Principal ─────────────────────────────────────────────────────────
@@ -1317,10 +1333,14 @@ export default function ConsultoraPage() {
   useEffect(() => {
     if (doneMonths.length === 0) return;
     const exists = doneMonths.some(
-      m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+      m =>
+        m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
     );
     if (!exists) {
-      setSelectedDoneMonth({ month: doneMonths[0].month, year: doneMonths[0].year });
+      setSelectedDoneMonth({
+        month: doneMonths[0].month,
+        year: doneMonths[0].year,
+      });
     }
   }, [doneMonths]);
 
@@ -1481,11 +1501,14 @@ export default function ConsultoraPage() {
       id: "feito" as Tab,
       label: "Feitos",
       icon: <BookCheck className="w-4 h-4" />,
-      count: activeTab === "feito"
-        ? (doneMonths.find(
-            m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
-          )?.count ?? doneItems.length)
-        : counts?.feito ?? 0,
+      count:
+        activeTab === "feito"
+          ? (doneMonths.find(
+              m =>
+                m.month === selectedDoneMonth.month &&
+                m.year === selectedDoneMonth.year
+            )?.count ?? doneItems.length)
+          : (counts?.feito ?? 0),
     },
     {
       id: "alertas" as Tab,
@@ -1587,7 +1610,10 @@ export default function ConsultoraPage() {
         {/* Seletor de mês — somente na aba Feitos */}
         {activeTab === "feito" && doneMonths.length > 0 && (
           <div className="flex gap-2 flex-wrap items-center mb-1">
-            <span className="text-xs font-semibold shrink-0" style={{ color: "#737390" }}>
+            <span
+              className="text-xs font-semibold shrink-0"
+              style={{ color: "#737390" }}
+            >
               Mês:
             </span>
             {doneMonths.map(m => {

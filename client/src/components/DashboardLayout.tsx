@@ -770,7 +770,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </main>
 
       {isAdmin && (
-        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+        />
       )}
     </div>
   );

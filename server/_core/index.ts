@@ -11,7 +11,12 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startAlertsJob } from "../jobs/alertsJob";
 import { startReportsJob } from "../jobs/reportsJob";
-import { ensureSystemProducts, ensurePhotoColumns, ensureMonthlyGoalColumn, getDb } from "../db";
+import {
+  ensureSystemProducts,
+  ensurePhotoColumns,
+  ensureMonthlyGoalColumn,
+  getDb,
+} from "../db";
 import { sseEmitter } from "./sse";
 import { sdk } from "./sdk";
 import { sql } from "drizzle-orm";
@@ -69,9 +74,15 @@ async function startServer() {
   app.get("/api/events", async (req, res) => {
     try {
       const sessionCookie = sdk.getSessionCookieFromRequest(req);
-      if (!sessionCookie) { res.status(401).end(); return; }
+      if (!sessionCookie) {
+        res.status(401).end();
+        return;
+      }
       const user = await sdk.authenticateRequest(req, sessionCookie);
-      if (user.role !== "admin") { res.status(403).end(); return; }
+      if (user.role !== "admin") {
+        res.status(403).end();
+        return;
+      }
     } catch {
       res.status(401).end();
       return;

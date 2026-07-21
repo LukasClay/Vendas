@@ -36,8 +36,18 @@ type Tab = "para_escrever" | "pendente" | "feito";
 type Seller = { id: number; name: string | null };
 
 const MONTH_NAMES = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
 ];
 
 function formatBirthDate(d: Date | string | null | undefined): string {
@@ -609,7 +619,10 @@ function PendingCard({
                     className="w-4 h-4 shrink-0 mt-0.5"
                     style={{ color: "var(--primary)" }}
                   />
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>
+                  <p
+                    className="text-sm whitespace-pre-wrap"
+                    style={{ color: "var(--foreground)" }}
+                  >
                     {item.notes}
                   </p>
                 </div>
@@ -1392,10 +1405,14 @@ export default function Trabalhos() {
   useEffect(() => {
     if (doneMonths.length === 0) return;
     const exists = doneMonths.some(
-      m => m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
+      m =>
+        m.month === selectedDoneMonth.month && m.year === selectedDoneMonth.year
     );
     if (!exists) {
-      setSelectedDoneMonth({ month: doneMonths[0].month, year: doneMonths[0].year });
+      setSelectedDoneMonth({
+        month: doneMonths[0].month,
+        year: doneMonths[0].year,
+      });
     }
   }, [doneMonths]);
   const invalidateWorkQueries = () => {

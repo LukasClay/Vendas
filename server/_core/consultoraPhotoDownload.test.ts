@@ -30,8 +30,9 @@ vi.mock("../storage", async () => {
   };
 });
 
-const { registerConsultoraPhotoDownloadRoute } =
-  await import("./consultoraPhotoDownload");
+const { registerConsultoraPhotoDownloadRoute } = await import(
+  "./consultoraPhotoDownload"
+);
 const { StorageObjectNotFoundError } = await import("../storage");
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;

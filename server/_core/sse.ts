@@ -1,6 +1,11 @@
 import { EventEmitter } from "events";
 
-export type SseChannel = "sales" | "consultora" | "users" | "products" | "consultationSlots";
+export type SseChannel =
+  | "sales"
+  | "consultora"
+  | "users"
+  | "products"
+  | "consultationSlots";
 
 class SseEmitter extends EventEmitter {}
 

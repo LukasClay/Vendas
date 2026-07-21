@@ -1063,8 +1063,7 @@ export async function getSalesByPeriod(params: {
   } else if (params.startDate && params.endDate) {
     const start = new Date(params.startDate);
     const end = new Date(params.endDate);
-    const days =
-      Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
     prevEnd = new Date(start);
     prevEnd.setDate(prevEnd.getDate() - 1);
     prevStart = new Date(prevEnd);
