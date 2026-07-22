@@ -3,6 +3,7 @@ import {
   asc,
   desc,
   eq,
+  gt,
   isNotNull,
   isNull,
   like,
@@ -18,7 +19,6 @@ import {
   auditLogs,
   clients,
   consultationSlots,
-  InsertClient,
   InsertProduct,
   InsertReportSchedule,
   InsertSale,
@@ -34,6 +34,20 @@ import {
   getLocalLoginHealth,
   type LocalLoginHealthResult,
 } from "./_core/localLoginHealth";
+import {
+  buildClientAccessCondition,
+  type ClientAccessActor,
+} from "./clientAccess";
+import {
+  ClientIdentityConflictError,
+  ClientNotFoundError,
+  getSafeClientEnrichment,
+  normalizeClientBirthDate,
+  normalizeClientName,
+  normalizeClientPhone,
+  type ClientIdentityDate,
+} from "./clientIdentity";
+import { getSaoPauloDateTimeParts } from "./consultationSlotAvailability";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
@@ -503,32 +517,181 @@ export async function ensureMonthlyGoalColumn() {
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
-export async function upsertClient(data: InsertClient) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Try to find existing client by phone
-  if (data.phone) {
-    const existing = await db
-      .select()
-      .from(clients)
-      .where(eq(clients.phone, data.phone))
-      .limit(1);
-    if (existing.length > 0) {
-      await db
-        .update(clients)
-        .set({ fullName: data.fullName, birthDate: data.birthDate })
-        .where(eq(clients.id, existing[0].id));
-      return existing[0].id;
-    }
-  }
-  // PostgreSQL: usar .returning() para obter o ID gerado
-  const result = await db
-    .insert(clients)
-    .values(data)
-    .returning({ id: clients.id });
-  return result[0].id;
+export interface ClientForSaleInput {
+  clientId?: number;
+  fullName: string;
+  birthDate?: ClientIdentityDate;
+  phone?: string | null;
 }
 
+export interface ResolvedClient {
+  id: number;
+  fullName: string;
+  birthDate: string | null;
+  phone: string | null;
+}
+
+export type ClientResolutionDatabase = NonNullable<
+  Awaited<ReturnType<typeof getDb>>
+>;
+
+const clientIdentityProjection = {
+  id: clients.id,
+  fullName: clients.fullName,
+  birthDate: clients.birthDate,
+  phone: clients.phone,
+};
+
+export async function resolveClientForSale(
+  data: ClientForSaleInput,
+  actor: ClientAccessActor
+): Promise<ResolvedClient> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return resolveClientForSaleWithDb(db, data, actor);
+}
+
+export async function resolveClientForSaleWithDb(
+  db: ClientResolutionDatabase,
+  data: ClientForSaleInput,
+  actor: ClientAccessActor
+): Promise<ResolvedClient> {
+  const requestedIdentity = {
+    id: data.clientId,
+    fullName: data.fullName,
+    birthDate: data.birthDate,
+    phone: data.phone,
+  };
+
+  const resolveExisting = async (
+    existing: ResolvedClient
+  ): Promise<ResolvedClient> => {
+    let current = existing;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const enrichment = getSafeClientEnrichment(current, requestedIdentity);
+      if (Object.keys(enrichment).length === 0) return current;
+
+      const updateConditions: SQL[] = [eq(clients.id, current.id)];
+      if ("birthDate" in enrichment) {
+        updateConditions.push(isNull(clients.birthDate));
+      }
+      if ("phone" in enrichment) {
+        updateConditions.push(isNull(clients.phone));
+      }
+      const updateScope = buildClientAccessCondition(db, actor);
+      if (updateScope) updateConditions.push(updateScope);
+
+      const updated = await db
+        .update(clients)
+        .set(enrichment)
+        .where(and(...updateConditions))
+        .returning(clientIdentityProjection);
+      if (updated[0]) return updated[0];
+
+      const refreshScope = buildClientAccessCondition(db, actor);
+      const refreshCondition = refreshScope
+        ? and(eq(clients.id, current.id), refreshScope)
+        : eq(clients.id, current.id);
+      const refreshed = await db
+        .select(clientIdentityProjection)
+        .from(clients)
+        .where(refreshCondition)
+        .limit(1);
+      if (!refreshed[0]) throw new ClientNotFoundError(current.id);
+      current = refreshed[0];
+    }
+
+    const remaining = getSafeClientEnrichment(current, requestedIdentity);
+    if (Object.keys(remaining).length === 0) return current;
+    throw new Error("Client changed concurrently; retry the operation");
+  };
+  if (data.clientId !== undefined) {
+    const clientScope = buildClientAccessCondition(db, actor);
+    const conditions = clientScope
+      ? and(eq(clients.id, data.clientId), clientScope)
+      : eq(clients.id, data.clientId);
+    const existing = await db
+      .select(clientIdentityProjection)
+      .from(clients)
+      .where(conditions)
+      .limit(1);
+
+    if (!existing[0]) {
+      throw new ClientNotFoundError(data.clientId);
+    }
+
+    return resolveExisting(existing[0]);
+  }
+
+  const normalizedPhone = normalizeClientPhone(data.phone);
+  if (normalizedPhone) {
+    const storedPhoneValue = sql<string>`btrim(coalesce(${clients.phone}, ''))`;
+    const storedPhoneDigits = sql<string>`regexp_replace(
+      ${storedPhoneValue},
+      '[^0-9]',
+      '',
+      'g'
+    )`;
+    const normalizedStoredPhone = sql<string>`case
+      when left(${storedPhoneDigits}, 4) = '0055'
+        and length(${storedPhoneDigits}) in (14, 15)
+        then substring(${storedPhoneDigits} from 5)
+      when left(${storedPhoneDigits}, 2) = '55'
+        and length(${storedPhoneDigits}) in (12, 13)
+        then substring(${storedPhoneDigits} from 3)
+      when left(${storedPhoneValue}, 2) = '00'
+        then '+' || substring(${storedPhoneDigits} from 3)
+      when left(${storedPhoneValue}, 1) = '+'
+        or length(${storedPhoneDigits}) > 11
+        then '+' || ${storedPhoneDigits}
+      else ${storedPhoneDigits}
+    end`;
+
+    const phoneMatch = sql`${normalizedStoredPhone} = ${normalizedPhone}`;
+    const clientScope = buildClientAccessCondition(db, actor);
+    const candidates = await db
+      .select(clientIdentityProjection)
+      .from(clients)
+      .where(clientScope ? and(phoneMatch, clientScope) : phoneMatch)
+      .orderBy(asc(clients.id))
+      .limit(20);
+
+    let firstConflict: ClientIdentityConflictError | undefined;
+    for (const candidate of candidates) {
+      try {
+        return await resolveExisting(candidate);
+      } catch (error) {
+        if (error instanceof ClientIdentityConflictError) {
+          firstConflict ??= error;
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (firstConflict) throw firstConflict;
+  }
+
+  normalizeClientName(data.fullName);
+  const fullName = data.fullName.normalize("NFKC").trim().replace(/\s+/g, " ");
+  const birthDate = normalizeClientBirthDate(data.birthDate);
+  const result = await db
+    .insert(clients)
+    .values({
+      fullName,
+      birthDate,
+      phone: normalizedPhone,
+    })
+    .returning(clientIdentityProjection);
+
+  if (!result[0]) {
+    throw new Error("Client insert did not return a row");
+  }
+
+  return result[0];
+}
 // ─── Sales ────────────────────────────────────────────────────────────────────
 
 export interface SaleFilters {
@@ -557,19 +720,120 @@ export async function getActiveCompany(): Promise<
   return rows[0].value as "mundo_da_magia" | "mundo_cigano";
 }
 
-export async function createSale(data: InsertSale) {
+export class ConsultationSlotUnavailableError extends Error {
+  constructor() {
+    super("Consultation slot is no longer available");
+    this.name = "ConsultationSlotUnavailableError";
+  }
+}
+
+type SaleWithoutResolvedClient = Omit<
+  InsertSale,
+  "clientId" | "clientName" | "clientBirthDate" | "clientPhone"
+>;
+export interface CreateSaleAuditContext {
+  userId: number;
+  userName: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
+
+export interface CreateSaleWithResolvedClientInput {
+  client: ClientForSaleInput;
+  actor: ClientAccessActor;
+  sale: SaleWithoutResolvedClient;
+  consultationSlotId?: number;
+  audit: CreateSaleAuditContext;
+}
+
+export async function createSaleWithResolvedClient(
+  data: CreateSaleWithResolvedClientInput
+): Promise<{ saleId: number; client: ResolvedClient }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Carimba a venda com a empresa ativa se não foi fornecida
-  if (!data.company) {
-    data.company = await getActiveCompany();
-  }
-  // PostgreSQL: usar .returning() para obter o ID gerado
-  const result = await db
-    .insert(sales)
-    .values(data)
-    .returning({ id: sales.id });
-  return result[0].id;
+
+  const company = data.sale.company ?? (await getActiveCompany());
+
+  return createSaleWithResolvedClientWithDb(db, data, company);
+}
+
+export async function createSaleWithResolvedClientWithDb(
+  db: ClientResolutionDatabase,
+  data: CreateSaleWithResolvedClientInput,
+  company: "mundo_da_magia" | "mundo_cigano"
+): Promise<{ saleId: number; client: ResolvedClient }> {
+  return db.transaction(async transaction => {
+    const normalizedPhone = normalizeClientPhone(data.client.phone);
+    if (data.client.clientId === undefined && normalizedPhone) {
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(
+          hashtextextended(${`client-phone:${normalizedPhone}`}, 0)
+        )`
+      );
+    }
+
+    const client = await resolveClientForSaleWithDb(
+      transaction as unknown as ClientResolutionDatabase,
+      data.client,
+      data.actor
+    );
+
+    const insertedSale = await transaction
+      .insert(sales)
+      .values({
+        ...data.sale,
+        company,
+        clientId: client.id,
+        clientName: client.fullName,
+        clientBirthDate: client.birthDate,
+        clientPhone: client.phone,
+      })
+      .returning({ id: sales.id });
+    const saleId = insertedSale[0]?.id;
+    if (!saleId) throw new Error("Sale insert did not return a row");
+
+    if (data.consultationSlotId !== undefined) {
+      const { date: today, time: nowTime } = getSaoPauloDateTimeParts();
+      const updatedSlot = await transaction
+        .update(consultationSlots)
+        .set({ sold: true, saleId })
+        .where(
+          and(
+            eq(consultationSlots.id, data.consultationSlotId),
+            eq(consultationSlots.sold, false),
+            isNull(consultationSlots.saleId),
+            eq(consultationSlots.status, "pendente"),
+            or(
+              gt(consultationSlots.consultationDate, today),
+              and(
+                eq(consultationSlots.consultationDate, today),
+                gt(consultationSlots.consultationTime, nowTime)
+              )
+            )
+          )
+        )
+        .returning({ id: consultationSlots.id });
+      if (updatedSlot.length === 0) {
+        throw new ConsultationSlotUnavailableError();
+      }
+    }
+
+    await transaction.insert(auditLogs).values({
+      userId: data.audit.userId,
+      userName: data.audit.userName,
+      action: "Criou Venda",
+      details: JSON.stringify({
+        saleId,
+        clientName: client.fullName,
+        productName: data.sale.productName,
+        amount: Number(data.sale.amount),
+      }),
+      ipAddress: data.audit.ipAddress ?? null,
+      userAgent: data.audit.userAgent ?? null,
+    });
+
+    return { saleId, client };
+  });
 }
 
 export async function getSales(filters: SaleFilters = {}) {

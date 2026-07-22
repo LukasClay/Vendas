@@ -1,5 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
+import {
+  applyClientAutofill,
+  editAutofilledClientDetails,
+  editAutofilledClientName,
+  type ClientAutofillSnapshot,
+} from "@/lib/clientAutofill";
+import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -129,6 +135,8 @@ export default function NovaVenda() {
   const [activeClientIndex, setActiveClientIndex] = useState(-1);
 
   const [form, setForm] = useState({
+    clientId: null as number | null,
+    selectedClientSnapshot: null as ClientAutofillSnapshot | null,
     clientName: "",
     clientBirthDate: "",
     clientPhone: "",
@@ -153,19 +161,48 @@ export default function NovaVenda() {
   const clientSearchTerm = debouncedClientSearch.trim();
   const canSearchClients =
     clientSearchTerm.length >= 2 && clientSearchTerm.length <= 100;
-  const {
-    data: clientSuggestions = [],
-    isFetching: loadingClientSuggestions,
-    isError: clientSearchError,
-  } = trpc.clients.search.useQuery(
-    { query: clientSearchTerm },
-    {
-      enabled: canSearchClients && clientDropdownOpen,
-      retry: false,
-      staleTime: 30_000,
-    }
-  );
+  const [clientSuggestions, setClientSuggestions] = useState<
+    RouterOutputs["clients"]["search"]
+  >([]);
+  const [clientSuggestionsTerm, setClientSuggestionsTerm] = useState("");
+  const [loadingClientSuggestions, setLoadingClientSuggestions] =
+    useState(false);
+  const [clientSearchError, setClientSearchError] = useState(false);
+  const clientSearchRequestId = useRef(0);
+  const { mutateAsync: searchClients } = trpc.clients.search.useMutation();
 
+  useEffect(() => {
+    const requestId = ++clientSearchRequestId.current;
+    if (!canSearchClients || !clientDropdownOpen) {
+      setClientSuggestions([]);
+      setClientSuggestionsTerm("");
+      setLoadingClientSuggestions(false);
+      setClientSearchError(false);
+      setActiveClientIndex(-1);
+      return;
+    }
+
+    setLoadingClientSuggestions(true);
+    setClientSearchError(false);
+    setActiveClientIndex(-1);
+
+    void searchClients({ query: clientSearchTerm })
+      .then(results => {
+        if (requestId !== clientSearchRequestId.current) return;
+        setClientSuggestions(results);
+        setClientSuggestionsTerm(clientSearchTerm);
+      })
+      .catch(() => {
+        if (requestId !== clientSearchRequestId.current) return;
+        setClientSuggestions([]);
+        setClientSuggestionsTerm(clientSearchTerm);
+        setClientSearchError(true);
+      })
+      .finally(() => {
+        if (requestId !== clientSearchRequestId.current) return;
+        setLoadingClientSuggestions(false);
+      });
+  }, [canSearchClients, clientDropdownOpen, clientSearchTerm, searchClients]);
   const isConsultaCartas = form.productName === CONSULTA_CARTAS;
   const canUploadClientPhotos =
     !isConsultaCartas &&
@@ -304,10 +341,11 @@ export default function NovaVenda() {
     const digits = e.target.value
       .replace(/\D/g, "")
       .slice(0, selectedCountry.maxDigits);
-    setForm(f => ({
-      ...f,
-      clientPhone: applyPhoneMask(digits, selectedCountry.mask),
-    }));
+    setForm(current =>
+      editAutofilledClientDetails(current, {
+        clientPhone: applyPhoneMask(digits, selectedCountry.mask),
+      })
+    );
   };
 
   const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -323,7 +361,11 @@ export default function NovaVenda() {
     const local = allDigits
       .slice(country.ddi.length)
       .slice(0, country.maxDigits);
-    setForm(f => ({ ...f, clientPhone: applyPhoneMask(local, country.mask) }));
+    setForm(current =>
+      editAutofilledClientDetails(current, {
+        clientPhone: applyPhoneMask(local, country.mask),
+      })
+    );
   };
 
   const selectClientSuggestion = (
@@ -339,12 +381,19 @@ export default function NovaVenda() {
 
     setSelectedCountry(country);
     setBirthDateMasked(fmtDate(birthDate));
-    setForm(current => ({
-      ...current,
-      clientName: client.fullName,
-      clientBirthDate: birthDate,
-      clientPhone: applyPhoneMask(localDigits, country.mask),
-    }));
+    setForm(current =>
+      applyClientAutofill(current, {
+        id: client.id,
+        fullName: client.fullName,
+        birthDate,
+        phone: applyPhoneMask(localDigits, country.mask),
+        snapshot: {
+          birthDateWasEmpty:
+            client.birthDate == null || String(client.birthDate).trim() === "",
+          phoneWasEmpty: client.phone == null || client.phone.trim() === "",
+        },
+      })
+    );
     setClientSearch(client.fullName);
     setClientDropdownOpen(false);
     setActiveClientIndex(-1);
@@ -360,6 +409,7 @@ export default function NovaVenda() {
     if (
       !clientDropdownOpen ||
       clientSearch.trim() !== clientSearchTerm ||
+      clientSuggestionsTerm !== clientSearchTerm ||
       clientSuggestions.length === 0
     ) {
       return;
@@ -386,13 +436,17 @@ export default function NovaVenda() {
     const masked = applyDateMask(e.target.value);
     setBirthDateMasked(masked);
     const iso = parseDateMask(masked);
-    setForm(f => ({ ...f, clientBirthDate: iso }));
+    setForm(current =>
+      editAutofilledClientDetails(current, { clientBirthDate: iso })
+    );
   };
 
   // Quando o input nativo (calendário) muda, sincroniza a máscara
   const handleBirthDateNative = (e: React.ChangeEvent<HTMLInputElement>) => {
     const iso = e.target.value; // "YYYY-MM-DD"
-    setForm(f => ({ ...f, clientBirthDate: iso }));
+    setForm(current =>
+      editAutofilledClientDetails(current, { clientBirthDate: iso })
+    );
     if (iso) {
       const [y, mo, d] = iso.split("-");
       setBirthDateMasked(`${d}/${mo}/${y}`);
@@ -494,6 +548,7 @@ export default function NovaVenda() {
     }
 
     await createSale.mutateAsync({
+      clientId: form.clientId ?? undefined,
       clientName: form.clientName.trim(),
       clientBirthDate: form.clientBirthDate || undefined,
       clientPhone: form.clientPhone
@@ -528,6 +583,8 @@ export default function NovaVenda() {
 
   const resetForm = () => {
     setForm({
+      clientId: null,
+      selectedClientSnapshot: null,
       clientName: "",
       clientBirthDate: "",
       clientPhone: "",
@@ -695,10 +752,15 @@ export default function NovaVenda() {
                   value={form.clientName}
                   onChange={e => {
                     const value = e.target.value;
-                    setForm(current => ({
-                      ...current,
-                      clientName: value,
-                    }));
+                    const selectedClientNameWasEdited =
+                      form.clientId !== null && value !== form.clientName;
+                    setForm(current =>
+                      editAutofilledClientName(current, value)
+                    );
+                    if (selectedClientNameWasEdited) {
+                      setBirthDateMasked("");
+                      setSelectedCountry(COUNTRIES[0]);
+                    }
                     setClientSearch(value);
                     setClientDropdownOpen(
                       value.trim().length >= 2 && value.trim().length <= 100
@@ -744,6 +806,7 @@ export default function NovaVenda() {
                       }}
                     >
                       {clientSearch.trim() !== clientSearchTerm ||
+                      clientSuggestionsTerm !== clientSearchTerm ||
                       loadingClientSuggestions ? (
                         <div
                           className="px-4 py-3 text-sm flex items-center gap-2"
@@ -926,7 +989,11 @@ export default function NovaVenda() {
                                 setSelectedCountry(country);
                                 setShowDdiDropdown(false);
                                 setDdiSearch("");
-                                setForm(f => ({ ...f, clientPhone: "" }));
+                                setForm(current =>
+                                  editAutofilledClientDetails(current, {
+                                    clientPhone: "",
+                                  })
+                                );
                               }}
                               className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-[var(--secondary)] transition-colors"
                               style={{

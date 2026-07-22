@@ -3,6 +3,7 @@ import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
   getDb: vi.fn(),
+  searchAccessibleClients: vi.fn(),
 }));
 
 vi.mock("./db", async () => {
@@ -10,6 +11,15 @@ vi.mock("./db", async () => {
   return {
     ...actual,
     getDb: mocks.getDb,
+  };
+});
+
+vi.mock("./clientAccess", async () => {
+  const actual =
+    await vi.importActual<typeof import("./clientAccess")>("./clientAccess");
+  return {
+    ...actual,
+    searchAccessibleClients: mocks.searchAccessibleClients,
   };
 });
 
@@ -42,30 +52,11 @@ function createUser(): AuthenticatedUser {
   };
 }
 
-function createDbMock(
-  rows: Array<{
-    id: number;
-    fullName: string;
-    birthDate: string | null;
-    phone: string | null;
-  }>
-) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const orderBy = vi.fn(() => ({ limit }));
-  const where = vi.fn(() => ({ orderBy }));
-  const from = vi.fn(() => ({ where }));
-  const select = vi.fn(() => ({ from }));
-
-  return {
-    db: { select },
-    spies: { select, from, where, orderBy, limit },
-  };
-}
-
 describe("clients.search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getDb.mockResolvedValue(null);
+    mocks.searchAccessibleClients.mockResolvedValue([]);
   });
 
   it("requires authentication", async () => {
@@ -97,18 +88,20 @@ describe("clients.search", () => {
         phone: "11999998888",
       },
     ];
-    const database = createDbMock(rows);
-    mocks.getDb.mockResolvedValue(database.db);
+    const database = { select: vi.fn() };
+    mocks.getDb.mockResolvedValue(database);
+    mocks.searchAccessibleClients.mockResolvedValue(rows);
     const caller = appRouter.createCaller(createContext(createUser()));
 
     await expect(
       caller.clients.search({ query: "  Maria  " })
     ).resolves.toEqual(rows);
 
-    expect(database.spies.select).toHaveBeenCalledOnce();
-    expect(database.spies.where).toHaveBeenCalledOnce();
-    expect(database.spies.orderBy).toHaveBeenCalledOnce();
-    expect(database.spies.limit).toHaveBeenCalledWith(8);
+    expect(mocks.searchAccessibleClients).toHaveBeenCalledWith(
+      database,
+      { id: 10, role: "user" },
+      "Maria"
+    );
   });
 
   it("reports database unavailability without leaking internals", async () => {

@@ -117,6 +117,45 @@ describe("sales.update storage cleanup", () => {
     expect(mocks.updateSale).not.toHaveBeenCalled();
   });
 
+  it("desvincula o cadastro canÃ´nico quando a identidade da venda muda", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      clientId: 5,
+      clientName: "Maria da Silva",
+      clientBirthDate: "1990-05-20",
+      clientPhone: "11999998888",
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+    await caller.update({ id: 20, clientName: "Joana da Silva" });
+
+    expect(mocks.updateSale).toHaveBeenCalledWith(
+      20,
+      expect.objectContaining({
+        clientId: null,
+        clientName: "Joana da Silva",
+      })
+    );
+  });
+
+  it("preserva o vÃ­nculo quando os dados enviados representam a mesma identidade", async () => {
+    mocks.getSaleById.mockResolvedValue({
+      clientId: 5,
+      clientName: "Maria da Silva",
+      clientBirthDate: "1990-05-20",
+      clientPhone: "+55 (11) 99999-8888",
+    });
+
+    const caller = salesRouter.createCaller(createAdminContext());
+    await caller.update({
+      id: 21,
+      clientName: "  MARIA   DA SILVA ",
+      clientBirthDate: "1990-05-20",
+      clientPhone: "11999998888",
+    });
+
+    const updateData = mocks.updateSale.mock.calls[0][1];
+    expect(updateData).not.toHaveProperty("clientId");
+  });
   it("rejeita campos extras no create usado por vendedor e consultora", async () => {
     const caller = salesRouter.createCaller(createAdminContext());
 

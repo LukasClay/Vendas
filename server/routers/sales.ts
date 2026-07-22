@@ -2,20 +2,29 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   createAuditLog,
-  createSale,
+  ConsultationSlotUnavailableError,
+  createSaleWithResolvedClient,
   deleteSale,
   getSaleById,
   getSales,
   getSalesBySeller,
   updateSale,
-  upsertClient,
   getDb,
   withRetry,
   getDeletedSales,
   restoreSale,
   permanentDeleteSale,
   cleanupExpiredTrash,
+  getProductById,
 } from "../db";
+import {
+  ClientIdentityConflictError,
+  ClientNotFoundError,
+  normalizeClientBirthDate,
+  normalizeClientName,
+  normalizeClientPhone,
+} from "../clientIdentity";
+import { isConsultationSlotAvailable } from "../consultationSlotAvailability";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { emitSseEvent } from "../_core/sse";
 import { storageDelete, storagePut } from "../storage";
@@ -27,7 +36,6 @@ import {
   users,
 } from "../../drizzle/schema";
 import { eq, and, like, ne, desc, isNull } from "drizzle-orm";
-import { getProductById } from "../db";
 import {
   ATTACHMENT_MIME_TYPES,
   MAX_FILE_BYTES,
@@ -64,6 +72,36 @@ type StoredMediaRecord = {
   mime: string | null;
   name?: string | null;
 };
+
+const CONSULTA_CARTAS_PRODUCT_NAME = "consulta cartas";
+
+function normalizeProductName(value: string): string {
+  return value.normalize("NFKC").trim().replace(/\s+/g, " ");
+}
+
+function isConsultaCartasProduct(value: string): boolean {
+  return value.toLowerCase() === CONSULTA_CARTAS_PRODUCT_NAME;
+}
+
+async function cleanupUploadedSaleMedia(
+  keys: Array<string | null | undefined>
+): Promise<void> {
+  const uniqueKeys = Array.from(
+    new Set(keys.filter((key): key is string => !!key))
+  );
+  const results = await Promise.allSettled(
+    uniqueKeys.map(key => storageDelete(key))
+  );
+  const failedCount = results.filter(
+    result => result.status === "rejected"
+  ).length;
+
+  if (failedCount > 0) {
+    console.error(
+      `[sales.create] Failed to clean ${failedCount} uploaded object(s)`
+    );
+  }
+}
 
 function assertMime(mime: string, allowed: readonly string[], message: string) {
   if (!allowed.includes(mime)) {
@@ -168,18 +206,25 @@ export const salesRouter = router({
     .input(
       z
         .object({
-          clientName: z.string().min(1, "Nome do cliente é obrigatório"),
-          clientBirthDate: z.string().optional(),
-          clientPhone: z.string().optional(),
-          productName: z.string().min(1, "Nome do trabalho é obrigatório"),
-          productId: z.number().optional(),
+          clientId: z.number().int().positive().optional(),
+          clientName: z
+            .string()
+            .min(1, "Nome do cliente é obrigatório")
+            .max(256),
+          clientBirthDate: z.string().max(10).optional(),
+          clientPhone: z.string().max(32).optional(),
+          productName: z
+            .string()
+            .min(1, "Nome do trabalho é obrigatório")
+            .max(256),
+          productId: z.number().int().positive().optional(),
           productCategory: z
             .enum(["individual", "promocao", "coletivo"])
             .default("individual"),
           saleDate: z.string().min(1, "Data da venda é obrigatória"),
           amount: z.number().positive("Valor deve ser positivo"),
           notes: z.string().optional(),
-          consultationSlotId: z.number().optional(), // Para Consulta Cartas
+          consultationSlotId: z.number().int().positive().optional(), // Para Consulta Cartas
           // Attachment: base64 encoded file
           attachmentBase64: z
             .string()
@@ -218,6 +263,94 @@ export const salesRouter = router({
         saleDate = `${get("year")}-${get("month")}-${get("day")}`;
       }
 
+      const selectedProduct =
+        input.productId === undefined
+          ? undefined
+          : await getProductById(input.productId);
+      if (
+        input.productId !== undefined &&
+        (!selectedProduct ||
+          !selectedProduct.active ||
+          selectedProduct.deletedAt)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "O produto selecionado n\u00e3o est\u00e1 dispon\u00edvel.",
+        });
+      }
+
+      if (
+        selectedProduct &&
+        !selectedProduct.allowedCategories.includes(input.productCategory)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "A categoria selecionada n\u00e3o \u00e9 permitida para este produto.",
+        });
+      }
+
+      const productName = normalizeProductName(
+        selectedProduct?.name ?? input.productName
+      );
+      if (!productName) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nome do trabalho \u00e9 obrigat\u00f3rio.",
+        });
+      }
+      const isConsultaCartas = isConsultaCartasProduct(productName);
+
+      if (isConsultaCartas && !input.consultationSlotId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Consulta Cartas exige um hor\u00e1rio reservado. Selecione um hor\u00e1rio dispon\u00edvel.",
+        });
+      }
+
+      if (input.consultationSlotId !== undefined && !isConsultaCartas) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas Consulta Cartas pode reservar um hor\u00e1rio.",
+        });
+      }
+
+      if (
+        isConsultaCartas &&
+        (Boolean(input.photo1Base64 && input.photo1Mime) ||
+          Boolean(input.photo2Base64 && input.photo2Mime))
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Consulta Cartas n\u00e3o permite fotos do cliente.",
+        });
+      }
+
+      const consultationSlotId = input.consultationSlotId;
+      if (consultationSlotId !== undefined) {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Banco indispon\u00edvel.",
+          });
+        }
+        const slot = await withRetry(() =>
+          db
+            .select()
+            .from(consultationSlots)
+            .where(eq(consultationSlots.id, consultationSlotId))
+            .limit(1)
+        );
+        if (!isConsultationSlotAvailable(slot[0])) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "Este hor\u00e1rio n\u00e3o est\u00e1 mais dispon\u00edvel. Atualize a p\u00e1gina e tente novamente.",
+          });
+        }
+      }
       let attachmentUrl: string | null = null;
       let attachmentKey: string | null = null;
       let attachmentMime: string | null = null;
@@ -233,10 +366,15 @@ export const salesRouter = router({
         }
         const ext = input.attachmentMime.includes("pdf") ? "pdf" : "jpg";
         const key = `comprovantes/${ctx.user.id}/${nanoid()}.${ext}`;
-        const uploaded = await storagePut(key, buffer, input.attachmentMime);
-        attachmentUrl = uploaded.url;
         attachmentKey = key;
-        attachmentMime = input.attachmentMime;
+        try {
+          const uploaded = await storagePut(key, buffer, input.attachmentMime);
+          attachmentUrl = uploaded.url;
+          attachmentMime = input.attachmentMime;
+        } catch (error) {
+          await cleanupUploadedSaleMedia([key]);
+          throw error;
+        }
       }
 
       // Upload fotos do cliente para S3 (apenas para tipos permitidos)
@@ -248,190 +386,140 @@ export const salesRouter = router({
       const isPhotoType =
         (TYPES_WITH_PHOTOS as readonly string[]).includes(
           input.productCategory
-        ) && input.productName !== "Consulta Cartas";
-
-      if (
-        input.productName === "Consulta Cartas" &&
-        (Boolean(input.photo1Base64 && input.photo1Mime) ||
-          Boolean(input.photo2Base64 && input.photo2Mime))
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Consulta Cartas não permite fotos do cliente.",
-        });
-      }
-
-      if (isPhotoType) {
-        if (input.photo1Base64 && input.photo1Mime) {
-          const buf = Buffer.from(input.photo1Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 1 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = input.photo1Mime.includes("png")
-            ? "png"
-            : input.photo1Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo1Mime);
-          photo1Url = r.url;
-          photo1Key = key;
-        }
-        if (input.photo2Base64 && input.photo2Mime) {
-          const buf = Buffer.from(input.photo2Base64, "base64");
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Foto 2 muito grande. Máximo 5MB.",
-            });
-          }
-          const ext = input.photo2Mime.includes("png")
-            ? "png"
-            : input.photo2Mime.includes("webp")
-              ? "webp"
-              : "jpg";
-          const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
-          const r = await storagePut(key, buf, input.photo2Mime);
-          photo2Url = r.url;
-          photo2Key = key;
-        }
-      }
-
-      // Upsert client
-      let clientId: number | null = null;
+        ) && !isConsultaCartas;
       try {
-        clientId = await upsertClient({
-          fullName: input.clientName,
-          phone: input.clientPhone ?? null,
-          birthDate: (input.clientBirthDate ?? null) as any,
-        });
-      } catch (e) {
-        // Non-critical: continue without clientId
-      }
-
-      // Regra de negócio: Consulta Cartas OBRIGA horário reservado
-      if (
-        input.productName === "Consulta Cartas" &&
-        !input.consultationSlotId
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Consulta Cartas exige um horário reservado. Selecione um horário disponível.",
-        });
-      }
-
-      // Se for Consulta Cartas, valida e reserva o slot
-      if (input.consultationSlotId) {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Banco indisponível.",
-          });
-        const slot = await withRetry(() =>
-          db
-            .select()
-            .from(consultationSlots)
-            .where(
-              and(
-                eq(consultationSlots.id, input.consultationSlotId!),
-                eq(consultationSlots.sold, false)
-              )
-            )
-            .limit(1)
-        );
-        if (!slot[0]) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "Este horário já foi reservado ou não existe. Atualize a página e tente novamente.",
-          });
+        if (isPhotoType) {
+          if (input.photo1Base64 && input.photo1Mime) {
+            const buf = Buffer.from(input.photo1Base64, "base64");
+            if (buf.length > 5 * 1024 * 1024) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Foto 1 muito grande. Máximo 5MB.",
+              });
+            }
+            const ext = input.photo1Mime.includes("png")
+              ? "png"
+              : input.photo1Mime.includes("webp")
+                ? "webp"
+                : "jpg";
+            const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+            photo1Key = key;
+            const r = await storagePut(key, buf, input.photo1Mime);
+            photo1Url = r.url;
+          }
+          if (input.photo2Base64 && input.photo2Mime) {
+            const buf = Buffer.from(input.photo2Base64, "base64");
+            if (buf.length > 5 * 1024 * 1024) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Foto 2 muito grande. Máximo 5MB.",
+              });
+            }
+            const ext = input.photo2Mime.includes("png")
+              ? "png"
+              : input.photo2Mime.includes("webp")
+                ? "webp"
+                : "jpg";
+            const key = `fotos/${ctx.user.id}/${nanoid()}.${ext}`;
+            photo2Key = key;
+            const r = await storagePut(key, buf, input.photo2Mime);
+            photo2Url = r.url;
+          }
         }
+      } catch (error) {
+        await cleanupUploadedSaleMedia([attachmentKey, photo1Key, photo2Key]);
+        throw error;
       }
 
-      // Snapshot do nome do vendedor para preservar mesmo se o usuário for excluído
       const sellerName =
         ctx.user.displayName ||
         ctx.user.name ||
         ctx.user.username ||
-        `Usuário #${ctx.user.id}`;
-
-      // Categoria vem diretamente do formulário (não mais do produto)
+        "Usu\u00e1rio #" + ctx.user.id;
       const productCategory = input.productCategory;
 
-      const saleId = await createSale({
-        sellerId: ctx.user.id,
-        sellerName,
-        clientId: clientId ?? undefined,
-        clientName: input.clientName,
-        // Passar strings diretamente para evitar conversão de timezone pelo PostgreSQL
-        clientBirthDate: (input.clientBirthDate ?? null) as any,
-        clientPhone: input.clientPhone ?? null,
-        productId: input.productId ?? undefined,
-        productName: input.productName,
-        productCategory,
-        saleDate: saleDate as any,
-        amount: String(input.amount),
-        notes: input.notes ?? null,
-        attachmentUrl,
-        attachmentKey,
-        attachmentMime,
-        photo1Url,
-        photo1Key,
-        photo2Url,
-        photo2Key,
-      });
+      let saleResult: Awaited<ReturnType<typeof createSaleWithResolvedClient>>;
+      try {
+        saleResult = await createSaleWithResolvedClient({
+          client: {
+            clientId: input.clientId,
+            fullName: input.clientName,
+            phone: input.clientPhone ?? null,
+            birthDate: input.clientBirthDate ?? null,
+          },
+          actor: { id: ctx.user.id, role: ctx.user.role },
+          audit: {
+            userId: ctx.user.id,
+            userName: sellerName,
+            ipAddress: ctx.ipAddress,
+            userAgent: ctx.userAgent,
+          },
+          sale: {
+            sellerId: ctx.user.id,
+            sellerName,
+            productId: input.productId ?? undefined,
+            productName,
+            productCategory,
+            saleDate: saleDate as any,
+            amount: String(input.amount),
+            notes: input.notes ?? null,
+            attachmentUrl,
+            attachmentKey,
+            attachmentMime,
+            photo1Url,
+            photo1Key,
+            photo2Url,
+            photo2Key,
+          },
+          consultationSlotId: input.consultationSlotId,
+        });
+      } catch (error) {
+        await cleanupUploadedSaleMedia([attachmentKey, photo1Key, photo2Key]);
 
-      // MARCA O SLOT COMO VENDIDO DE FORMA ATÔMICA E SEGURA
-      if (input.consultationSlotId) {
-        const db = await getDb();
-        if (db) {
-          const updatedSlot = await withRetry(() =>
-            db
-              .update(consultationSlots)
-              .set({ sold: true, saleId })
-              .where(
-                and(
-                  eq(consultationSlots.id, input.consultationSlotId!),
-                  eq(consultationSlots.sold, false) // Garante que não foi vendido nestes milissegundos
-                )
-              )
-              .returning({ id: consultationSlots.id })
-          );
-
-          // Se retornou vazio, alguém pegou a vaga no mesmo milissegundo.
-          if (updatedSlot.length === 0) {
-            // Rollback (Hard Delete) da venda que acabamos de criar, pois não tem horário
-            await withRetry(() => db.delete(sales).where(eq(sales.id, saleId)));
-            throw new TRPCError({
-              code: "CONFLICT",
-              message:
-                "Este horário foi reservado por outro vendedor neste exato momento. A venda foi cancelada. Por favor, selecione outro horário.",
-            });
-          }
+        if (error instanceof ClientIdentityConflictError) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "Os dados informados n\u00e3o correspondem ao cadastro do cliente. Limpe a sele\u00e7\u00e3o e confira nome, nascimento e telefone.",
+          });
         }
+        if (error instanceof ClientNotFoundError) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "Cliente n\u00e3o encontrado ou indispon\u00edvel para este usu\u00e1rio.",
+          });
+        }
+        if (error instanceof ConsultationSlotUnavailableError) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "Este hor\u00e1rio foi reservado por outro vendedor. A venda foi cancelada; selecione outro hor\u00e1rio.",
+          });
+        }
+        if (error instanceof TypeError) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Os dados do cliente s\u00e3o inv\u00e1lidos.",
+          });
+        }
+
+        console.error(
+          "[sales.create] Client/sale transaction failed",
+          error instanceof Error ? error.name : "UnknownError"
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "N\u00e3o foi poss\u00edvel registrar a venda.",
+        });
       }
 
-      const sellerNameLog =
-        ctx.user.displayName || ctx.user.name || ctx.user.username || "Usuário";
-      await createAuditLog({
-        userId: ctx.user.id,
-        userName: sellerNameLog,
-        action: "Criou Venda",
-        details: JSON.stringify({
-          saleId,
-          clientName: input.clientName,
-          productName: input.productName,
-          amount: input.amount,
-        }),
-        ipAddress: ctx.ipAddress,
-        userAgent: ctx.userAgent,
-      });
-      emitSseEvent("sales");
+      const { saleId } = saleResult;
+      try {
+        emitSseEvent("sales");
+      } catch {
+        console.error("[sales.create] Failed to emit SSE update");
+      }
       return { success: true, saleId };
     }),
 
@@ -492,10 +580,10 @@ export const salesRouter = router({
     .input(
       z.object({
         id: z.number(),
-        clientName: z.string().min(1).optional(),
-        clientBirthDate: z.string().optional(),
-        clientPhone: z.string().optional(),
-        productName: z.string().min(1).optional(),
+        clientName: z.string().min(1).max(256).optional(),
+        clientBirthDate: z.string().max(10).optional(),
+        clientPhone: z.string().max(32).optional(),
+        productName: z.string().min(1).max(256).optional(),
         productCategory: z
           .enum(["individual", "promocao", "coletivo"])
           .optional(),
@@ -561,6 +649,17 @@ export const salesRouter = router({
           data.clientBirthDate = fields.clientBirthDate ?? null;
         if (fields.clientPhone !== undefined)
           data.clientPhone = fields.clientPhone;
+        const clientIdentityChanged =
+          (fields.clientName !== undefined &&
+            normalizeClientName(fields.clientName) !==
+              normalizeClientName(existingSale.clientName)) ||
+          (fields.clientBirthDate !== undefined &&
+            normalizeClientBirthDate(fields.clientBirthDate) !==
+              normalizeClientBirthDate(existingSale.clientBirthDate)) ||
+          (fields.clientPhone !== undefined &&
+            normalizeClientPhone(fields.clientPhone) !==
+              normalizeClientPhone(existingSale.clientPhone));
+        if (clientIdentityChanged) data.clientId = null;
         if (fields.productName !== undefined)
           data.productName = fields.productName;
         if (fields.productCategory !== undefined)

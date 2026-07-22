@@ -1,9 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import { asc, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { clients } from "../../drizzle/schema";
 import { protectedProcedure, router } from "../_core/trpc";
+import { searchAccessibleClients } from "../clientAccess";
 import { getDb } from "../db";
+import { createFixedWindowRateLimiter } from "../clientSearchRateLimit";
+
+const clientSearchRateLimiter = createFixedWindowRateLimiter({
+  limit: 60,
+  windowMs: 60_000,
+});
 
 export const clientsRouter = router({
   search: protectedProcedure
@@ -12,7 +17,14 @@ export const clientsRouter = router({
         query: z.string().trim().min(2).max(100),
       })
     )
-    .query(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const rateLimit = clientSearchRateLimiter.consume(ctx.user.id);
+      if (!rateLimit.allowed) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Muitas buscas em pouco tempo. Aguarde alguns segundos.",
+        });
+      }
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
@@ -21,24 +33,10 @@ export const clientsRouter = router({
         });
       }
 
-      const escapedQuery = input.query.replace(/[%_\\]/g, "\\$&");
-      const like = `%${escapedQuery}%`;
-
-      return db
-        .select({
-          id: clients.id,
-          fullName: clients.fullName,
-          birthDate: clients.birthDate,
-          phone: clients.phone,
-        })
-        .from(clients)
-        .where(
-          or(
-            sql`${clients.fullName} ILIKE ${like} ESCAPE '\\'`,
-            sql`${clients.phone} ILIKE ${like} ESCAPE '\\'`
-          )
-        )
-        .orderBy(asc(clients.fullName))
-        .limit(8);
+      return searchAccessibleClients(
+        db,
+        { id: ctx.user.id, role: ctx.user.role },
+        input.query
+      );
     }),
 });
