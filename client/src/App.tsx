@@ -14,6 +14,7 @@ const MinhasVendas = lazy(() => import("./pages/MinhasVendas"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminRelatorios = lazy(() => import("./pages/admin/Relatorios"));
 const AdminVendas = lazy(() => import("./pages/admin/Vendas"));
+const AdminCadastros = lazy(() => import("./pages/admin/Cadastros"));
 const AdminProdutos = lazy(() => import("./pages/admin/Produtos"));
 const AdminVendedores = lazy(() => import("./pages/admin/Vendedores"));
 const AdminConfiguracoes = lazy(() => import("./pages/admin/Configuracoes"));
@@ -159,6 +160,11 @@ function Router() {
         <Route path="/admin/vendas">
           <AuthGuard adminOnly>
             <AdminVendas />
+          </AuthGuard>
+        </Route>
+        <Route path="/admin/cadastros">
+          <AuthGuard adminOnly>
+            <AdminCadastros />
           </AuthGuard>
         </Route>
         <Route path="/admin/produtos">
