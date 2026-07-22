@@ -309,3 +309,16 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Bug: inputs de edição de funcionários perdiam foco a cada caractere digitado — `UserCard` movido para fora do componente principal
 - [x] Bug: área clicável do card de trabalho no `stopPropagation` desnecessário do div do nome da cliente — corrigido
 - [x] Nova Venda para ADM: rota `/admin/nova-venda` (adminOnly) usando o mesmo formulário `NovaVenda`
+
+---
+
+## Cadastros de Clientes (v2.16.0)
+
+- [x] Nova entrada única **Cadastros** na sidebar do ADM, com seções internas para Clientes e Duplicidades
+- [x] Listagem paginada no servidor e busca por nome ou telefone normalizado
+- [x] Ficha canônica da cliente com resumo e histórico estritamente vinculado por `clientId`
+- [x] Edição protegida por versão do cadastro, com confirmação e audit log transacional
+- [x] Vendas antigas preservam seus snapshots de nome, nascimento e telefone
+- [x] Revisão somente leitura de possíveis duplicidades por telefone ou nome + nascimento
+- [x] Autocomplete de Nova Venda disponível também no campo de telefone, mantendo as permissões existentes
+- [x] APIs administrativas protegidas por `adminProcedure` e cobertas por testes de permissão

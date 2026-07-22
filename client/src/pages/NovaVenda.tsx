@@ -33,6 +33,16 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { TYPES_WITH_PHOTOS } from "@shared/const";
 
 const CONSULTA_CARTAS = "Consulta Cartas";
+type ClientSearchSource = "name" | "phone";
+
+function canSearchClientTerm(
+  source: ClientSearchSource,
+  term: string
+): boolean {
+  const length = term.trim().length;
+  const minimum = source === "phone" ? 4 : 2;
+  return length >= minimum && length <= 100;
+}
 
 // Retorna a data de hoje no fuso local (evita bug das 21h com UTC)
 function getLocalToday() {
@@ -130,8 +140,12 @@ export default function NovaVenda() {
   const productInputRef = useRef<HTMLInputElement>(null);
   const clientInputRef = useRef<HTMLInputElement>(null);
   const [clientSearch, setClientSearch] = useState("");
+  const [clientSearchSource, setClientSearchSource] =
+    useState<ClientSearchSource>("name");
   const [debouncedClientSearch, setDebouncedClientSearch] = useState("");
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [debouncedClientSearchSource, setDebouncedClientSearchSource] =
+    useState<ClientSearchSource>("name");
   const [activeClientIndex, setActiveClientIndex] = useState(-1);
 
   const [form, setForm] = useState({
@@ -154,46 +168,59 @@ export default function NovaVenda() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedClientSearch(clientSearch.trim());
+      setDebouncedClientSearchSource(clientSearchSource);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [clientSearch]);
+  }, [clientSearch, clientSearchSource]);
 
   const clientSearchTerm = debouncedClientSearch.trim();
-  const canSearchClients =
-    clientSearchTerm.length >= 2 && clientSearchTerm.length <= 100;
+  const canSearchClients = canSearchClientTerm(
+    debouncedClientSearchSource,
+    clientSearchTerm
+  );
   const [clientSuggestions, setClientSuggestions] = useState<
     RouterOutputs["clients"]["search"]
   >([]);
   const [clientSuggestionsTerm, setClientSuggestionsTerm] = useState("");
   const [loadingClientSuggestions, setLoadingClientSuggestions] =
     useState(false);
+  const [clientSuggestionsSource, setClientSuggestionsSource] =
+    useState<ClientSearchSource | null>(null);
   const [clientSearchError, setClientSearchError] = useState(false);
   const clientSearchRequestId = useRef(0);
   const { mutateAsync: searchClients } = trpc.clients.search.useMutation();
 
   useEffect(() => {
     const requestId = ++clientSearchRequestId.current;
-    if (!canSearchClients || !clientDropdownOpen) {
+    const currentClientSearchTerm = clientSearch.trim();
+    const searchPairIsCurrent =
+      debouncedClientSearchSource === clientSearchSource &&
+      clientSearchTerm === currentClientSearchTerm;
+    if (!canSearchClients || !clientDropdownOpen || !searchPairIsCurrent) {
       setClientSuggestions([]);
       setClientSuggestionsTerm("");
       setLoadingClientSuggestions(false);
       setClientSearchError(false);
       setActiveClientIndex(-1);
+      setClientSuggestionsSource(null);
       return;
     }
 
     setLoadingClientSuggestions(true);
     setClientSearchError(false);
     setActiveClientIndex(-1);
+    const requestSource = debouncedClientSearchSource;
 
     void searchClients({ query: clientSearchTerm })
       .then(results => {
         if (requestId !== clientSearchRequestId.current) return;
         setClientSuggestions(results);
         setClientSuggestionsTerm(clientSearchTerm);
+        setClientSuggestionsSource(requestSource);
       })
       .catch(() => {
         if (requestId !== clientSearchRequestId.current) return;
+        setClientSuggestionsSource(requestSource);
         setClientSuggestions([]);
         setClientSuggestionsTerm(clientSearchTerm);
         setClientSearchError(true);
@@ -202,7 +229,22 @@ export default function NovaVenda() {
         if (requestId !== clientSearchRequestId.current) return;
         setLoadingClientSuggestions(false);
       });
-  }, [canSearchClients, clientDropdownOpen, clientSearchTerm, searchClients]);
+  }, [
+    canSearchClients,
+    clientSearch,
+    clientSearchSource,
+    clientDropdownOpen,
+    clientSearchTerm,
+    debouncedClientSearchSource,
+    searchClients,
+  ]);
+
+  const beginClientSearch = (source: ClientSearchSource, term: string) => {
+    setClientSearchSource(source);
+    setClientSearch(term);
+    setClientDropdownOpen(canSearchClientTerm(source, term));
+    setActiveClientIndex(-1);
+  };
   const isConsultaCartas = form.productName === CONSULTA_CARTAS;
   const canUploadClientPhotos =
     !isConsultaCartas &&
@@ -341,11 +383,13 @@ export default function NovaVenda() {
     const digits = e.target.value
       .replace(/\D/g, "")
       .slice(0, selectedCountry.maxDigits);
+    const maskedPhone = applyPhoneMask(digits, selectedCountry.mask);
     setForm(current =>
       editAutofilledClientDetails(current, {
-        clientPhone: applyPhoneMask(digits, selectedCountry.mask),
+        clientPhone: maskedPhone,
       })
     );
+    beginClientSearch("phone", digits);
   };
 
   const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -361,11 +405,13 @@ export default function NovaVenda() {
     const local = allDigits
       .slice(country.ddi.length)
       .slice(0, country.maxDigits);
+    const maskedPhone = applyPhoneMask(local, country.mask);
     setForm(current =>
       editAutofilledClientDetails(current, {
-        clientPhone: applyPhoneMask(local, country.mask),
+        clientPhone: maskedPhone,
       })
     );
+    beginClientSearch("phone", local);
   };
 
   const selectClientSuggestion = (
@@ -599,7 +645,12 @@ export default function NovaVenda() {
     setSelectedCountry(COUNTRIES[0]);
     setClientSearch("");
     setDebouncedClientSearch("");
+    setClientSearchSource("name");
     setClientDropdownOpen(false);
+    setDebouncedClientSearchSource("name");
+    setClientSuggestions([]);
+    setClientSuggestionsTerm("");
+    setClientSuggestionsSource(null);
     setActiveClientIndex(-1);
     clientInputRef.current?.blur();
     setProductQuery("");
@@ -684,6 +735,89 @@ export default function NovaVenda() {
   const dynLabelStyle = isDark ? { color: "var(--foreground)" } : labelStyle;
   const dynHeadingColor = isDark ? "var(--foreground)" : "#1a1a2e";
   const dynSubColor = isDark ? "var(--muted-foreground)" : "#737390";
+  const renderClientSuggestions = (source: ClientSearchSource) => {
+    const suggestionsAreCurrent =
+      clientSearchSource === source &&
+      debouncedClientSearchSource === source &&
+      clientSuggestionsSource === source &&
+      clientSearch.trim() === clientSearchTerm &&
+      clientSuggestionsTerm === clientSearchTerm;
+    const optionId = (index: number) => `client-${source}-suggestion-${index}`;
+
+    return (
+      <div
+        id={`client-suggestions-${source}`}
+        role="listbox"
+        className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
+        style={{
+          background: isDark ? "var(--card)" : "white",
+          border: isDark ? "1.5px solid var(--border)" : "1.5px solid #ddd5c4",
+          maxHeight: 260,
+          overflowY: "auto",
+        }}
+      >
+        {!suggestionsAreCurrent || loadingClientSuggestions ? (
+          <div
+            className="px-4 py-3 text-sm flex items-center gap-2"
+            style={{ color: dynSubColor }}
+          >
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Buscando clientes...
+          </div>
+        ) : clientSearchError ? (
+          <div className="px-4 py-3 text-sm" style={{ color: dynSubColor }}>
+            {"N\u00e3o foi poss\u00edvel buscar clientes agora."}
+          </div>
+        ) : clientSuggestions.length === 0 ? (
+          <div className="px-4 py-3 text-sm" style={{ color: dynSubColor }}>
+            Nenhum cliente encontrado. Continue preenchendo para cadastrar um
+            novo.
+          </div>
+        ) : (
+          clientSuggestions.map((client, index) => (
+            <button
+              id={optionId(index)}
+              key={client.id}
+              type="button"
+              role="option"
+              aria-selected={activeClientIndex === index}
+              onMouseDown={event => event.preventDefault()}
+              onMouseEnter={() => setActiveClientIndex(index)}
+              onClick={() => selectClientSuggestion(client)}
+              className="w-full px-4 py-3 text-left transition-colors"
+              style={{
+                background:
+                  activeClientIndex === index
+                    ? isDark
+                      ? "var(--accent)"
+                      : "#ede8de"
+                    : isDark
+                      ? "var(--card)"
+                      : "white",
+                color: isDark ? "var(--foreground)" : "#1a1a2e",
+                borderBottom: isDark
+                  ? "1px solid var(--border)"
+                  : "1px solid #eee8dc",
+              }}
+            >
+              <span className="block text-sm font-semibold">
+                {client.fullName}
+              </span>
+              <span
+                className="block text-xs mt-0.5"
+                style={{ color: dynSubColor }}
+              >
+                {client.phone || "Telefone n\u00e3o informado"}
+                {client.birthDate
+                  ? ` - ${fmtDate(String(client.birthDate))}`
+                  : ""}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -742,11 +876,13 @@ export default function NovaVenda() {
                   type="text"
                   role="combobox"
                   aria-autocomplete="list"
-                  aria-controls="client-suggestions"
-                  aria-expanded={clientDropdownOpen}
+                  aria-controls="client-suggestions-name"
+                  aria-expanded={
+                    clientDropdownOpen && clientSearchSource === "name"
+                  }
                   aria-activedescendant={
-                    activeClientIndex >= 0
-                      ? `client-suggestion-${activeClientIndex}`
+                    clientSearchSource === "name" && activeClientIndex >= 0
+                      ? `client-name-suggestion-${activeClientIndex}`
                       : undefined
                   }
                   value={form.clientName}
@@ -761,18 +897,10 @@ export default function NovaVenda() {
                       setBirthDateMasked("");
                       setSelectedCountry(COUNTRIES[0]);
                     }
-                    setClientSearch(value);
-                    setClientDropdownOpen(
-                      value.trim().length >= 2 && value.trim().length <= 100
-                    );
-                    setActiveClientIndex(-1);
+                    beginClientSearch("name", value);
                   }}
                   onFocus={() => {
-                    setClientSearch(form.clientName);
-                    setClientDropdownOpen(
-                      form.clientName.trim().length >= 2 &&
-                        form.clientName.trim().length <= 100
-                    );
+                    beginClientSearch("name", form.clientName);
                   }}
                   onBlur={() => {
                     window.setTimeout(() => {
@@ -790,90 +918,9 @@ export default function NovaVenda() {
                 />
 
                 {clientDropdownOpen &&
-                  clientSearch.trim().length >= 2 &&
-                  clientSearch.trim().length <= 100 && (
-                    <div
-                      id="client-suggestions"
-                      role="listbox"
-                      className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
-                      style={{
-                        background: isDark ? "var(--card)" : "white",
-                        border: isDark
-                          ? "1.5px solid var(--border)"
-                          : "1.5px solid #ddd5c4",
-                        maxHeight: 260,
-                        overflowY: "auto",
-                      }}
-                    >
-                      {clientSearch.trim() !== clientSearchTerm ||
-                      clientSuggestionsTerm !== clientSearchTerm ||
-                      loadingClientSuggestions ? (
-                        <div
-                          className="px-4 py-3 text-sm flex items-center gap-2"
-                          style={{ color: dynSubColor }}
-                        >
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Buscando clientes...
-                        </div>
-                      ) : clientSearchError ? (
-                        <div
-                          className="px-4 py-3 text-sm"
-                          style={{ color: dynSubColor }}
-                        >
-                          {"N\u00e3o foi poss\u00edvel buscar clientes agora."}
-                        </div>
-                      ) : clientSuggestions.length === 0 ? (
-                        <div
-                          className="px-4 py-3 text-sm"
-                          style={{ color: dynSubColor }}
-                        >
-                          Nenhum cliente encontrado. Continue preenchendo para
-                          cadastrar um novo.
-                        </div>
-                      ) : (
-                        clientSuggestions.map((client, index) => (
-                          <button
-                            id={`client-suggestion-${index}`}
-                            key={client.id}
-                            type="button"
-                            role="option"
-                            aria-selected={activeClientIndex === index}
-                            onMouseDown={e => e.preventDefault()}
-                            onMouseEnter={() => setActiveClientIndex(index)}
-                            onClick={() => selectClientSuggestion(client)}
-                            className="w-full px-4 py-3 text-left transition-colors"
-                            style={{
-                              background:
-                                activeClientIndex === index
-                                  ? isDark
-                                    ? "var(--accent)"
-                                    : "#ede8de"
-                                  : isDark
-                                    ? "var(--card)"
-                                    : "white",
-                              color: isDark ? "var(--foreground)" : "#1a1a2e",
-                              borderBottom: isDark
-                                ? "1px solid var(--border)"
-                                : "1px solid #eee8dc",
-                            }}
-                          >
-                            <span className="block text-sm font-semibold">
-                              {client.fullName}
-                            </span>
-                            <span
-                              className="block text-xs mt-0.5"
-                              style={{ color: dynSubColor }}
-                            >
-                              {client.phone || "Telefone n\u00e3o informado"}
-                              {client.birthDate
-                                ? ` - ${fmtDate(String(client.birthDate))}`
-                                : ""}
-                            </span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
+                  clientSearchSource === "name" &&
+                  canSearchClientTerm("name", clientSearch) &&
+                  renderClientSuggestions("name")}
               </div>
 
               {/* Data de Nascimento — input text com máscara dd/mm/aaaa + botão calendário */}
@@ -929,7 +976,7 @@ export default function NovaVenda() {
               </div>
 
               {/* Telefone */}
-              <div>
+              <div className="relative">
                 <label
                   className="block text-sm font-medium mb-2"
                   style={dynLabelStyle}
@@ -994,6 +1041,7 @@ export default function NovaVenda() {
                                     clientPhone: "",
                                   })
                                 );
+                                beginClientSearch("phone", "");
                               }}
                               className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-[var(--secondary)] transition-colors"
                               style={{
@@ -1027,9 +1075,33 @@ export default function NovaVenda() {
                   <input
                     type="tel"
                     inputMode="tel"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="client-suggestions-phone"
+                    aria-expanded={
+                      clientDropdownOpen && clientSearchSource === "phone"
+                    }
+                    aria-activedescendant={
+                      clientSearchSource === "phone" && activeClientIndex >= 0
+                        ? `client-phone-suggestion-${activeClientIndex}`
+                        : undefined
+                    }
                     value={form.clientPhone}
                     onChange={handlePhoneChange}
                     onPaste={handlePhonePaste}
+                    onFocus={() =>
+                      beginClientSearch(
+                        "phone",
+                        form.clientPhone.replace(/\D/g, "")
+                      )
+                    }
+                    onBlur={() => {
+                      window.setTimeout(() => {
+                        setClientDropdownOpen(false);
+                        setActiveClientIndex(-1);
+                      }, 150);
+                    }}
+                    onKeyDown={handleClientKeyDown}
                     placeholder={selectedCountry.mask.replace(/#/g, "0")}
                     maxLength={selectedCountry.mask.length}
                     className={`flex-1 ${inputClass}`}
@@ -1037,6 +1109,10 @@ export default function NovaVenda() {
                     required
                   />
                 </div>
+                {clientDropdownOpen &&
+                  clientSearchSource === "phone" &&
+                  canSearchClientTerm("phone", clientSearch) &&
+                  renderClientSuggestions("phone")}
               </div>
             </div>
           </div>

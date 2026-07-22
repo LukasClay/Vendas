@@ -22,6 +22,7 @@ import {
   Moon,
   Trash2,
   Shield,
+  ContactRound,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -105,6 +106,7 @@ const adminMenuItems = [
   { icon: ClipboardList, label: "Painel Trabalhos", path: "/admin/trabalhos" },
   { icon: Calendar, label: "Consultas", path: "/admin/consultas" },
   { icon: Bell, label: "Alertas", path: "/admin/alertas" },
+  { icon: ContactRound, label: "Cadastros", path: "/admin/cadastros" },
   { icon: Users, label: "Funcionários", path: "/admin/vendedores" },
   { icon: Trash2, label: "Lixeira", path: "/admin/lixeira" },
   { icon: Shield, label: "Segurança", path: "/admin/seguranca" },
