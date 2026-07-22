@@ -137,6 +137,8 @@ export default function NovaVenda() {
   // Estado do combobox de produtos
   const [productQuery, setProductQuery] = useState("");
   const [productDropdownOpen, setProductDropdownOpen] = useState(false);
+  const [activeProductIndex, setActiveProductIndex] = useState(-1);
+  const productListRef = useRef<HTMLDivElement>(null);
   const productInputRef = useRef<HTMLInputElement>(null);
   const clientInputRef = useRef<HTMLInputElement>(null);
   const [clientSearch, setClientSearch] = useState("");
@@ -280,6 +282,64 @@ export default function NovaVenda() {
         normalize(p.name).includes(normalize(productQuery))
       )
     : safeProducts;
+
+  useEffect(() => {
+    if (!productDropdownOpen || activeProductIndex < 0) return;
+    productListRef.current
+      ?.querySelector<HTMLElement>(
+        `[data-product-index="${activeProductIndex}"]`
+      )
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeProductIndex, productDropdownOpen]);
+
+  const handleProductKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === "Escape" && productDropdownOpen) {
+      event.preventDefault();
+      setProductDropdownOpen(false);
+      setActiveProductIndex(-1);
+      return;
+    }
+
+    if (
+      !productDropdownOpen &&
+      (event.key === "ArrowDown" || event.key === "ArrowUp")
+    ) {
+      event.preventDefault();
+      setProductQuery("");
+      setProductDropdownOpen(true);
+      setActiveProductIndex(
+        event.key === "ArrowDown" ? 0 : Math.max(safeProducts.length - 1, -1)
+      );
+      return;
+    }
+
+    if (!productDropdownOpen || filteredProducts.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveProductIndex(current =>
+        current >= filteredProducts.length - 1 ? 0 : current + 1
+      );
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveProductIndex(current =>
+        current <= 0 ? filteredProducts.length - 1 : current - 1
+      );
+    } else if (
+      event.key === "Enter" &&
+      activeProductIndex >= 0 &&
+      activeProductIndex < filteredProducts.length
+    ) {
+      event.preventDefault();
+      productListRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `[data-product-index="${activeProductIndex}"]`
+        )
+        ?.click();
+    }
+  };
 
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -1142,12 +1202,24 @@ export default function NovaVenda() {
                 </label>
                 <div className="relative">
                   <input
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={productDropdownOpen}
+                    aria-controls="product-options"
+                    aria-activedescendant={
+                      productDropdownOpen &&
+                      filteredProducts[activeProductIndex]
+                        ? `product-option-${filteredProducts[activeProductIndex].id}`
+                        : undefined
+                    }
+                    onKeyDown={handleProductKeyDown}
                     ref={productInputRef}
                     type="text"
                     value={
                       productDropdownOpen ? productQuery : form.productName
                     }
                     onChange={e => {
+                      setActiveProductIndex(-1);
                       setProductQuery(e.target.value);
                       setProductDropdownOpen(true);
                       // Se o utilizador apagar tudo, limpa a seleção
@@ -1160,12 +1232,16 @@ export default function NovaVenda() {
                       }
                     }}
                     onFocus={() => {
+                      setActiveProductIndex(-1);
                       setProductQuery("");
                       setProductDropdownOpen(true);
                     }}
                     onBlur={() => {
                       // Pequeno delay para permitir o click no item da lista
-                      setTimeout(() => setProductDropdownOpen(false), 150);
+                      setTimeout(() => {
+                        setProductDropdownOpen(false);
+                        setActiveProductIndex(-1);
+                      }, 150);
                     }}
                     placeholder={
                       loadingProducts
@@ -1186,9 +1262,11 @@ export default function NovaVenda() {
                     tabIndex={-1}
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => {
+                      setActiveProductIndex(-1);
                       if (productDropdownOpen) {
                         setProductDropdownOpen(false);
                       } else {
+                        setActiveProductIndex(-1);
                         setProductQuery("");
                         setProductDropdownOpen(true);
                         productInputRef.current?.focus();
@@ -1220,10 +1298,12 @@ export default function NovaVenda() {
                     </svg>
                   </button>
                 </div>
-
                 {/* Dropdown de sugestões */}
                 {productDropdownOpen && !loadingProducts && (
                   <div
+                    ref={productListRef}
+                    id="product-options"
+                    role="listbox"
                     className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
                     style={{
                       background: isDark ? "var(--card)" : "white",
@@ -1242,9 +1322,15 @@ export default function NovaVenda() {
                         Nenhum trabalho encontrado.
                       </div>
                     ) : (
-                      filteredProducts.map(p => (
+                      filteredProducts.map((p, index) => (
                         <button
                           key={p.id}
+                          id={`product-option-${p.id}`}
+                          role="option"
+                          aria-selected={form.productId === p.id}
+                          data-product-index={index}
+                          onMouseEnter={() => setActiveProductIndex(index)}
+                          onFocus={() => setActiveProductIndex(index)}
                           type="button"
                           onMouseDown={e => e.preventDefault()} // evita blur antes do click
                           onClick={() => {
@@ -1267,6 +1353,7 @@ export default function NovaVenda() {
                               };
                             });
                             setProductQuery("");
+                            setActiveProductIndex(-1);
                             setProductDropdownOpen(false);
                             productInputRef.current?.blur();
                           }}
@@ -1275,7 +1362,9 @@ export default function NovaVenda() {
                             padding: isMobile ? "14px 16px" : "10px 16px",
                             fontSize: isMobile ? 16 : 14,
                             background:
-                              form.productName === p.name
+                              activeProductIndex === index ||
+                              (activeProductIndex < 0 &&
+                                form.productName === p.name)
                                 ? isDark
                                   ? "var(--accent)"
                                   : "#ede8de"
