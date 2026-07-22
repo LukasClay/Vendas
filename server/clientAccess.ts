@@ -22,6 +22,11 @@ function normalizeSearchTerm(term: string): string {
   return normalized.replace(/[%_\\]/g, "\\$&");
 }
 
+function getPhoneSearchDigits(term: string): string | null {
+  const digits = term.replace(/\D/g, "");
+  return digits.length >= 2 ? digits : null;
+}
+
 export function buildClientAccessCondition<
   TSchema extends Record<string, unknown>,
 >(
@@ -59,10 +64,19 @@ export function buildAccessibleClientSearchQuery<
 >(db: ClientAccessDatabase<TSchema>, actor: ClientAccessActor, term: string) {
   const escapedTerm = normalizeSearchTerm(term);
   const like = `%${escapedTerm}%`;
-  const textMatch = or(
+  const phoneSearchDigits = getPhoneSearchDigits(term);
+  const textMatches: SQL[] = [
     sql`${clients.fullName} ILIKE ${like} ESCAPE '\\'`,
-    sql`${clients.phone} ILIKE ${like} ESCAPE '\\'`
-  );
+    sql`${clients.phone} ILIKE ${like} ESCAPE '\\'`,
+  ];
+  if (phoneSearchDigits) {
+    // Canonical phones are stored as digits/E.164, but legacy rows can still
+    // contain masks. Comparing digits lets the masked mobile input find both.
+    textMatches.push(
+      sql`regexp_replace(coalesce(${clients.phone}, ''), '[^0-9]', '', 'g') LIKE ${`%${phoneSearchDigits}%`}`
+    );
+  }
+  const textMatch = or(...textMatches);
   const clientScope = buildClientAccessCondition(db, actor);
 
   return db

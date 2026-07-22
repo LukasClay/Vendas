@@ -58,6 +58,14 @@ describe("buildAccessibleClientSearchQuery", () => {
     expect(query.params).toContain(CLIENT_SEARCH_LIMIT);
   });
 
+  it("busca telefones mascarados pelos mesmos digitos do campo mobile", () => {
+    const query = compile({ id: 42, role: "user" }, "(11) 99999");
+    const statement = compactSql(query.sql);
+
+    expect(statement).toContain("regexp_replace");
+    expect(query.params).toContain("%1199999%");
+  });
+
   it("rejeita termos fora dos limites antes de montar SQL", () => {
     expect(() => compile({ id: 42, role: "user" }, " M ")).toThrow(RangeError);
     expect(() => compile({ id: 42, role: "user" }, "x".repeat(101))).toThrow(
