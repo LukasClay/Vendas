@@ -27,9 +27,11 @@
 ### 3. Regras de Negócio e Arquitetura
 
 - **Paridade ADM e Consultora:** Toda funcionalidade implementada para a Consultora deve ter um equivalente acessível no ADM.
-- **Lixeira de Vendas (Soft Delete):** Venda excluída vai para a Lixeira por 30 dias — não aparece em dashboards nem relatórios, mas pode ser restaurada. Exclusão permanente automática após 30 dias.
-- **Desativação de Funcionários:** Ao desativar, o `username` recebe sufixo `_old` (ex: `joao_old`), liberando o username original. O nome com sufixo aparece nas vendas históricas para rastreabilidade.
+- **Lixeira de Vendas (Soft Delete):** Venda excluída vai para a Lixeira por 90 dias civis de `America/Sao_Paulo` — não aparece em telas operacionais, dashboards nem relatórios, mas pode ser restaurada. Em vendas de Consulta Cartas, o slot original permanece reservado durante todo o período restaurável e volta automaticamente com a venda. O slot só é liberado por cancelamento/reembolso confirmado, exclusão permanente ou purge após 90 dias. Se um dado legado já tiver conflito de slot, o ADM deve escolher outro slot livre; cancelar mantém a venda na lixeira. Nunca podem existir duas vendas ativas no mesmo slot.
+- **Desativação de Funcionários:** A identidade de login original deve ser armazenada explicitamente. A liberação e a reativação do `username` não podem depender de interpretar ou remover `_old`, sufixos hexadecimais ou qualquer outro padrão textual. Preserve ID, vendas históricas e snapshots do funcionário; invalide somente as sessões do usuário afetado. Se o username original estiver ocupado na reativação, exija outro username explícito sem desconectar ou renomear o ocupante atual.
 - **Categoria da Venda, não do Produto:** A `productCategory` (Individual/Promoção/Coletivo) é definida no momento da venda e salva como snapshot em `sales.productCategory`. A tabela `products` não tem campo de categoria.
+- **Datas de Negócio:** Instantes técnicos permanecem em UTC, mas “hoje”, períodos diários, início/fim de mês, retenção e outras datas civis devem usar `America/Sao_Paulo` no frontend e no backend. Não use `toISOString().slice(0, 10)` para determinar a data civil do negócio.
+- **Histórico de Reembolsos:** Reembolsos aprovados funcionam como extrato imutável. Preserve venda, cliente, valor, item/consulta, responsável, motivo, data/hora e estados anterior/posterior. Nunca apague o vínculo original para fazer a venda parecer inexistente.
 - **Otimização de Banco e Queries:** Mantenha `staleTime` no React Query, nunca use `refetchInterval` agressivo, estabilize inputs de queries com `useMemo` e evite re-renders desnecessários.
 
 ### 4. Mindset de Desenvolvimento
@@ -175,6 +177,7 @@ drizzle/
 - **Toda ação sensível** (deletar venda, desconectar usuário, exportar dados) deve gerar audit log em `createAuditLog()`
 - **Uploads** vão para paths separados: `comprovantes/{userId}/` e `fotos/{userId}/` — nunca misturar
 - **`adminProcedure`** para tudo que o ADM faz — nunca usar `protectedProcedure` em rotas de admin
+- **Senha mestre:** `MASTER_PASSWORD_HASH` deve vir de configuração válida e obrigatória; nunca usar fallback rastreado no código nem registrar senha/hash em logs.
 
 ---
 
