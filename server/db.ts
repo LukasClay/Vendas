@@ -13,7 +13,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { Pool, type QueryResultRow } from "pg";
 import {
   appSettings,
   auditLogs,
@@ -93,6 +93,180 @@ export async function getDb() {
   });
   _db = drizzle(_pool);
   return _db;
+}
+
+export interface SessionAdvisoryLock {
+  onLost(listener: (error: Error) => void): () => void;
+  heartbeat(): Promise<void>;
+  release(): Promise<void>;
+}
+
+const ADVISORY_LOCK_QUERY_TIMEOUT_MS = 5_000;
+
+/**
+ * Tenta adquirir um advisory lock de sessão em uma conexão dedicada.
+ *
+ * A conexão permanece reservada enquanto o lock estiver ativo para garantir
+ * que heartbeat e unlock ocorram na mesma sessão PostgreSQL.
+ */
+export async function tryAcquireSessionAdvisoryLock(
+  lockName: string
+): Promise<SessionAdvisoryLock | null> {
+  if (!lockName.trim()) {
+    throw new Error("Advisory lock name must not be empty");
+  }
+
+  await getDb();
+  const pool = _pool;
+  if (!pool) return null;
+
+  const client = await pool.connect();
+  let released = false;
+  let connectionError: Error | null = null;
+  let clientDetached = false;
+  const lossListeners = new Set<(error: Error) => void>();
+
+  const callLossListener = (listener: (error: Error) => void, error: Error) => {
+    try {
+      listener(error);
+    } catch {
+      // A falha de um observador não pode impedir os demais nem o cleanup.
+    }
+  };
+
+  const markConnectionLost = (error: unknown): Error => {
+    const observedError =
+      connectionError ??
+      (error instanceof Error
+        ? error
+        : new Error("PostgreSQL advisory lock connection failed"));
+
+    if (!connectionError) {
+      connectionError = observedError;
+      if (!released) {
+        lossListeners.forEach(listener => {
+          callLossListener(listener, observedError);
+        });
+      }
+    }
+
+    return observedError;
+  };
+
+  const handleConnectionError = (error: Error) => {
+    markConnectionLost(error);
+  };
+
+  const handleConnectionEnd = () => {
+    markConnectionLost(
+      new Error("PostgreSQL advisory lock connection ended unexpectedly")
+    );
+  };
+
+  client.on("error", handleConnectionError);
+  client.on("end", handleConnectionEnd);
+
+  const detachAndRelease = (destroy: boolean) => {
+    if (clientDetached) return;
+    clientDetached = true;
+    client.removeListener("error", handleConnectionError);
+    client.removeListener("end", handleConnectionEnd);
+    lossListeners.clear();
+    client.release(destroy);
+  };
+
+  const queryWithTimeout = async <Row extends QueryResultRow>(
+    text: string,
+    values?: unknown[]
+  ) => {
+    const queryConfig = {
+      text,
+      values,
+      // Suportado pelo node-postgres; ainda não consta em QueryConfig do
+      // pacote @types/pg usado pelo projeto.
+      query_timeout: ADVISORY_LOCK_QUERY_TIMEOUT_MS,
+    };
+
+    try {
+      return await client.query<Row>(queryConfig);
+    } catch (error) {
+      markConnectionLost(error);
+      throw error;
+    }
+  };
+
+  try {
+    const result = await queryWithTimeout<{ acquired: boolean }>(
+      `SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS "acquired"`,
+      [lockName]
+    );
+
+    if (result.rows[0]?.acquired !== true) {
+      detachAndRelease(false);
+      return null;
+    }
+
+    return {
+      onLost(listener) {
+        if (released) return () => {};
+
+        lossListeners.add(listener);
+        if (connectionError) {
+          const observedError = connectionError;
+          queueMicrotask(() => {
+            if (!released && lossListeners.has(listener)) {
+              callLossListener(listener, observedError);
+            }
+          });
+        }
+
+        return () => {
+          lossListeners.delete(listener);
+        };
+      },
+
+      async heartbeat() {
+        if (released) {
+          throw new Error("Advisory lock has already been released");
+        }
+        if (connectionError) throw connectionError;
+
+        await queryWithTimeout("SELECT 1");
+
+        if (connectionError) throw connectionError;
+      },
+
+      async release() {
+        if (released) return;
+        released = true;
+
+        if (connectionError) {
+          detachAndRelease(true);
+          return;
+        }
+
+        let destroy = false;
+        try {
+          const result = await queryWithTimeout<{ released: boolean }>(
+            `SELECT pg_advisory_unlock(hashtextextended($1, 0)) AS "released"`,
+            [lockName]
+          );
+          if (result.rows[0]?.released !== true) {
+            destroy = true;
+            throw new Error("PostgreSQL advisory lock was not owned");
+          }
+        } catch (error) {
+          destroy = true;
+          throw error;
+        } finally {
+          detachAndRelease(destroy);
+        }
+      },
+    };
+  } catch (error) {
+    detachAndRelease(true);
+    throw error;
+  }
 }
 
 // M2: retry real com backoff exponencial para erros transitórios de conexão

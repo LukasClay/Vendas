@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getDb: vi.fn(),
@@ -28,11 +28,19 @@ vi.mock("./webpush", () => ({
   sendPushToRoles: mocks.sendPushToRoles,
 }));
 
-const { checkAndNotify } = await import("./jobs/alertsJob");
+const { checkAndNotify, startAlertsJob } = await import("./jobs/alertsJob");
 
 describe("alertsJob", () => {
+  let cleanups: Array<() => void> = [];
+
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanups.forEach(cleanup => cleanup());
+    cleanups = [];
+    vi.useRealTimers();
   });
 
   it("ignora Consulta Cartas mesmo se o filtro SQL falhar (defense-in-depth)", async () => {
@@ -85,5 +93,64 @@ describe("alertsJob", () => {
     await checkAndNotify();
 
     expect(mocks.sendPushToRoles).not.toHaveBeenCalled();
+  });
+
+  it("inicializa somente um loop por processo", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 5, 7, 0, 0));
+
+    const firstCleanup = startAlertsJob();
+    const secondCleanup = startAlertsJob();
+    cleanups.push(firstCleanup, secondCleanup);
+
+    expect(secondCleanup).toBe(firstCleanup);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("retorna cleanup idempotente que cancela o timer pendente", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 5, 7, 0, 0));
+
+    const cleanup = startAlertsJob();
+    cleanups.push(cleanup);
+    expect(vi.getTimerCount()).toBe(1);
+
+    cleanup();
+    cleanup();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("não reagenda depois do cleanup durante uma execução", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 5, 7, 59, 59));
+
+    let resolveRows!: (rows: unknown[]) => void;
+    const rowsPromise = new Promise<unknown[]>(resolve => {
+      resolveRows = resolve;
+    });
+    const selectBuilder: any = {
+      from: vi.fn(() => selectBuilder),
+      where: vi.fn(() => rowsPromise),
+    };
+    const dbMock = {
+      select: vi.fn(() => selectBuilder),
+    };
+    mocks.getDb.mockResolvedValue(dbMock);
+
+    const cleanup = startAlertsJob();
+    cleanups.push(cleanup);
+
+    vi.advanceTimersByTime(1_000);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    resolveRows([]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
