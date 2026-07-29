@@ -1,5 +1,16 @@
 # Auditoria de Qualidade de Vida
 
+## Retomada obrigatoria apos compactacao
+
+Sempre que o contexto desta tarefa for compactado, a primeira acao obrigatoria
+deve ser reler este arquivo integralmente. Somente depois dessa releitura o
+trabalho podera prosseguir normalmente, retomando o ultimo estado confirmado e
+respeitando o escopo, as autorizacoes e os bloqueios aqui registrados.
+
+A compactacao nao amplia autorizacoes, nao substitui confirmacoes explicitas e
+nao permite presumir que uma etapa pendente foi aprovada.
+
+
 ## Finalidade e limite de autorização
 
 Este arquivo registra o mapa técnico, as decisões oficiais do proprietário, as
