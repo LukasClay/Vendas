@@ -322,10 +322,35 @@ Todas partirão do commit-base da auditoria:
 
 ## Próximo gate
 
-Executar somente o registro documental e S01/S02 em commits separados. Depois
-da validação integral, entregar relatório e aguardar nova confirmação antes de
-integrar `codex/qol-critical`, criar branches posteriores ou ampliar o escopo.
+A etapa C1 foi concluída em commits separados. O próximo gate é revisar o
+relatório de validação e aguardar autorização explícita antes de integrar
+`codex/qol-critical` em `codex/qol-integration`, criar branches posteriores ou
+ampliar o escopo.
 
 O inventário B01 será somente leitura; o restore drill poderá ser conduzido
 pelo navegador após plano próprio. O SHA de produção foi confirmado como
 `79660b694925a33dbb077631648d7aef64a3591a`.
+
+## Registro de execução — C1
+
+- `S01` — commit `1df743e`: `auth.me` passou a retornar somente `role`, `name`,
+  `email` e `username`; o usuário completo permanece disponível apenas no
+  contexto interno.
+- `S02` — commit `95924ca`: `reports.exportData` e `sales.listDeleted`
+  preservam seus wrappers e dados públicos, mas não retornam storage keys nem
+  os JSONs internos de mídia.
+- Versionamento — commit `11d2243`: versão visível alterada de `2.16.0` para
+  `2.16.1`.
+- Validação automática: typecheck aprovado; 24 arquivos e 186 testes de
+  backend aprovados; build de produção aprovado; Prettier aprovado no escopo;
+  `git diff --check` aprovado.
+- O aviso já existente de chunk de exportação acima de 500 kB permaneceu no
+  build. O `format:check` global continua afetado pelo checkout CRLF do Windows
+  e pelo documento não rastreado preservado
+  `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md`.
+- Nenhum schema, migration, sessão, permissão, regra de negócio, mídia no R2,
+  fluxo operacional ou configuração externa foi alterado.
+- Uma falha local do aplicador de patch removeu temporariamente dois arquivos
+  rastreados; ambos foram restaurados exatamente de `HEAD` antes da aplicação
+  controlada de S02, sem perda de alterações.
+- Nenhum merge, push ou deploy foi executado.
