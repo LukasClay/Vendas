@@ -22,7 +22,16 @@ export const appRouter = router({
   system: systemRouter,
 
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(({ ctx }) => {
+      if (!ctx.user) return null;
+
+      return {
+        role: ctx.user.role,
+        name: ctx.user.name,
+        email: ctx.user.email,
+        username: ctx.user.username,
+      };
+    }),
     // Logout seguro: incrementa sessionVersion para invalidar todos os JWTs
     // anteriores do usuário, e limpa o cookie de sessão.
     logout: protectedProcedure.mutation(async ({ ctx }) => {
