@@ -11,8 +11,14 @@ import { getDb } from "../db";
 import { reportSchedules, sales } from "../../drizzle/schema";
 import { and, eq, isNull, sql, desc, asc } from "drizzle-orm";
 import { sendEmail, isEmailConfigured } from "../email";
+import { getSaoPauloDateTimeParts } from "../consultationSlotAvailability";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
+const INITIAL_CHECK_DELAY_MS = 10_000;
+const NOOP_CLEANUP = () => {};
+
+let schedulerCleanup: (() => void) | null = null;
+let processInFlight: Promise<void> | null = null;
 
 /** Escapa HTML para prevenir XSS em templates de email */
 function escapeHtml(str: string): string {
@@ -118,6 +124,14 @@ function shouldSendNow(frequency: string, lastSentAt: Date | null): boolean {
   }
 
   return false;
+}
+
+export function getScheduledReportIdempotencyKey(
+  scheduleId: number,
+  now: Date = new Date()
+): string {
+  const { date } = getSaoPauloDateTimeParts(now);
+  return `scheduled-report/${scheduleId}/${date}`;
 }
 
 /**
@@ -337,6 +351,10 @@ async function processSchedules() {
         to: schedule.recipientEmail,
         subject: report.subject,
         html: report.html,
+        idempotencyKey: getScheduledReportIdempotencyKey(
+          schedule.id,
+          new Date()
+        ),
       });
 
       if (sent) {
@@ -356,20 +374,62 @@ async function processSchedules() {
   }
 }
 
+function processSchedulesGuarded(): Promise<void> {
+  if (processInFlight) return processInFlight;
+
+  const execution = (async () => {
+    try {
+      await processSchedules();
+    } finally {
+      processInFlight = null;
+    }
+  })();
+
+  processInFlight = execution;
+  return execution;
+}
+
+function triggerProcessSchedules() {
+  void processSchedulesGuarded().catch(err => {
+    console.error("[ReportsJob] Erro inesperado ao executar job:", err);
+  });
+}
+
 /**
  * Inicia o job de relatorios — verifica a cada hora.
  */
-export function startReportsJob() {
+export function startReportsJob(): () => void {
   if (!isEmailConfigured()) {
     console.log("[ReportsJob] Desabilitado — RESEND_API_KEY nao configurada");
-    return;
+    return NOOP_CLEANUP;
   }
+
+  if (schedulerCleanup) return schedulerCleanup;
 
   console.log("[ReportsJob] Iniciado — verificacao a cada hora, envio as 7h");
 
   // Verificar imediatamente na inicializacao
-  setTimeout(() => processSchedules(), 10_000);
+  const initialCheckTimeout = setTimeout(
+    triggerProcessSchedules,
+    INITIAL_CHECK_DELAY_MS
+  );
 
   // Verificar a cada hora
-  setInterval(() => processSchedules(), CHECK_INTERVAL_MS);
+  const checkInterval = setInterval(triggerProcessSchedules, CHECK_INTERVAL_MS);
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+
+    clearTimeout(initialCheckTimeout);
+    clearInterval(checkInterval);
+
+    if (schedulerCleanup === cleanup) {
+      schedulerCleanup = null;
+    }
+  };
+
+  schedulerCleanup = cleanup;
+  return cleanup;
 }

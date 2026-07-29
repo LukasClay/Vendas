@@ -12,6 +12,14 @@ import { sendPushToRoles } from "../webpush";
 // Horários de disparo (hora local do servidor, formato 24h)
 const TRIGGER_HOURS = [8, 18];
 
+interface AlertsJobLoop {
+  stopped: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+  cleanup: () => void;
+}
+
+let activeLoop: AlertsJobLoop | null = null;
+
 export async function checkAndNotify() {
   const db = await getDb();
   if (!db) return;
@@ -112,17 +120,59 @@ function msUntilNextTrigger(): number {
 /**
  * Agenda recursivamente o próximo disparo.
  */
-function scheduleNext() {
+function scheduleNext(loop: AlertsJobLoop) {
+  if (loop.stopped || activeLoop !== loop) return;
+
   const delay = msUntilNextTrigger();
-  setTimeout(async () => {
-    await checkAndNotify();
-    scheduleNext(); // agendar o próximo após executar
+  loop.timer = setTimeout(async () => {
+    loop.timer = null;
+    if (loop.stopped || activeLoop !== loop) return;
+
+    try {
+      await checkAndNotify();
+    } catch (err) {
+      console.error("[AlertsJob] Erro não tratado no agendamento:", err);
+    } finally {
+      // Uma execução em andamento não pode ser cancelada, mas perder a
+      // liderança impede que este loop agende o próximo disparo.
+      if (!loop.stopped && activeLoop === loop) {
+        scheduleNext(loop);
+      }
+    }
   }, delay);
 }
 
-export function startAlertsJob() {
+export function startAlertsJob(): () => void {
+  // Reutilizar o cleanup ativo impede dois loops no mesmo processo.
+  if (activeLoop) return activeLoop.cleanup;
+
+  const loop: AlertsJobLoop = {
+    stopped: false,
+    timer: null,
+    cleanup: () => {},
+  };
+
+  const cleanup = () => {
+    if (loop.stopped) return;
+    loop.stopped = true;
+
+    if (loop.timer !== null) {
+      clearTimeout(loop.timer);
+      loop.timer = null;
+    }
+
+    if (activeLoop === loop) {
+      activeLoop = null;
+    }
+  };
+
+  loop.cleanup = cleanup;
+  activeLoop = loop;
+
   console.log(
     `[AlertsJob] Iniciado — disparos às ${TRIGGER_HOURS.map(h => `${h}h`).join(" e ")}`
   );
-  scheduleNext();
+  scheduleNext(loop);
+
+  return cleanup;
 }
