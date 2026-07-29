@@ -33,6 +33,7 @@ import {
 } from "drizzle-orm";
 import { sales, users } from "../../drizzle/schema";
 import { calcDeadline } from "../../shared/businessDays";
+import { toPublicSale } from "../saleMedia";
 
 export const reportsRouter = router({
   summary: adminProcedure
@@ -345,7 +346,10 @@ export const reportsRouter = router({
         });
       }
 
-      return salesData;
+      return salesData.map(row => ({
+        ...row,
+        sale: toPublicSale(row.sale),
+      }));
     }),
 
   // Agendamento de relatórios por email

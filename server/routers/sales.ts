@@ -1136,7 +1136,11 @@ export const salesRouter = router({
 
   // ─── Lixeira (Trash) ──────────────────────────────────────────────────────────
   listDeleted: adminProcedure.query(async () => {
-    return getDeletedSales();
+    const rows = await getDeletedSales();
+    return rows.map(row => ({
+      ...row,
+      sale: toPublicSale(row.sale),
+    }));
   }),
 
   restore: adminProcedure
