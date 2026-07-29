@@ -350,6 +350,11 @@ pelo navegador após plano próprio. O SHA de produção foi confirmado como
   `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md`.
 - Nenhum schema, migration, sessão, permissão, regra de negócio, mídia no R2,
   fluxo operacional ou configuração externa foi alterado.
+- A revisão de S01 identificou, fora do escopo autorizado, que as rotas
+  administrativas `users.listAll` e `users.getById` ainda expõem alguns campos
+  internos (`openId` e, em `getById`, `deletedAt` e `sessionVersion`). Elas não
+  expõem `passwordHash`; uma eventual redução desse contrato precisa de item e
+  aprovação próprios.
 - Uma falha local do aplicador de patch removeu temporariamente dois arquivos
   rastreados; ambos foram restaurados exatamente de `HEAD` antes da aplicação
   controlada de S02, sem perda de alterações.
