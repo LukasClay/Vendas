@@ -9,8 +9,7 @@ import { registerConsultoraPhotoDownloadRoute } from "./consultoraPhotoDownload"
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { startAlertsJob } from "../jobs/alertsJob";
-import { startReportsJob } from "../jobs/reportsJob";
+import { startJobLeadership } from "../jobs/jobLeadership";
 import {
   ensureSystemProducts,
   ensurePhotoColumns,
@@ -157,10 +156,11 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    // Iniciar job de alertas de prazo
-    startAlertsJob();
-    // Iniciar job de relatorios por email
-    startReportsJob();
+    // Somente a réplica líder executa os jobs de alertas e relatórios.
+    const jobLeadership = startJobLeadership();
+    server.once("close", () => {
+      void jobLeadership.stop();
+    });
   });
 }
 

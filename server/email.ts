@@ -21,6 +21,7 @@ export interface EmailOptions {
   to: string | string[];
   subject: string;
   html: string;
+  idempotencyKey?: string;
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
@@ -32,12 +33,17 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: "Mundo Da Magia <onboarding@resend.dev>",
-      to: Array.isArray(options.to) ? options.to : [options.to],
-      subject: options.subject,
-      html: options.html,
-    });
+    const { data, error } = await resend.emails.send(
+      {
+        from: "Mundo Da Magia <onboarding@resend.dev>",
+        to: Array.isArray(options.to) ? options.to : [options.to],
+        subject: options.subject,
+        html: options.html,
+      },
+      options.idempotencyKey
+        ? { idempotencyKey: options.idempotencyKey }
+        : undefined
+    );
 
     if (error) {
       console.error("[Email] Erro ao enviar:", error);
