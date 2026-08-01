@@ -34,6 +34,20 @@ Em 29/07/2026, o proprietário também autorizou explicitamente:
 Essas autorizações foram consumidas e não permitem corrigir schema, migrations,
 dados, infraestrutura ou documentação adicional.
 
+Em 01/08/2026, o proprietário autorizou explicitamente:
+
+- criar `AGENTS.md` na raiz, limitado a tarefas de programação/manutenção
+  técnica, e registrá-lo em commit local;
+- autorizar posteriormente o commit local `8d4ea4e` do registro B01, sem
+  push;
+- implementar somente os testes sintéticos de caracterização S05-A, sem
+  alterar código de produção, configuração, sessões reais ou serviços externos;
+- após a revisão, registrar o checkpoint S05-A nestes dois documentos e criar
+  commits locais separados para teste e documentação, sem push.
+
+Essas autorizações são específicas e não autorizam S05-B, rotação de segredo,
+deploy, alteração de sessões, acesso externo ou mudança de schema.
+
 Também foi autorizada e executada a exclusão somente destes três arquivos
 locais não rastreados:
 
@@ -57,6 +71,8 @@ O arquivo `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md` deve ser preservado.
   - `codex/qol-high`;
   - `codex/qol-medium`;
   - `codex/qol-low`.
+- A branch crítica local contém o teste S05-A no commit `4e0be94`; o remoto
+  permanece em `0f2642a` e nenhum push foi executado.
 
 ## Método obrigatório de trabalho
 
@@ -286,7 +302,8 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 ### S05 — Senha mestre
 
 - Produção já possui a variável necessária.
-- Antes da alteração, caracterizar `disconnectSession` e `disconnectUser`.
+- A caracterização S05-A de `disconnectSession` e `disconnectUser` foi
+  concluída sem banco, sessão ou segredo real.
 - A remoção do fallback não deve invalidar sessões por si só.
 - Rollout precisa validar todos os ambientes antes do deploy.
 
@@ -320,7 +337,8 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 - E01 fornece histórico/invariantes usados pelo dry-run E02.
 - S01 e S02 podem compartilhar infraestrutura de testes, mas não o mesmo
   commit funcional.
-- S05 depende de validação externa das envs e do baseline de disconnect.
+- O baseline de disconnect de S05 foi concluído; S05-B ainda depende de plano
+  aprovado, validação dos ambientes e rotação segura da credencial histórica.
 - Nenhum item autoriza alteração do fluxo principal de trabalho.
 
 ## Bloqueios atuais
@@ -332,10 +350,13 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
    existir backup recente concluído.
 3. Nunca houve restore drill; o plano de restauração precisa ser definido.
 4. R2 não possui recuperação independente; deleção real permanece bloqueada.
-5. O comportamento atual de disconnect ainda precisa de teste de
-   caracterização.
+5. O fallback de senha mestre permanece no código e a credencial histórica
+   deve ser considerada comprometida; remoção, validação e rotação ainda não
+   foram autorizadas.
 6. A estrutura imutável de reembolsos ainda precisa de proposta aprovada.
 7. Dados legados de usernames precisam ser inventariados antes de C01.
+8. `disconnectSession` incrementa a versão global do usuário; revogação
+   realmente individual exige desenho separado de JWT/sessão.
 
 ## Estrutura de branches proposta
 
@@ -359,9 +380,10 @@ schema, migration ou ledger está autorizada. Antes de qualquer DDL ainda são
 obrigatórios backup recente, estratégia de restauração, plano idempotente,
 janela, rollback e autorização específica.
 
-O próximo candidato é apresentar o plano de caracterização de
-`disconnectSession`, `disconnectUser` e ambientes para S05. O plano não
-autoriza invalidar sessões, alterar senha mestre ou implementar código.
+S05-A foi concluído. O próximo candidato é apresentar o plano pré-alteração de
+S05-B para remover o fallback, validar `MASTER_PASSWORD_HASH`, falhar cedo e
+preparar rotação/rollout. O plano não autoriza alterar segredo externo,
+invalidar sessões, desconectar funcionários, implementar S05-B ou fazer deploy.
 
 ## Registro de execução — C1
 
@@ -489,4 +511,60 @@ autoriza invalidar sessões, alterar senha mestre ou implementar código.
 - Qualquer correção depende de backup recente confirmado, restauração,
   compatibilidade idempotente, rollback e nova autorização.
 - B01: **100% concluído / 0% restante**.
+- Plano global estimado: **18% concluído / 82% restante**.
+
+## Registro de execução — S05-A
+
+### Escopo e barreiras
+
+- S05-A foi autorizado e executado em 01/08/2026 somente como caracterização
+  local de `disconnectSession` e `disconnectUser`.
+- O novo arquivo `server/security.disconnect.test.ts` usa senha e hash
+  exclusivamente sintéticos, restaura a env após o teste e mocka integralmente
+  o módulo de banco.
+- Nenhum código de produção, configuração, segredo real, banco, sessão,
+  funcionário ou serviço externo foi alterado ou acessado.
+- O teste foi registrado no commit local `4e0be94`, sem push.
+
+### Baseline confirmado
+
+- Chamadores anônimos e não administradores são bloqueados antes de qualquer
+  efeito; senha mestre incorreta também bloqueia ambos os endpoints.
+- `disconnectSession` procura o ID solicitado, pede incremento
+  `sessionVersion + 1` para o usuário encontrado, exclui somente a linha da
+  sessão solicitada e então registra auditoria.
+- Sessão desconhecida ainda retorna sucesso, exclui pelo ID informado e audita
+  `targetUserId: null`, sem incremento de versão.
+- `disconnectUser` não confirma previamente a existência do usuário; pede o
+  incremento global de versão, exclui todas as sessões registradas do ID e
+  registra auditoria.
+- Se o `getDb()` do router retornar `null`, ambos ainda chamam os helpers de
+  exclusão/auditoria e retornam sucesso sem incremento. Esses helpers consultam
+  `getDb()` novamente e podem também virar no-op se o banco continuar
+  indisponível, produzindo falso sucesso.
+- Falha no update interrompe exclusão e auditoria. Falha na exclusão ocorre
+  depois da chamada de update e impede auditoria. Falha na auditoria é
+  propagada depois das chamadas de update e exclusão.
+- Os payloads esperados de auditoria são exatos e não contêm a senha nem o hash
+  sintéticos.
+- A implementação atual não oferece revogação JWT realmente individual:
+  `disconnectSession` incrementa a versão global do usuário; o JWT não carrega
+  identificador de sessão e a autenticação não consulta `user_sessions`.
+- A interface administrativa chama somente `disconnectUser`; a semântica de
+  revogação individual deve ser tratada em item separado.
+- O fallback rastreado permanece no código de produção. A credencial histórica
+  associada deve ser considerada comprometida e rotacionada antes do rollout;
+  nenhum valor foi reproduzido neste registro.
+- A existência de `MASTER_PASSWORD_HASH` em produção está registrada nos
+  documentos, mas não foi revalidada externamente durante S05-A.
+
+### Validação e resultado
+
+- Teste direcionado: 1 arquivo, 13 testes aprovados.
+- Backend completo: 29 arquivos, 223 testes aprovados.
+- `pnpm run typecheck` e `pnpm run build` aprovados.
+- Prettier direcionado, whitespace e revisão independente aprovados sem
+  bloqueador final.
+- O aviso preexistente do chunk `exports` acima de 500 kB permaneceu.
+- S05-A: **100% concluído / 0% restante**.
 - Plano global estimado: **18% concluído / 82% restante**.

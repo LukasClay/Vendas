@@ -91,8 +91,10 @@ apontar o conflito, mostrar compatibilidade/rollback e obter decisão oficial.
 - Não trabalhar diretamente na `main` para novas mudanças.
 - Não fazer merge, push ou deploy na `main` sem permissão explícita nova.
 - As autorizações do hotfix H1 e do inventário B01 já foram consumidas.
-- O registro documental de B01 foi autorizado somente nos dois documentos da
-  auditoria, sem commit ou push.
+- A autorização inicial do registro B01 sem commit foi consumida; autorização
+  posterior específica permitiu o commit local `8d4ea4e`, sem push.
+- As autorizações dos testes S05-A e deste checkpoint documental também foram
+  consumidas; elas não autorizam S05-B, novo commit, push ou ação externa.
 - Commits, pushes e merges futuros, inclusive em branches de trabalho, exigem
   confirmação específica.
 - A regra de manter branches no GitHub não autoriza pushes indiscriminados.
@@ -124,6 +126,7 @@ Estado deste handoff:
 - C1 (`S01` e `S02`): **100% / 0%**.
 - Sincronização: **100% / 0%**.
 - B01: **100% / 0%**.
+- S05-A: **100% / 0%**.
 - Plano global estimado: **18% / 82%**.
 
 ## 7. Estado Git confirmado
@@ -153,13 +156,17 @@ Crítica:
   `473da91ed14541e1342680378a8d55b47660bc38`;
 - continuidade original:
   `0f2642a4725cdcf643c3f5ac86d913908b715e75`;
-- local e remoto foram reconfirmados nesse último SHA em 01/08/2026, após a
-  atualização de `origin/main`.
+- o remoto crítico permanece em
+  `0f2642a4725cdcf643c3f5ac86d913908b715e75`;
+- commits locais posteriores ao remoto:
+  - `8d4ea4e4c317323d423f5dc0ccb94e205dfbdac4` — registro B01;
+  - `df10c8c02f829348600c4fe615c6fb63963bd8cf` — `AGENTS.md`;
+  - `4e0be94f2418848136cc31a851074a9924d7a54c` — testes S05-A.
 
-Branch atual esperada: `codex/qol-critical`.
-Após o registro autorizado de B01, o estado local esperado contém modificações
-somente em `AUDITORIA_QUALIDADE_DE_VIDA.md` e neste arquivo, além do arquivo
-protegido não rastreado. Nenhum commit ou push foi autorizado ou executado.
+Branch atual confirmada: `codex/qol-critical`.
+Este próprio registro documental foi autorizado para commit local; consultar
+`HEAD` para o SHA resultante. O arquivo protegido permanece não rastreado,
+intacto e fora do stage. Nenhum push foi executado.
 
 ## 8. Fluxo de branches
 
@@ -343,6 +350,37 @@ schema, tipos, FK, snapshots ou ledger foi autorizada.
   `server/jobs/reportsJob.ts`, `server/db.ts`, `server/email.ts` e
   `server/_core/index.ts`.
 - Testes H1: `server/jobs/jobLeadership.test.ts`, jobs, advisory lock e email.
+- S05-A: `server/security.disconnect.test.ts`.
+
+### 11.9 S05-A — caracterização de senha mestre e sessões
+
+S05-A foi autorizado e concluído localmente em 01/08/2026:
+
+- 13 testes sintéticos cobrem `disconnectSession` e `disconnectUser`, com o
+  módulo de banco integralmente mockado;
+- anônimo, não administrador e senha incorreta são bloqueados antes de efeitos;
+- `disconnectSession` seleciona o ID solicitado, pede incremento global de
+  `sessionVersion` para o usuário-alvo, exclui somente a linha indicada e
+  audita; sessão desconhecida ainda retorna sucesso;
+- `disconnectUser` não confirma existência do alvo, pede incremento global,
+  exclui todas as sessões do ID e audita;
+- se o `getDb()` do router retornar `null`, ambos chamam os helpers de
+  exclusão/auditoria e reportam sucesso sem incremento; esses helpers consultam
+  `getDb()` novamente e podem também virar no-op se a indisponibilidade
+  persistir;
+- falhas de update, exclusão e auditoria confirmam uma sequência não
+  transacional e são propagadas no ponto correspondente;
+- payloads de auditoria são exatos e não contêm senha/hash sintéticos;
+- revogação realmente individual não existe: o JWT não identifica a sessão e
+  a autenticação não consulta `user_sessions`;
+- o fallback permanece em produção e a credencial histórica associada deve ser
+  considerada comprometida e rotacionada antes do rollout/deploy de
+  S05-B;
+- a env de produção não foi revalidada externamente durante S05-A;
+- commit local do teste:
+  `4e0be94f2418848136cc31a851074a9924d7a54c`;
+- nenhum código de produção, configuração, sessão real, banco, segredo ou
+  serviço externo foi alterado.
 
 ## 12. Validações executadas
 
@@ -384,7 +422,16 @@ B01:
 - encerramento com `ROLLBACK`, desconexão e descarte da credencial;
 - worktree e SHAs reconfirmados após o inventário.
 
-Essas são validações do inventário, não testes funcionais da aplicação.
+S05-A:
+
+- teste direcionado: 1 arquivo/13 testes;
+- `pnpm run typecheck`;
+- `pnpm run test:backend`: 29 arquivos/223 testes;
+- `pnpm run build`;
+- Prettier direcionado, whitespace e revisão independente sem bloqueadores;
+- nenhum banco, sessão ou serviço externo foi usado.
+
+As validações de B01 acima são do inventário, não testes funcionais da aplicação.
 Avisos conhecidos:
 
 - chunk `exports` acima de 500 kB, preexistente;
@@ -599,23 +646,35 @@ tratamento de falha parcial, audit log e confirmação adicional.
 
 ## 17. S05 — senha mestre e sessões
 
-`MASTER_PASSWORD_HASH` existe em produção; fallback hardcoded não era usado no
-fluxo normal conhecido.
+S05-A concluiu a caracterização local de `disconnectSession` e
+`disconnectUser`, sem afetar sessões reais.
 
-Proposta:
+Estado confirmado:
 
-- remover fallback;
-- validar formato;
-- falhar cedo e com segurança se ausente/inválida;
-- nunca logar senha/hash;
-- confirmar dev/teste/produção;
-- apresentar rollout.
+- o fallback hardcoded permanece no código;
+- a credencial histórica associada deve ser considerada comprometida e
+  rotacionada; nenhum valor foi reproduzido;
+- `MASTER_PASSWORD_HASH` consta como existente em produção, mas não foi
+  revalidada externamente nesta etapa;
+- `disconnectSession` pede incremento global de `sessionVersion`; não existe
+  revogação JWT verdadeiramente individual no modelo atual.
 
-O próximo gate apenas apresenta o plano para caracterizar `disconnectSession`,
-`disconnectUser` e os ambientes. A execução desse plano, inclusive criação de
-testes ou alteração de código/configuração, exige nova autorização. Não
-invalidar sessões, trocar a senha mestre nem desconectar funcionários durante o
-planejamento.
+Escopo mínimo recomendado para S05-B:
+
+- extrair validação/verificação para helper servidor puro;
+- remover integralmente o fallback;
+- exigir hash SHA-256 hexadecimal válido de 64 caracteres;
+- decodificar para 32 bytes antes da comparação constante;
+- falhar antes de abrir porta, executar DDL ou iniciar jobs;
+- usar somente fixture sintética em teste/CI;
+- preparar rotação, comunicação, rollout, observabilidade e rollback.
+
+S05-B não deve alterar a semântica das sessões. Revogação individual exige item
+separado e pode demandar mudança de JWT/schema.
+
+O próximo gate permite somente apresentar o plano pré-alteração de S05-B.
+Implementação, validação externa da env, rotação de segredo, desconexão,
+commit, push ou deploy exigem autorização específica nova.
 
 ## 18. Pendências e dependências
 
@@ -626,6 +685,7 @@ planejamento.
 - H1: concluído e em produção.
 - B01: inventário estrutural somente leitura concluído; nenhuma correção foi
   executada.
+- S05-A: caracterização local concluída; nenhuma mudança chegou à produção.
 
 ### B01 — banco somente leitura
 
@@ -652,8 +712,9 @@ Não alterar mutations mecanicamente sem entender contratos/efeitos.
 
 ### S05
 
-Depende de baseline de disconnect, validação dos ambientes, rollout e impacto
-em sessões.
+S05-A concluiu o baseline. S05-B depende de plano aprovado, validação dos
+ambientes, rotação segura e rollout. Revogação individual de sessão permanece
+item separado.
 
 ### F03
 
@@ -691,15 +752,16 @@ Branches high/medium/low não podem começar sem seus gates.
 
 Isto é recomendação, não autorização:
 
-1. Apresentar o plano de caracterização de disconnect e ambientes para S05.
-2. Se aprovado, executar a caracterização de S05 sem afetar sessões reais.
-3. Inventariar mutations/desenhar fase sem DDL de S04.
-4. Fundação F03 em plano separado.
-5. Modelo/inventário legado de C01.
-6. Modelo de E01, slots e reembolsos.
-7. E02 somente dry-run.
-8. Reconciliação de migrations/schema somente com gates de banco satisfeitos.
-9. Altos, médios, baixos e opcionais conforme dependências.
+1. Apresentar o plano pré-alteração de S05-B.
+2. Se aprovado, implementar e validar S05-B somente no repositório local.
+3. Tratar rotação/rollout externo em gate operacional separado.
+4. Inventariar mutations/desenhar fase sem DDL de S04.
+5. Fundação F03 em plano separado.
+6. Modelo/inventário legado de C01.
+7. Modelo de E01, slots e reembolsos.
+8. E02 somente dry-run.
+9. Reconciliação de migrations/schema somente com gates de banco satisfeitos.
+10. Altos, médios, baixos e opcionais conforme dependências.
 
 Reavaliar antes mudanças recentes na `main`, backups e dependências novas.
 
@@ -712,7 +774,10 @@ Reavaliar antes mudanças recentes na `main`, backups e dependências novas.
 - PITR informado como inativo.
 - Restore drill nunca confirmado.
 - R2 sem recuperação independente conhecida.
-- Disconnect sem caracterização recente.
+- Fallback de senha mestre ainda rastreado e credencial histórica considerada
+  comprometida; remoção e rotação não foram autorizadas.
+- Revogação individual não existe no modelo JWT/sessão atual e precisa de item
+  separado.
 - Usernames legados sem inventário.
 - Modelo imutável de reembolso sem aprovação.
 - Failover real multiprocesso do H1 não testado.
@@ -761,7 +826,7 @@ backup/restauração, destrutivo continua bloqueado.
 - Verificar branch, SHAs, worktree e `origin/main`.
 - Inspecionar somente o repositório/código local em modo read-only.
 - Preparar o próximo plano pré-alteração.
-- Preparar e apresentar o plano de caracterização de S05.
+- Preparar e apresentar o plano pré-alteração de S05-B.
 - Fazer perguntas de confirmação.
 
 O acesso externo de B01 terminou. Qualquer novo acesso a PostgreSQL, R2,
@@ -779,19 +844,27 @@ Não pode sem aprovação nova:
 
 ## 24. Próximo gate recomendado
 
-Apresentar o plano pré-alteração de **S05**, ainda sem executá-lo. O plano deve
-cobrir:
+S05-A está concluído. O próximo gate é apresentar o plano pré-alteração de
+**S05-B**, ainda sem executá-lo.
 
-- inspeção local e somente leitura dos chamadores de `disconnectSession` e
-  `disconnectUser`;
-- baseline esperado dos dois comportamentos e das sessões afetadas;
-- matriz de desenvolvimento, testes e produção para `MASTER_PASSWORD_HASH`;
-- testes de caracterização propostos, sem usar senha/hash reais;
-- impacto em funcionários, necessidade de novo login e comunicação;
-- rollout, observabilidade, critérios de abortar e rollback.
+O plano deve cobrir:
 
-Aguardar aprovação explícita antes de criar testes, alterar código/configuração,
-validar segredo externo ou afetar qualquer sessão.
+- helper servidor puro para validação/verificação da senha mestre;
+- remoção integral do fallback e validação hexadecimal de 64 caracteres;
+- comparação dos 32 bytes decodificados em tempo constante;
+- fail-fast antes de porta, DDL de startup e jobs;
+- fixture exclusivamente sintética para testes e CI;
+- testes de ausência, vazio, whitespace, comprimento/formato inválidos, valor
+  válido, senha correta/incorreta e ausência de senha/hash em logs;
+- preservação da semântica atual de sessões durante S05-B;
+- matriz de desenvolvimento, testes, CI e produção;
+- rotação externa da credencial histórica em gate separado, com comunicação,
+  observabilidade, critérios de abortar e rollback;
+- rollback de código sem restaurar a credencial histórica comprometida;
+- typecheck, backend completo, build, Prettier direcionado e diff-check.
+
+Aguardar aprovação explícita antes de alterar código/configuração, validar ou
+rotacionar segredo externo, afetar sessões, criar commit, fazer push ou deploy.
 
 ## 25. Mensagem curta para o novo chat
 
@@ -799,10 +872,10 @@ validar segredo externo ou afetar qualquer sessão.
 > `TODO.md`, `AUDITORIA_QUALIDADE_DE_VIDA.md` e
 > `CONTINUIDADE_AUDITORIA_QUALIDADE_DE_VIDA.md`. Não abra nem use
 > `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md`. Confirme SHAs/worktree, informe
-> percentuais concluído/restante em todas as atualizações. B01 está concluído;
-> retome apresentando somente o plano de caracterização de S05. Não implemente,
-> afete sessões, acesse serviços externos, faça commit ou push sem autorização
-> explícita.
+> percentuais concluído/restante em todas as atualizações. B01 e S05-A estão
+> concluídos; retome apresentando somente o plano pré-alteração de S05-B. Não
+> altere código/configuração, segredo externo ou sessões e não faça commit,
+> push ou deploy sem autorização explícita.
 
 ## 26. Estado de encerramento
 
@@ -810,8 +883,14 @@ validar segredo externo ou afetar qualquer sessão.
 - C1 validado na crítica: concluído, ainda não em produção.
 - Integração/crítica sincronizadas com a main do hotfix: concluído.
 - B01 somente leitura: concluído, sem alteração de produção.
-- Registro documental de B01: atualizado localmente nos dois documentos
-  autorizados, sem commit ou push.
-- Próxima implementação: não autorizada.
-- Próxima ação segura: confirmar estado e apresentar somente o plano de S05.
+- Registro documental de B01: commit local `8d4ea4e`.
+- Instruções persistentes de programação: commit local `df10c8c`.
+- S05-A: 13 testes de caracterização no commit local `4e0be94`, sem alteração
+  de produção.
+- Este checkpoint documental foi autorizado para commit local; consultar
+  `HEAD` para seu SHA.
+- Nenhum push foi executado.
+- S05-A: **100% concluído / 0% restante**.
+- Próxima implementação, S05-B: não autorizada.
+- Próxima ação segura: apresentar somente o plano pré-alteração de S05-B.
 - Plano global estimado: **18% concluído / 82% restante**.
