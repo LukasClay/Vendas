@@ -25,6 +25,15 @@ C1 (`S01` e `S02`). Fora desse escopo:
 - não executar DDL ou operações destrutivas em PostgreSQL ou R2;
 - não considerar silêncio ou compactação como autorização.
 
+Em 29/07/2026, o proprietário também autorizou explicitamente:
+
+- a execução do inventário B01 estritamente somente leitura;
+- o registro dos resultados de B01 neste arquivo e em
+  `CONTINUIDADE_AUDITORIA_QUALIDADE_DE_VIDA.md`, sem commit ou push.
+
+Essas autorizações foram consumidas e não permitem corrigir schema, migrations,
+dados, infraestrutura ou documentação adicional.
+
 Também foi autorizada e executada a exclusão somente destes três arquivos
 locais não rastreados:
 
@@ -91,7 +100,9 @@ O arquivo `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md` deve ser preservado.
 
 ### Operação
 
-- Railway em US East/Virginia, uma réplica no momento.
+- Railway em US East/Virginia; o retrato inicial tinha uma réplica e, em
+  29/07/2026, duas réplicas foram observadas. A operação não deve depender de
+  quantidade fixa.
 - `TZ=America/Sao_Paulo`.
 - Healthcheck `/api/health`, timeout de 300 segundos.
 - Jobs de alertas e relatórios executados dentro do processo HTTP.
@@ -205,7 +216,8 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 
 ### Infraestrutura externa
 
-- Railway possui uma réplica hoje, mas jobs devem suportar múltiplas.
+- Duas réplicas Railway foram observadas em 29/07/2026; jobs devem suportar
+  qualquer quantidade de réplicas.
 - Não alterar GitHub ou Railway diretamente.
 - Recomendar proteção da `main`, PR obrigatório, Verify obrigatório, bloqueio
   de force push/exclusão, deploy seguro, readiness/liveness e rollback.
@@ -214,12 +226,13 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 
 - `user_sessions` e `audit_logs` existem desde pelo menos 31/03/2026.
 - Não há migration Drizzle comprovada para essas tabelas.
-- Antes de schema/DDL:
-  1. inventariar produção;
-  2. comparar Drizzle e todas as migrations;
-  3. verificar `__drizzle_migrations`;
-  4. não editar migrations antigas;
-  5. propor compatibilidade idempotente.
+- B01 concluiu o inventário de produção, a comparação com Drizzle/migrations e
+  a verificação de `__drizzle_migrations`. O ledger existe, mas está vazio, e a
+  cadeia rastreada é inconsistente.
+- Antes de schema/DDL ainda é obrigatório:
+  1. não editar migrations antigas nem preencher o ledger por suposição;
+  2. propor reconciliação e compatibilidade idempotentes;
+  3. definir backup, restauração, rollout, rollback e obter autorização.
 - PostgreSQL:
   - backup diário recém-ativado;
   - semanal ativo;
@@ -267,8 +280,8 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 - Mitigação imediata sem DDL: remover retry automático de mutations não
   idempotentes e permitir opt-in apenas onde comprovado.
 - Proteção durável de `sales.create` pode exigir chave persistida/constraint.
-- A parte durável depende do inventário B01 antes de qualquer alteração de
-  schema.
+- A parte durável depende dos achados de B01, reconciliação idempotente, backup
+  e plano de schema aprovado.
 
 ### S05 — Senha mestre
 
@@ -279,14 +292,20 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 
 ### B01 — Bootstrap e compatibilidade do banco
 
-- Começa por inventário somente leitura, não por editar SQL.
+- O inventário somente leitura foi concluído em 29/07/2026.
+- Produção possui as 10 tabelas, 113 colunas e 7 enums esperados pelo schema
+  atual, com divergências registradas na seção de execução B01.
+- O ledger `drizzle.__drizzle_migrations` existe, mas não possui registros.
+- Nenhuma correção, DDL, DML, migration ou leitura de dados de negócio foi
+  executada.
 - É pré-requisito para qualquer nova tabela/coluna necessária a S04, C01,
   E01 ou histórico imutável de reembolsos.
 - DDL permanece bloqueada até backup recente e plano/teste de restauração.
 
 ### E01 — Estado de vendas, slots e reembolsos
 
-- Depende de B01, da definição de data civil e de modelo aprovado.
+- Qualquer persistência depende dos achados de B01 e de reconciliação aprovada;
+  o item também depende da definição de data civil e de modelo aprovado.
 - Deve permanecer isolado dos itens simples de segurança.
 - Deduplicação de clientes é item separado.
 - Purge destrutivo não integra E01; E02 começa em dry-run e possui gate próprio.
@@ -295,7 +314,9 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 
 - A fundação de data civil de F03 é pré-requisito para expiração de 90 dias,
   jobs e filtros; adoção visual completa permanece na etapa alta.
-- B01 antecede qualquer persistência nova de S04, C01, E01 ou reembolsos.
+- O inventário B01 foi concluído, mas qualquer persistência nova de S04, C01,
+  E01 ou reembolsos ainda depende de plano idempotente de compatibilidade,
+  backup recente, restauração e autorização.
 - E01 fornece histórico/invariantes usados pelo dry-run E02.
 - S01 e S02 podem compartilhar infraestrutura de testes, mas não o mesmo
   commit funcional.
@@ -304,8 +325,9 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 
 ## Bloqueios atuais
 
-1. Falta inventário somente leitura do schema real e de
-   `__drizzle_migrations`.
+1. A cadeia de migrations não é uma fonte confiável do estado atual:
+   `__drizzle_migrations` está vazio, snapshots estão incompletos e existem
+   migrations conflitantes ou fora de ordem.
 2. O último backup PostgreSQL informado tem quatro dias; antes de DDL precisa
    existir backup recente concluído.
 3. Nunca houve restore drill; o plano de restauração precisa ser definido.
@@ -332,14 +354,14 @@ Todas partirão do commit-base da auditoria:
 
 ## Próximo gate
 
-A etapa C1 foi concluída em commits separados. O próximo gate é revisar o
-relatório de validação e aguardar autorização explícita antes de integrar
-`codex/qol-critical` em `codex/qol-integration`, criar branches posteriores ou
-ampliar o escopo.
+O inventário B01 foi concluído sem alteração de estado. Nenhuma correção de
+schema, migration ou ledger está autorizada. Antes de qualquer DDL ainda são
+obrigatórios backup recente, estratégia de restauração, plano idempotente,
+janela, rollback e autorização específica.
 
-O inventário B01 será somente leitura; o restore drill poderá ser conduzido
-pelo navegador após plano próprio. O SHA de produção foi confirmado como
-`79660b694925a33dbb077631648d7aef64a3591a`.
+O próximo candidato é apresentar o plano de caracterização de
+`disconnectSession`, `disconnectUser` e ambientes para S05. O plano não
+autoriza invalidar sessões, alterar senha mestre ou implementar código.
 
 ## Registro de execução — C1
 
@@ -369,3 +391,102 @@ pelo navegador após plano próprio. O SHA de produção foi confirmado como
   rastreados; ambos foram restaurados exatamente de `HEAD` antes da aplicação
   controlada de S02, sem perda de alterações.
 - Nenhum merge, push ou deploy foi executado.
+
+## Registro de execução — B01
+
+### Escopo e barreiras de leitura
+
+- B01 foi autorizado e executado em 29/07/2026 exclusivamente como inventário
+  estrutural.
+- A conexão PostgreSQL usou `default_transaction_read_only=on`, transação
+  `READ ONLY` com isolamento `REPEATABLE READ`, `search_path=pg_catalog`,
+  `statement_timeout=10s`, `lock_timeout=1s` e
+  `idle_in_transaction_session_timeout=30s`.
+- Foram consultados somente `pg_catalog`, `information_schema` e, após validar
+  tipo, schema, ausência de RLS/regras/herança, os campos `id`, `hash` e
+  `created_at` de `drizzle.__drizzle_migrations`.
+- Nenhuma linha de clientes, vendas, usuários, sessões, auditoria, push ou
+  storage foi consultada.
+- A transação terminou com `ROLLBACK`; a conexão e a credencial foram
+  descartadas.
+
+### Inventário de produção
+
+- PostgreSQL `18.4`; timezone do servidor `Etc/UTC`.
+- Schemas de aplicação: `public` e `drizzle`.
+- `public`: 10 tabelas, 113 colunas, 10 sequences e 7 enums.
+- 13 índices: 10 chaves primárias e 3 uniques
+  (`users.openId`, `users.username` e `app_settings.key`).
+- Não existem views, materialized views, foreign tables, índices não únicos,
+  triggers de aplicação, RLS ou policies nos schemas inventariados.
+- A única extensão encontrada foi `plpgsql`.
+- As sequences de ID estão vinculadas às respectivas colunas `serial`.
+- `drizzle.__drizzle_migrations` existe com estrutura válida, mas contém zero
+  registros.
+
+### Divergências entre produção e `drizzle/schema.ts`
+
+- Todas as 10 tabelas, 113 colunas e 7 enums esperados pelo schema existem em
+  produção.
+- Três tipos de `audit_logs` divergem:
+  - `userName`: schema `varchar(256)`, produção `text`;
+  - `action`: schema `varchar(128)`, produção `text`;
+  - `ipAddress`: schema `varchar(64)`, produção `text`.
+- Produção possui a FK `audit_logs.userId -> users.id ON DELETE SET NULL`; ela
+  não está declarada no schema nem nas migrations rastreadas.
+- Essa FK gera quatro triggers internos do PostgreSQL. Não há triggers de
+  aplicação.
+- As outras dez relações descritas no código apenas como comentários “FK” não
+  possuem constraints reais. Também não há índices dedicados para essas
+  referências.
+- A ordem física de colunas em algumas tabelas difere da ordem atual do schema
+  por adições posteriores; o acesso por nome permanece compatível.
+
+### Divergências da cadeia de migrations
+
+- O schema atual possui 10 tabelas, 113 colunas e 7 enums.
+- O último snapshot (`0001`) possui somente 8 tabelas, 89 colunas e 7 enums.
+- O snapshot `0000` registra 76 colunas, mas o SQL `0000` foi alterado depois
+  para incluir `sales.deletedAt`, `users.sessionVersion` e
+  `products.isSystem`, chegando a 79.
+- `0001` tenta adicionar novamente essas três colunas sem `IF NOT EXISTS`; uma
+  aplicação limpa da sequência colide primeiro em `products.isSystem`.
+- `0002` e `0003` constam no journal, mas não possuem snapshots. Seus
+  timestamps também são anteriores aos de `0000` e `0001`, podendo fazê-los
+  ser ignorados quando houver migration mais nova registrada.
+- `0003` contém quatro `ALTER TABLE` sem `statement-breakpoint` ou
+  `IF NOT EXISTS`.
+- `scripts/migrate-railway.mjs` lê apenas `0000`, não usa transação, não
+  processa o journal e não registra o ledger.
+- `ensureSystemProducts`, `ensurePhotoColumns` e `ensureMonthlyGoalColumn`
+  continuam executando DDL no startup de cada réplica.
+- `users.monthlyGoal`, `sales.attachmentExtras` e `sales.photoExtras` não
+  possuem migration ou snapshot e são garantidos somente pelo startup.
+- No estado atual, `pnpm db:push`, `drizzle-kit migrate` e
+  `scripts/migrate-railway.mjs` não são caminhos seguros para produção.
+
+### Origem provável e limite da evidência
+
+- `user_sessions` e `audit_logs` entraram no código no commit `b61b1c1`, sem
+  migration, snapshot ou rotina `ensure*`.
+- O Git comprova a origem no código, mas não a criação física das tabelas.
+  Com o ledger vazio, não é possível distinguir entre comando manual,
+  migration não versionada ou SQL direto.
+- `sales.attachmentExtras` e `sales.photoExtras` entraram na linhagem atual no
+  commit `0019ec3`; a hipótese mais forte é criação pelo startup.
+- `users.monthlyGoal` entrou no commit `2376003` com `ensure*`; a hipótese mais
+  forte também é criação pelo startup.
+- Fotos e `products.isSystem` possuem caminhos DDL sobrepostos entre migration
+  e `ensure*`; o inventário estrutural não determina qual executou primeiro.
+
+### Resultado e bloqueios residuais
+
+- Não há coluna ou tabela esperada pelo código ausente em produção.
+- O risco principal identificado é de migration/deploy futuro, não uma
+  incompatibilidade estrutural imediata da aplicação.
+- Não editar migrations antigas, preencher o ledger ou alinhar tipos/FK sem
+  plano separado e aprovação.
+- Qualquer correção depende de backup recente confirmado, restauração,
+  compatibilidade idempotente, rollback e nova autorização.
+- B01: **100% concluído / 0% restante**.
+- Plano global estimado: **18% concluído / 82% restante**.

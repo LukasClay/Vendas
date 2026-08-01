@@ -3,8 +3,8 @@
 ## 1. Finalidade
 
 Este arquivo transfere a auditoria para outro chat. Registra o estado confirmado
-em 29/07/2026, decisões oficiais, trabalho concluído, pendências, bloqueios e o
-procedimento de retomada.
+em 29/07/2026 e reconfirmado em 01/08/2026, decisões oficiais, trabalho
+concluído, pendências, bloqueios e o procedimento de retomada.
 
 Ele não concede autorização automática. Silêncio, troca de chat ou compactação
 nunca significam aprovação. O sistema está em produção e a prioridade é
@@ -90,9 +90,11 @@ apontar o conflito, mostrar compatibilidade/rollback e obter decisão oficial.
 
 - Não trabalhar diretamente na `main` para novas mudanças.
 - Não fazer merge, push ou deploy na `main` sem permissão explícita nova.
-- A autorização do hotfix H1 já foi consumida.
+- As autorizações do hotfix H1 e do inventário B01 já foram consumidas.
+- O registro documental de B01 foi autorizado somente nos dois documentos da
+  auditoria, sem commit ou push.
 - Commits, pushes e merges futuros, inclusive em branches de trabalho, exigem
-  confirmação. A autorização atual termina com sync e handoff.
+  confirmação específica.
 - A regra de manter branches no GitHub não autoriza pushes indiscriminados.
 - Não usar rebase ou force-push nesta auditoria.
 - Manter no GitHub somente trabalho explicitamente aprovado e validado.
@@ -100,8 +102,9 @@ apontar o conflito, mostrar compatibilidade/rollback e obter decisão oficial.
 - Não alterar GitHub, Railway, PostgreSQL ou R2 sem autorização específica.
 - Poder usar o navegador não é autorização permanente de escopo; cada
   inventário externo segue seu próprio gate.
-- Qualquer DDL, schema ou migration está bloqueado até B01, backup recente,
-  restauração/compatibilidade e aprovação. DDL destrutiva permanece proibida.
+- B01 foi concluído, mas qualquer DDL, schema, migration ou reconciliação do
+  ledger continua bloqueada até backup recente, restauração, plano idempotente
+  de compatibilidade e aprovação. DDL destrutiva permanece proibida.
 - Purge real e deleção de mídia também permanecem bloqueados.
 - Não editar migrations antigas às cegas.
 - Não alterar negócio, contratos, papéis, permissões ou sessões por suposição.
@@ -120,7 +123,8 @@ Estado deste handoff:
 - H1: **100% / 0%**.
 - C1 (`S01` e `S02`): **100% / 0%**.
 - Sincronização: **100% / 0%**.
-- Plano global estimado: **14% / 86%**.
+- B01: **100% / 0%**.
+- Plano global estimado: **18% / 82%**.
 
 ## 7. Estado Git confirmado
 
@@ -147,13 +151,15 @@ Crítica:
   `c091b0dab5e378f29db81d274b11ae8ca31cea3d`;
 - normalização documental:
   `473da91ed14541e1342680378a8d55b47660bc38`;
-- local e remoto estavam nesse último SHA antes deste arquivo;
-- o commit deste arquivo passa a ser o novo `HEAD`; confirmar com
-  `git rev-parse HEAD`.
+- continuidade original:
+  `0f2642a4725cdcf643c3f5ac86d913908b715e75`;
+- local e remoto foram reconfirmados nesse último SHA em 01/08/2026, após a
+  atualização de `origin/main`.
 
 Branch atual esperada: `codex/qol-critical`.
-Depois do commit/push deste handoff, o único untracked esperado é o arquivo
-protegido, que deve continuar fora do stage.
+Após o registro autorizado de B01, o estado local esperado contém modificações
+somente em `AUDITORIA_QUALIDADE_DE_VIDA.md` e neste arquivo, além do arquivo
+protegido não rastreado. Nenhum commit ou push foi autorizado ou executado.
 
 ## 8. Fluxo de branches
 
@@ -178,9 +184,13 @@ Backend: Express/tRPC; procedures públicas, autenticadas e administrativas;
 JWT/cookie, `sessionVersion` e sessões persistidas; serviços de vendas,
 clientes, produtos, consultas, relatórios, push, segurança e configurações.
 
-Dados: PostgreSQL/Drizzle e Cloudflare R2/S3. Vendas usam soft delete.
-`user_sessions` e `audit_logs` existem em produção, mas sua origem não está
-comprovada nas migrations rastreadas.
+Dados: PostgreSQL/Drizzle e Cloudflare R2/S3. Vendas usam soft delete. B01
+confirmou 10 tabelas, 113 colunas e 7 enums em produção. Todas as estruturas
+esperadas pelo schema existem, mas `audit_logs.userName`, `action` e
+`ipAddress` usam `text` em produção versus `varchar` no código. A FK
+`audit_logs.userId -> users.id ON DELETE SET NULL` existe somente em produção.
+A origem física de `user_sessions` e `audit_logs` continua não comprovada e o
+ledger de migrations está vazio.
 
 Operação: Railway US East/Virginia, duas réplicas observadas em 29/07/2026,
 `TZ=America/Sao_Paulo`, healthcheck `/api/health` e deploy automático da
@@ -290,7 +300,41 @@ Observação pontual de produção em 29/07/2026:
 - Crítica enviada ao GitHub.
 - Nenhum force-push e nenhum novo toque na `main`.
 
-### 11.7 Arquivos principais dos itens concluídos
+### 11.7 B01 — inventário estrutural somente leitura
+
+B01 foi autorizado e concluído em 29/07/2026:
+
+- PostgreSQL `18.4`, timezone do servidor `Etc/UTC`;
+- `public` possui 10 tabelas, 113 colunas, 10 sequences e 7 enums;
+- todas as tabelas e colunas esperadas pelo schema atual existem;
+- há 13 índices, sendo 10 PKs e 3 uniques;
+- não há views, foreign tables, triggers de aplicação, RLS ou policies;
+- `drizzle.__drizzle_migrations` existe, mas contém zero registros;
+- `audit_logs.userName`, `action` e `ipAddress` usam `text` em produção versus
+  `varchar(256)`, `varchar(128)` e `varchar(64)` no schema;
+- a FK `audit_logs.userId -> users.id ON DELETE SET NULL` existe somente em
+  produção;
+- o último snapshot cobre 8 tabelas e 89 colunas;
+- `0000` diverge do próprio snapshot e `0001` repete três colunas sem
+  idempotência;
+- `0002` e `0003` não possuem snapshots e têm timestamps anteriores no
+  journal;
+- o migrador Railway aplica apenas `0000`, sem transação ou ledger;
+- `monthlyGoal`, `attachmentExtras` e `photoExtras` dependem de `ensure*` no
+  startup;
+- `user_sessions` e `audit_logs` entraram no código em `b61b1c1`, sem DDL
+  rastreado; a criação física continua não comprovada.
+
+A sessão usou duas barreiras read-only, `REPEATABLE READ`,
+`search_path=pg_catalog`, timeouts e encerramento por `ROLLBACK`. Nenhum dado de
+negócio, DDL, DML, migration, alteração externa ou segredo foi registrado. A
+credencial foi descartada após a desconexão.
+
+Não executar `pnpm db:push`, `drizzle-kit migrate` ou
+`scripts/migrate-railway.mjs` em produção no estado atual. Nenhuma correção do
+schema, tipos, FK, snapshots ou ledger foi autorizada.
+
+### 11.8 Arquivos principais dos itens concluídos
 
 - S01: `server/routers.ts` e `server/auth.me.test.ts`.
 - S02: `server/routers/reports.ts`, `server/routers/sales.ts`,
@@ -330,6 +374,17 @@ Após sincronização, tanto integração quanto crítica passaram em:
 A primeira tentativa de testes/build no sandbox falhou com `spawn EPERM`; foi
 repetida com permissão administrativa e passou. Era limitação ambiental.
 
+B01:
+
+- `default_transaction_read_only=on` e `transaction_read_only=on`;
+- isolamento `REPEATABLE READ`, `search_path=pg_catalog` e timeouts curtos;
+- ledger validado como tabela PostgreSQL comum, persistente, sem RLS, regras,
+  partições ou herança antes da leitura dos três campos permitidos;
+- consultas limitadas a metadados estruturais e ao ledger vazio;
+- encerramento com `ROLLBACK`, desconexão e descarte da credencial;
+- worktree e SHAs reconfirmados após o inventário.
+
+Essas são validações do inventário, não testes funcionais da aplicação.
 Avisos conhecidos:
 
 - chunk `exports` acima de 500 kB, preexistente;
@@ -367,7 +422,8 @@ Não interpretar/remover `_old`, hexadecimal ou outro sufixo. A proposta deve:
 - nunca renomear/desconectar indevidamente o ocupante atual.
 
 Antes: inventário de usuários antigos e modelo de compatibilidade. Se houver
-coluna nova, depende de B01 e gates de backup.
+coluna nova, depende dos achados de B01, reconciliação idempotente, gates de
+backup/restauração e aprovação específica.
 
 ### 14.2 E01/E02 — lixeira e slots
 
@@ -492,15 +548,32 @@ completá-los.
 
 ## 16. Banco, backups e R2
 
-Antes de schema/DDL:
+B01 concluiu o inventário estrutural somente leitura em 29/07/2026. O resultado
+confirmado foi:
 
-1. Inventariar produção em modo somente leitura.
-2. Comparar com `drizzle/schema.ts`.
-3. Comparar todas as migrations.
-4. Verificar `__drizzle_migrations`, se existir.
-5. Investigar origem de `user_sessions` e `audit_logs`.
-6. Não editar migrations antigas.
-7. Apresentar plano idempotente de compatibilidade.
+- produção contém as 10 tabelas, 113 colunas e 7 enums esperados pelo schema;
+- `drizzle.__drizzle_migrations` existe, mas está vazio;
+- o último snapshot cobre somente 8 tabelas e 89 colunas;
+- há três divergências `text`/`varchar` em `audit_logs` e uma FK existente
+  somente em produção;
+- `0000` diverge do próprio snapshot e colide com `0001` em uma aplicação limpa;
+- `0002` e `0003` não possuem snapshots e aparecem fora de ordem temporal no
+  journal;
+- `scripts/migrate-railway.mjs` aplica apenas `0000`, sem transação ou ledger;
+- `monthlyGoal`, `attachmentExtras` e `photoExtras` dependem de DDL no startup;
+- o Git prova quando `user_sessions` e `audit_logs` entraram no código, mas o
+  ledger vazio impede provar como as tabelas foram criadas fisicamente.
+
+Antes de qualquer schema/DDL ainda é obrigatório:
+
+1. Não editar migrations antigas nem preencher o ledger por suposição.
+2. Desenhar reconciliação idempotente entre produção, schema, snapshots,
+   journal, migrador e rotinas `ensure*`.
+3. Definir compatibilidade e rollback para tipos, FK e futuras persistências.
+4. Confirmar backup recente concluído.
+5. Definir e, conforme o risco, testar restauração.
+6. Apresentar risco, janela, rollout e critérios de abortar.
+7. Obter autorização específica antes de executar qualquer alteração.
 
 PostgreSQL, retrato informado em 29/07/2026:
 
@@ -538,8 +611,11 @@ Proposta:
 - confirmar dev/teste/produção;
 - apresentar rollout.
 
-Antes, caracterizar `disconnectSession` e `disconnectUser`. Não invalidar
-sessões nem desconectar funcionários inesperadamente.
+O próximo gate apenas apresenta o plano para caracterizar `disconnectSession`,
+`disconnectUser` e os ambientes. A execução desse plano, inclusive criação de
+testes ou alteração de código/configuração, exige nova autorização. Não
+invalidar sessões, trocar a senha mestre nem desconectar funcionários durante o
+planejamento.
 
 ## 18. Pendências e dependências
 
@@ -548,14 +624,19 @@ sessões nem desconectar funcionários inesperadamente.
 - S01: concluído na crítica, não em produção.
 - S02: concluído na crítica, não em produção.
 - H1: concluído e em produção.
+- B01: inventário estrutural somente leitura concluído; nenhuma correção foi
+  executada.
 
 ### B01 — banco somente leitura
 
-Próximo candidato de baixo risco. Entregar schema real, Drizzle, migrations,
-`__drizzle_migrations`, origem provável das tabelas sem migration, matriz de
-divergências e plano idempotente. A primeira fase não executa DDL.
+Concluído. Foram entregues inventário real, comparação com Drizzle, snapshots,
+migrations, journal, migrador, ledger, rotinas `ensure*` e evidência histórica
+do Git. A origem física de `user_sessions` e `audit_logs` continua
+indeterminável com a evidência disponível.
 
-B01 precede persistência nova de S04, C01, E01 e ledger de reembolsos.
+O resultado não autoriza correção. Persistência nova de S04, C01, E01 ou ledger
+de reembolsos depende agora de plano de reconciliação idempotente, backup,
+restauração, rollback e aprovação específica.
 
 ### S04 — idempotência de mutations
 
@@ -564,7 +645,8 @@ Dividir:
 1. sem DDL: inventariar mutations, remover retry automático das não
    idempotentes e manter opt-in somente onde comprovado;
 2. durável: `sales.create` e equivalentes podem exigir chave/constraint e
-   dependem de B01, backup e plano de schema.
+   dependem dos achados de B01, reconciliação aprovada, backup e plano de
+   schema.
 
 Não alterar mutations mecanicamente sem entender contratos/efeitos.
 
@@ -579,13 +661,16 @@ Fundação de data civil precede retenção de 90 dias, jobs, filtros e E01/E02.
 
 ### C01
 
-Depende de inventário de usernames legados, modelo explícito, B01 se houver
-persistência e plano de sessões/reativação.
+Depende de inventário de usernames legados, modelo explícito, achados de B01 e,
+se houver persistência, reconciliação idempotente do banco, backup e plano de
+sessões/reativação.
 
 ### E01
 
-Depende de B01, F03, modelo aprovado de slot/restauração, modelo de histórico
-de reembolso e compatibilidade legada. Deduplicação de clientes fica fora.
+Depende dos achados de B01 e de reconciliação aprovada para qualquer
+persistência, além de F03, modelo aprovado de slot/restauração, modelo de
+histórico de reembolso e compatibilidade legada. Deduplicação de clientes fica
+fora.
 
 ### E02
 
@@ -606,21 +691,23 @@ Branches high/medium/low não podem começar sem seus gates.
 
 Isto é recomendação, não autorização:
 
-1. B01 estritamente somente leitura.
-2. Caracterizar disconnect e ambientes para S05.
+1. Apresentar o plano de caracterização de disconnect e ambientes para S05.
+2. Se aprovado, executar a caracterização de S05 sem afetar sessões reais.
 3. Inventariar mutations/desenhar fase sem DDL de S04.
 4. Fundação F03 em plano separado.
 5. Modelo/inventário legado de C01.
 6. Modelo de E01, slots e reembolsos.
 7. E02 somente dry-run.
-8. Altos, médios, baixos e opcionais conforme dependências.
+8. Reconciliação de migrations/schema somente com gates de banco satisfeitos.
+9. Altos, médios, baixos e opcionais conforme dependências.
 
 Reavaliar antes mudanças recentes na `main`, backups e dependências novas.
 
 ## 20. Bloqueios atuais
 
-- Inventário produção/Drizzle/migrations incompleto.
-- Origem de `user_sessions` e `audit_logs` não comprovada.
+- Ledger de migrations vazio e cadeia rastreada inconsistente; não existe plano
+  de reconciliação aprovado.
+- Origem física de `user_sessions` e `audit_logs` não comprovada.
 - Backup PostgreSQL recente precisa ser reconfirmado.
 - PITR informado como inativo.
 - Restore drill nunca confirmado.
@@ -674,9 +761,11 @@ backup/restauração, destrutivo continua bloqueado.
 - Verificar branch, SHAs, worktree e `origin/main`.
 - Inspecionar somente o repositório/código local em modo read-only.
 - Preparar o próximo plano pré-alteração.
+- Preparar e apresentar o plano de caracterização de S05.
 - Fazer perguntas de confirmação.
-- Acessar banco, R2 ou Railway para B01, mesmo read-only, somente depois da
-  aprovação do plano correspondente.
+
+O acesso externo de B01 terminou. Qualquer novo acesso a PostgreSQL, R2,
+Railway ou outro serviço externo exige escopo e aprovação específicos.
 
 Não pode sem aprovação nova:
 
@@ -690,10 +779,19 @@ Não pode sem aprovação nova:
 
 ## 24. Próximo gate recomendado
 
-Apresentar plano pré-alteração para **B01 somente leitura**, incluindo fontes,
-consultas read-only, comparação produção/Drizzle/migrations, prevenção de DDL,
-proteção de dados sensíveis, entregáveis, riscos e validações. Aguardar
-aprovação explícita.
+Apresentar o plano pré-alteração de **S05**, ainda sem executá-lo. O plano deve
+cobrir:
+
+- inspeção local e somente leitura dos chamadores de `disconnectSession` e
+  `disconnectUser`;
+- baseline esperado dos dois comportamentos e das sessões afetadas;
+- matriz de desenvolvimento, testes e produção para `MASTER_PASSWORD_HASH`;
+- testes de caracterização propostos, sem usar senha/hash reais;
+- impacto em funcionários, necessidade de novo login e comunicação;
+- rollout, observabilidade, critérios de abortar e rollback.
+
+Aguardar aprovação explícita antes de criar testes, alterar código/configuração,
+validar segredo externo ou afetar qualquer sessão.
 
 ## 25. Mensagem curta para o novo chat
 
@@ -701,14 +799,19 @@ aprovação explícita.
 > `TODO.md`, `AUDITORIA_QUALIDADE_DE_VIDA.md` e
 > `CONTINUIDADE_AUDITORIA_QUALIDADE_DE_VIDA.md`. Não abra nem use
 > `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md`. Confirme SHAs/worktree, informe
-> percentuais concluído/restante em todas as atualizações e apresente o próximo
-> plano sem implementar até autorização explícita.
+> percentuais concluído/restante em todas as atualizações. B01 está concluído;
+> retome apresentando somente o plano de caracterização de S05. Não implemente,
+> afete sessões, acesse serviços externos, faça commit ou push sem autorização
+> explícita.
 
 ## 26. Estado de encerramento
 
 - H1 em produção e observado saudável: concluído.
 - C1 validado na crítica: concluído, ainda não em produção.
 - Integração/crítica sincronizadas com a main do hotfix: concluído.
-- Este handoff: concluído após commit/push.
+- B01 somente leitura: concluído, sem alteração de produção.
+- Registro documental de B01: atualizado localmente nos dois documentos
+  autorizados, sem commit ou push.
 - Próxima implementação: não autorizada.
-- Próxima ação segura: confirmar estado e apresentar o próximo plano.
+- Próxima ação segura: confirmar estado e apresentar somente o plano de S05.
+- Plano global estimado: **18% concluído / 82% restante**.
