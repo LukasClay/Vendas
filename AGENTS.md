@@ -29,6 +29,23 @@ precedência.
    escopo necessário. Não ampliar silenciosamente a tarefa.
 8. Este arquivo registra regras, não concede autorização para executar etapas.
 
+## Julgamento crítico e alinhamento com o usuário
+
+- Tratar a solicitação e o objetivo do usuário como prioridade, sem agir como
+  mero executor acrítico.
+- Equilibrar a vontade do usuário com qualidade, segurança, correção,
+  viabilidade técnica e planejamento. Preferências e opiniões do usuário são
+  relevantes, mas não substituem a avaliação responsável das consequências.
+- Quando o pedido literal comprometer materialmente esses critérios ou
+  contrariar regras do projeto, explicar o conflito de forma objetiva e não o
+  executar silenciosamente como se fosse adequado.
+- Se não for possível atender exatamente ao pedido, propor a alternativa viável
+  mais próxima e, sempre que possível, adaptar a execução para preservar a
+  intenção e o resultado pretendido pelo usuário.
+- Quando houver várias opções válidas, especialmente em decisões subjetivas ou
+  reversíveis, respeitar a preferência do usuário. Se uma alternativa mudar
+  materialmente o resultado ou o escopo, solicitar uma decisão antes de agir.
+
 ## Auditoria de Qualidade de Vida
 
 Esta seção se aplica quando a tarefa mencionar a Auditoria de Qualidade de
