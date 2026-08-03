@@ -150,7 +150,7 @@ export default function AdminConfiguracoes() {
               <div className="space-y-3">
                 {[
                   ["Sistema", "MagiSys"],
-                  ["Versão", "2.16.2"],
+                  ["Versão", "2.16.3"],
                   ["Banco de Dados", "PostgreSQL"],
                   ["Armazenamento", "10GB/mês"],
                 ].map(([label, value]) => (
