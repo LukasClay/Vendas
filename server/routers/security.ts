@@ -11,21 +11,7 @@ import {
 } from "../db";
 import { users } from "../../drizzle/schema";
 import { adminProcedure, router } from "../_core/trpc";
-import crypto from "crypto";
-
-// Senha mestre hasheada (SHA-256) para validação de operações críticas
-// Lê de ENV para não expor a senha no código fonte. Fallback hardcoded para compatibilidade.
-const MASTER_PASSWORD_HASH =
-  process.env.MASTER_PASSWORD_HASH ||
-  "2259180d28299fada66242f3c25eb2adc9b8ecfa2c6cce67d219f286fbe47241";
-
-function verifyMasterPassword(password: string): boolean {
-  const hash = crypto.createHash("sha256").update(password).digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(MASTER_PASSWORD_HASH)
-  );
-}
+import { verifyMasterPassword } from "../masterPassword";
 
 export const securityRouter = router({
   // Lista todas as sessões ativas com dados do usuário
@@ -74,7 +60,12 @@ export const securityRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!verifyMasterPassword(input.masterPassword)) {
+      if (
+        !verifyMasterPassword(
+          input.masterPassword,
+          process.env.MASTER_PASSWORD_HASH
+        )
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Senha mestre incorreta.",
@@ -123,7 +114,12 @@ export const securityRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      if (!verifyMasterPassword(input.masterPassword)) {
+      if (
+        !verifyMasterPassword(
+          input.masterPassword,
+          process.env.MASTER_PASSWORD_HASH
+        )
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Senha mestre incorreta.",
