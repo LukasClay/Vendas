@@ -45,8 +45,26 @@ Em 01/08/2026, o proprietário autorizou explicitamente:
 - após a revisão, registrar o checkpoint S05-A nestes dois documentos e criar
   commits locais separados para teste e documentação, sem push.
 
-Essas autorizações são específicas e não autorizam S05-B, rotação de segredo,
-deploy, alteração de sessões, acesso externo ou mudança de schema.
+Essas autorizações iniciais eram específicas e, naquele gate, não autorizavam
+S05-B, rotação de segredo, deploy, alteração de sessões, acesso externo ou
+mudança de schema.
+
+Ainda em 01/08/2026, após a apresentação do plano pré-alteração, o proprietário
+autorizou implementar e validar S05-B somente no repositório local. Essa
+autorização não incluía validar ou alterar ambiente externo, rotacionar segredo,
+afetar sessões reais, criar commit, fazer push ou deploy.
+
+Em 03/08/2026, o proprietário autorizou explicitamente:
+
+- concluir a revisão local de S05-B e corrigir somente bloqueadores dentro do
+  escopo aprovado;
+- registrar em commit local separado a ampliação do julgamento crítico em
+  `AGENTS.md`;
+- registrar este checkpoint nos dois documentos da auditoria e criar commits
+  locais separados para implementação/testes, versão e documentação, sem push.
+
+Essas autorizações foram consumidas. Elas não autorizam validação ou rotação de
+segredo externo, alteração de sessões, schema/DDL, push ou deploy.
 
 Também foi autorizada e executada a exclusão somente destes três arquivos
 locais não rastreados:
@@ -71,8 +89,10 @@ O arquivo `docs/REVISAO_TECNICA_GRANULAR_VENDAS.md` deve ser preservado.
   - `codex/qol-high`;
   - `codex/qol-medium`;
   - `codex/qol-low`.
-- A branch crítica local contém o teste S05-A no commit `4e0be94`; o remoto
-  permanece em `0f2642a` e nenhum push foi executado.
+- A branch crítica local contém S05-A em `4e0be94`, a ampliação do
+  `AGENTS.md` em `96fecd6`, S05-B em `cee9b77` e a versão `2.16.3` em
+  `2cffb03`.
+- O remoto crítico permanece em `0f2642a` e nenhum push foi executado.
 
 ## Método obrigatório de trabalho
 
@@ -268,10 +288,12 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 ### S05 — Senha mestre
 
 - `MASTER_PASSWORD_HASH` existe em produção.
-- Remover fallback e validar formato após plano de rollout.
+- S05-B removeu o fallback na branch local e passou a exigir SHA-256
+  hexadecimal válido de 64 caracteres.
 - Ausência/formato inválido devem falhar cedo e com segurança.
 - Nunca registrar senha ou hash.
-- Testar desenvolvimento, testes e produção.
+- Testes locais e CI usam somente fixture sintética; desenvolvimento e produção
+  ainda precisam de validação operacional antes do deploy.
 - Caracterizar `disconnect` antes de alterar código de sessões.
 
 ## Itens críticos e dependências preliminares
@@ -304,8 +326,9 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 - Produção já possui a variável necessária.
 - A caracterização S05-A de `disconnectSession` e `disconnectUser` foi
   concluída sem banco, sessão ou segredo real.
-- A remoção do fallback não deve invalidar sessões por si só.
-- Rollout precisa validar todos os ambientes antes do deploy.
+- S05-B foi concluído localmente sem alterar a semântica das sessões.
+- Produção continua no código anterior até um deploy autorizado; rollout precisa
+  validar todos os ambientes e rotacionar a credencial histórica antes disso.
 
 ### B01 — Bootstrap e compatibilidade do banco
 
@@ -337,8 +360,8 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
 - E01 fornece histórico/invariantes usados pelo dry-run E02.
 - S01 e S02 podem compartilhar infraestrutura de testes, mas não o mesmo
   commit funcional.
-- O baseline de disconnect de S05 foi concluído; S05-B ainda depende de plano
-  aprovado, validação dos ambientes e rotação segura da credencial histórica.
+- O baseline S05-A e a implementação local S05-B foram concluídos; validação dos
+  ambientes, rotação segura e rollout continuam em gate operacional separado.
 - Nenhum item autoriza alteração do fluxo principal de trabalho.
 
 ## Bloqueios atuais
@@ -350,9 +373,9 @@ Foram autorizados para planejamento e futura execução, após o plano da etapa:
    existir backup recente concluído.
 3. Nunca houve restore drill; o plano de restauração precisa ser definido.
 4. R2 não possui recuperação independente; deleção real permanece bloqueada.
-5. O fallback de senha mestre permanece no código e a credencial histórica
-   deve ser considerada comprometida; remoção, validação e rotação ainda não
-   foram autorizadas.
+5. O fallback foi removido somente na branch local; produção permanece no código
+   anterior. A credencial histórica deve ser considerada comprometida, e
+   validação externa, rotação e deploy ainda não foram autorizados.
 6. A estrutura imutável de reembolsos ainda precisa de proposta aprovada.
 7. Dados legados de usernames precisam ser inventariados antes de C01.
 8. `disconnectSession` incrementa a versão global do usuário; revogação
@@ -380,10 +403,12 @@ schema, migration ou ledger está autorizada. Antes de qualquer DDL ainda são
 obrigatórios backup recente, estratégia de restauração, plano idempotente,
 janela, rollback e autorização específica.
 
-S05-A foi concluído. O próximo candidato é apresentar o plano pré-alteração de
-S05-B para remover o fallback, validar `MASTER_PASSWORD_HASH`, falhar cedo e
-preparar rotação/rollout. O plano não autoriza alterar segredo externo,
-invalidar sessões, desconectar funcionários, implementar S05-B ou fazer deploy.
+S05-B foi concluído e validado somente no repositório local. O próximo candidato
+é apresentar o plano operacional de validação dos ambientes, rotação da
+credencial histórica e rollout. Esse plano deve cobrir comunicação,
+observabilidade, critérios de abortar e rollback sem restaurar a credencial
+comprometida; não autoriza por si só alterar segredo externo, invalidar sessões,
+fazer push ou deploy.
 
 ## Registro de execução — C1
 
@@ -568,3 +593,56 @@ invalidar sessões, desconectar funcionários, implementar S05-B ou fazer deploy
 - O aviso preexistente do chunk `exports` acima de 500 kB permaneceu.
 - S05-A: **100% concluído / 0% restante**.
 - Plano global estimado: **18% concluído / 82% restante**.
+
+## Registro de execução — S05-B
+
+### Escopo e barreiras
+
+- S05-B foi implementado e validado somente no repositório local, sem consultar
+  ou alterar desenvolvimento externo, CI remoto, Railway, PostgreSQL, R2,
+  segredo ou sessão real.
+- A semântica caracterizada em S05-A foi preservada integralmente; revogação
+  individual de JWT/sessão continua fora deste item.
+- A implementação e os testes foram registrados no commit local `cee9b77`; a
+  versão `2.16.3`, no commit local `2cffb03`. Nenhum push foi executado.
+
+### Implementação confirmada
+
+- `server/masterPassword.ts` exige exatamente 64 caracteres hexadecimais,
+  decodifica o hash configurado para 32 bytes e compara com o digest recebido
+  usando `timingSafeEqual`.
+- O fallback rastreado foi removido de `server/routers/security.ts`; senha e
+  hash não são registrados.
+- O entrypoint foi dividido em bootstrap mínimo e servidor operacional. A
+  validação ocorre antes de importar routers, criar o timer do rate limiter,
+  sondar porta, executar os três `ensure*`, abrir listener ou iniciar jobs.
+- Uma revisão detectou que a primeira versão do patch ainda avaliava imports
+  estáticos antes do assert. O bloqueador foi corrigido com importação dinâmica
+  testável e revalidado no bundle final.
+- `vitest.config.ts` injeta somente hash calculado de fixture sintética.
+- A versão visível passou de `2.16.2` para `2.16.3`.
+
+### Validação e resultado
+
+- Testes direcionados: 3 arquivos, 28 testes aprovados.
+- Backend completo: 31 arquivos, 238 testes aprovados.
+- `pnpm run typecheck` e `pnpm run build` aprovados.
+- Prettier direcionado, diff-check, whitespace, EOL e busca restrita por
+  fallback/segredo aprovados.
+- Smoke do bundle com configuração inválida encerrou com código 1, apresentou
+  somente erro seguro e não reproduziu o valor sentinela.
+- Três revisões independentes concluíram sem bloqueador final.
+- O aviso preexistente do chunk `exports` acima de 500 kB permaneceu.
+
+### Riscos e próximo gate
+
+- Produção ainda executa o código anterior; a existência e o formato da env não
+  foram revalidados externamente nesta etapa.
+- A credencial histórica continua considerada comprometida e precisa ser
+  rotacionada antes do rollout.
+- `startServer().catch(console.error)` já podia consumir falhas posteriores do
+  startup sem propagá-las; é dívida preexistente e item separado.
+- S05-B local: **100% concluído / 0% restante**.
+- Gate operacional de validação/rotação/rollout: **0% concluído / 100%
+  restante**.
+- Plano global estimado revisado: **20% concluído / 80% restante**.
