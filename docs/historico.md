@@ -322,3 +322,17 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Revisão somente leitura de possíveis duplicidades por telefone ou nome + nascimento
 - [x] Autocomplete de Nova Venda disponível também no campo de telefone, mantendo as permissões existentes
 - [x] APIs administrativas protegidas por `adminProcedure` e cobertas por testes de permissão
+
+---
+
+## Fundação Sales Insights para MCP (v2.17.0)
+
+- [x] Serviço interno com contratos para snapshot e desempenho de vendas agregadas
+- [x] Calendário no fuso `America/Sao_Paulo`, com sábado suplementar até 12h e domingo fechado
+- [x] Sábados futuros excluídos do divisor da meta necessária de segunda a sexta
+- [x] Dia atual incompleto excluído das médias históricas concluídas
+- [x] Metas alternativas aceitas somente como simulação, sem persistência
+- [x] Queries sem dados de clientes e com filtro obrigatório de vendedor e soft delete
+- [x] Autorização por scopes com bloqueio de acesso cruzado antes da consulta ao repositório
+- [x] Testes unitários e de SQL agregado, sem conexão ou alteração do banco real
+- [ ] Publicação das ferramentas MCP e OAuth 2.1 — reservada para a próxima fase
