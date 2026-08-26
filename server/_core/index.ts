@@ -20,6 +20,7 @@ import { sseEmitter } from "./sse";
 import { sdk } from "./sdk";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
+import { registerMcpRoutes } from "../mcp/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,6 +46,9 @@ async function startServer() {
   const server = createServer(app);
 
   app.set("trust proxy", 1); // Confia no proxy do Railway para pegar o IP real
+
+  // MCP usa parser e limite próprios. Quando desabilitado, /mcp responde 404.
+  registerMcpRoutes(app);
 
   // Configure body parser with safe size limit for file uploads
   app.use(express.json({ limit: "10mb" }));

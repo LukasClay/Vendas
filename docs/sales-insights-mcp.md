@@ -2,17 +2,23 @@
 
 ## Status
 
-A fase 1 implementa somente a fundação interna do `Sales Insights`. Ela não
-publica uma rota MCP, não altera o login atual, não cria tabelas e não executa
-operações no banco durante testes.
+A fase 2 implementa o resource server MCP na branch de teste. A integração
+permanece desligada por padrão e ainda não foi conectada ao ChatGPT. O login
+local atual não foi substituído nem reutilizado como bearer token do MCP. Não há
+tabelas ou migrations novas.
 
-Arquivos da fase:
+Arquivos principais:
 
 - `server/salesInsights/calendar.ts`: calendário de vendas no fuso oficial;
 - `server/salesInsights/repository.ts`: consultas exclusivamente agregadas;
 - `server/salesInsights/service.ts`: contratos, autorização e métricas;
 - `server/salesInsights/*.test.ts`: regras de negócio, formato das queries e
-  isolamento entre vendedores.
+  isolamento entre vendedores;
+- `server/mcp/config.ts`: configuração fail-closed;
+- `server/mcp/tokenVerifier.ts`: validação JWT e vínculo com usuário ativo;
+- `server/mcp/routes.ts`: metadados OAuth, rate limit e Streamable HTTP;
+- `server/mcp/server.ts`: ferramentas read-only;
+- `server/mcp/*.test.ts`: autenticação, transporte, schemas e isolamento.
 
 ## Arquitetura alvo
 
@@ -26,9 +32,8 @@ ChatGPT
   -> PostgreSQL
 ```
 
-O adaptador MCP deverá ser fino: validar o protocolo e transformar erros, sem
-duplicar consultas ou regras de negócio. O painel atual poderá reutilizar o
-mesmo serviço posteriormente, sem mudar sua autenticação nesta fase.
+O adaptador MCP é fino: valida protocolo, token e schemas e delega as regras ao
+Sales Insights. O painel e o login atuais não dependem do MCP.
 
 Referências oficiais usadas para o desenho:
 
@@ -42,7 +47,6 @@ Referências oficiais usadas para o desenho:
 
 Entrada:
 
-- `sellerId` opcional, sujeito à autorização;
 - até dez `targets` positivos para simulações da conversa.
 
 Saída:
@@ -57,7 +61,6 @@ Saída:
 
 Entrada:
 
-- `sellerId` opcional, sujeito à autorização;
 - intervalo de datas de até 366 dias.
 
 Saída:
@@ -67,9 +70,10 @@ Saída:
 - média, melhor e pior dia somente entre períodos concluídos;
 - classificação de cada dia, sem dados de clientes.
 
-Os nomes acima são os nomes planejados das ferramentas MCP. Nesta fase, os
-contratos existem como métodos internos `getSalesSnapshot` e
-`getSalesPerformance`.
+As duas ferramentas são publicadas somente quando `MCP_ENABLED=true`. A
+superfície MCP inicial não aceita `sellerId`: ela sempre usa o usuário vinculado
+ao token. O suporte interno a `sales:read:team` permanece reservado para uma
+ferramenta administrativa futura.
 
 ## Regras de calendário
 
@@ -91,11 +95,11 @@ do dia atual sem horários confiáveis.
 
 ## Autorização e dados
 
-| Ação                                       | Requisito                              |
-| ------------------------------------------ | -------------------------------------- |
-| Consultar os próprios agregados            | scope `sales:read:self`                |
-| Consultar outro vendedor                   | role `admin` e scope `sales:read:team` |
-| Consultar a si próprio com scope de equipe | role `admin` e `sales:read:team`       |
+| Superfície                      | Requisito                              |
+| ------------------------------- | -------------------------------------- |
+| MCP fase 2: próprios agregados  | scope `sales:read:self`                |
+| Serviço interno: outro vendedor | role `admin` e scope `sales:read:team` |
+| Ferramenta MCP administrativa   | ainda não publicada                    |
 
 A autorização é verificada antes da consulta ao repositório. Assim, um token
 sem acesso não consegue usar a existência de IDs de vendedores como canal de
@@ -106,16 +110,64 @@ Elas sempre filtram `sellerId` e `deletedAt IS NULL`. Não retornam nome, telefo
 ou nascimento de clientes, observações, comprovantes, fotos, chaves de storage,
 tokens ou senhas.
 
-## Próximas fases
+O token deve conter uma claim configurável com o `users.id` numérico. E-mail não
+é usado como vínculo porque não é obrigatório nem único no modelo atual. Após
+validar a assinatura, o servidor busca apenas `id` e `role`, exigindo
+`active=true` e `deletedAt IS NULL`. O cargo do token nunca é aceito como fonte
+de autorização.
 
-1. definir o provedor OAuth 2.1, emissão/revogação de scopes e vínculo entre o
-   subject do token e `users.id`;
-2. adicionar o adaptador MCP ao Express com HTTPS, Streamable HTTP, limites de
-   requisição, logs sem conteúdo sensível e tradução de erros;
-3. publicar `get_sales_snapshot` e `get_sales_performance` como ferramentas
-   somente leitura;
-4. validar o fluxo ponta a ponta em ambiente não produtivo;
-5. somente depois, avaliar ferramentas administrativas de equipe e ranking.
+## Configuração da fase 2
+
+Nenhuma das variáveis abaixo deve ser criada em produção durante o teste. Elas
+serão configuradas primeiro somente no serviço Vendas Copy:
+
+| Variável                    | Finalidade                                                        |
+| --------------------------- | ----------------------------------------------------------------- |
+| `MCP_ENABLED`               | `false` por padrão; `true` publica metadados e `/mcp`             |
+| `MCP_RESOURCE_URL`          | URL HTTPS canônica e exata do endpoint `/mcp`                     |
+| `MCP_AUTH_ISSUER`           | issuer exato publicado pelo provedor OAuth                        |
+| `MCP_AUTH_JWKS_URL`         | JWKS usado para verificar assinaturas RS256                       |
+| `MCP_AUTH_USER_ID_CLAIM`    | nome da claim que contém o `users.id` autorizado                  |
+| `MCP_RATE_LIMIT_PER_MINUTE` | limite por IP, opcional; padrão `60`, intervalo permitido `1-600` |
+
+Quando habilitada, uma configuração incompleta encerra a inicialização em vez
+de publicar um endpoint parcialmente protegido. Fora dos testes locais, todas
+as URLs precisam usar HTTPS e `MCP_RESOURCE_URL` precisa terminar exatamente em
+`/mcp`.
+
+O provedor OAuth deve emitir tokens curtos para a audiência exata de
+`MCP_RESOURCE_URL`, publicar discovery compatível com OAuth 2.1/PKCE S256 e
+incluir o scope `sales:read:self`. O Vendas valida assinatura, issuer, audiência,
+expiração, scope e usuário ativo em cada requisição.
+
+O vínculo de teste deve ser mantido em metadados administrativos do provedor,
+nunca em metadados que o próprio usuário possa editar. O logout do painel Vendas
+encerra a sessão local, mas não revoga automaticamente um access token emitido
+pelo provedor OAuth. Por isso, o teste deve usar tokens de curta duração e também
+validar a revogação/desconexão pelo provedor e pelo ChatGPT.
+
+## Proteções do endpoint
+
+- corpo JSON limitado a 256 KB antes de chegar ao MCP;
+- rate limit por IP antes da autenticação;
+- transporte stateless, sem sessão compartilhada entre usuários;
+- schemas estritos de entrada e saída;
+- anotações `readOnlyHint=true`, `destructiveHint=false` e
+  `openWorldHint=false`;
+- erros e logs não incluem token, claims completas, parâmetros ou resultados;
+- `/mcp` e metadados retornam 404 quando `MCP_ENABLED=false`.
+
+## Pendências antes de `main`
+
+1. criar/configurar um tenant OAuth de desenvolvimento separado;
+2. vincular apenas a conta de teste ao `users.id` correspondente no banco Copy;
+3. configurar as variáveis exclusivamente no Vendas Copy;
+4. habilitar o MCP no Copy e verificar health check, metadados e recusas;
+5. conectar a URL do Copy ao modo de desenvolvedor do ChatGPT;
+6. comparar respostas do ChatGPT com o painel Copy;
+7. repetir os smoke tests críticos do sistema existente;
+8. validar desconexão/revogação e expiração do token de teste;
+9. somente depois discutir merge/push em `main` e produção.
 
 Antes de métricas por hora, ainda é necessário definir início, intervalo e fim
 do expediente de segunda a sexta. Essa pendência não recebe valores presumidos.
@@ -150,11 +202,17 @@ Após o deploy, verificar `GET /api/health` e executar manualmente:
 - painel da consultora e seus fluxos principais;
 - logout, novo login e invalidação de sessão;
 - dashboard e relatórios do ADM;
-- ausência de `/mcp` enquanto a fase 2 não estiver habilitada.
+- `/mcp` e metadados respondendo 404 enquanto `MCP_ENABLED=false`.
 
-O deploy desta fase 1 valida regressões do sistema existente. Ele ainda não
-valida uma conversa com o ChatGPT, porque o adaptador MCP e o OAuth permanecem
-desconectados.
+Após habilitar a fase 2 somente no Copy, validar também:
+
+- metadados OAuth retornando o resource e issuer esperados;
+- `/mcp` sem token, token inválido e token sem scope recusados;
+- ChatGPT solicitando autorização e listando somente as duas ferramentas;
+- tentativa de informar `sellerId` recusada;
+- totais retornados iguais aos dados do painel Copy;
+- nenhum dado pessoal de cliente presente na resposta.
+- token expirado/revogado recusado após a desconexão no provedor ou no ChatGPT.
 
 ### Gate 3 — produção
 

@@ -335,4 +335,23 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Queries sem dados de clientes e com filtro obrigatório de vendedor e soft delete
 - [x] Autorização por scopes com bloqueio de acesso cruzado antes da consulta ao repositório
 - [x] Testes unitários e de SQL agregado, sem conexão ou alteração do banco real
-- [ ] Publicação das ferramentas MCP e OAuth 2.1 — reservada para a próxima fase
+- [x] Fundação mantida isolada do runtime até a implementação da fase 2
+
+---
+
+## MCP autenticado para Sales Insights (v2.18.0)
+
+- [x] Endpoint `/mcp` por Streamable HTTP usando o SDK TypeScript oficial
+- [x] Integração desligada por padrão com `MCP_ENABLED=false` e resposta 404
+- [x] Validação JWT por JWKS, RS256, emissor, audiência, expiração e scope
+- [x] Vínculo explícito entre claim do token e `users.id`, sem usar e-mail
+- [x] Usuário e cargo revalidados no banco a cada requisição; inativos e excluídos são recusados
+- [x] Ferramentas `get_sales_snapshot` e `get_sales_performance` somente leitura
+- [x] Superfície MCP inicial restrita ao próprio usuário, sem parâmetro `sellerId`
+- [x] Schemas estritos impedem campos inesperados na entrada e na saída
+- [x] Limite de corpo de 256 KB, rate limit por IP e logs sem token ou resultado
+- [x] Testes locais de metadados, transporte, token assinado, scopes e isolamento
+- [x] Falhas do vínculo com o banco convertidas em erro sanitizado, sem detalhes internos
+- [x] Logout local documentado como independente da revogação do token OAuth
+- [ ] Configuração do provedor OAuth de desenvolvimento no Vendas Copy
+- [ ] Teste ponta a ponta com o ChatGPT antes de qualquer envio para `main`
