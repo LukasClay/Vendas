@@ -1,6 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { TrpcContext } from "./_core/context";
-import { isSuperAdminUser, securityRouter } from "./routers/security";
+import {
+  getHiddenAuditLogActions,
+  isSuperAdminUser,
+  securityRouter,
+  SUPER_ADMIN_MAINTENANCE_ACTIONS,
+} from "./routers/security";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -83,6 +88,15 @@ describe("Super ADM", () => {
     expect(isSuperAdminUser(createAdminContext(8, "owner-account").user!)).toBe(
       false
     );
+  });
+
+  it("oculta registros de manutenção dos demais administradores", () => {
+    process.env.SUPER_ADMIN_USER_ID = "7";
+
+    expect(getHiddenAuditLogActions(createAdminContext(8).user!)).toEqual([
+      ...SUPER_ADMIN_MAINTENANCE_ACTIONS,
+    ]);
+    expect(getHiddenAuditLogActions(createAdminContext(7).user!)).toEqual([]);
   });
 
   it("bloqueia mutações de qualquer outro administrador antes do banco", async () => {

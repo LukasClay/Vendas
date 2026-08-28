@@ -30,6 +30,10 @@ function verifyMasterPassword(password: string): boolean {
 
 const SUPER_ADMIN_UPDATED_LOG_ACTION = "Super ADM alterou log";
 const SUPER_ADMIN_DELETED_LOG_ACTION = "Super ADM apagou log";
+export const SUPER_ADMIN_MAINTENANCE_ACTIONS = [
+  SUPER_ADMIN_UPDATED_LOG_ACTION,
+  SUPER_ADMIN_DELETED_LOG_ACTION,
+] as const;
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -57,10 +61,13 @@ function requireSuperAdmin(user: AuthenticatedUser) {
 }
 
 function isProtectedSuperAdminLog(action: string): boolean {
-  return (
-    action === SUPER_ADMIN_UPDATED_LOG_ACTION ||
-    action === SUPER_ADMIN_DELETED_LOG_ACTION
+  return SUPER_ADMIN_MAINTENANCE_ACTIONS.some(
+    maintenanceAction => action === maintenanceAction
   );
+}
+
+export function getHiddenAuditLogActions(user: AuthenticatedUser): string[] {
+  return isSuperAdminUser(user) ? [] : [...SUPER_ADMIN_MAINTENANCE_ACTIONS];
 }
 
 const editableAuditLogInput = z.object({
@@ -110,10 +117,11 @@ export const securityRouter = router({
         })
         .optional()
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       return getAuditLogs({
         userId: input?.userId,
         action: input?.action,
+        excludeActions: getHiddenAuditLogActions(ctx.user),
         limit: input?.limit ?? 50,
         offset: input?.offset ?? 0,
       });

@@ -1672,6 +1672,7 @@ export async function getAuditLogs(
   filters: {
     userId?: number;
     action?: string;
+    excludeActions?: string[];
     limit?: number;
     offset?: number;
   } = {}
@@ -1685,6 +1686,9 @@ export async function getAuditLogs(
     conditions.push(
       sql`${auditLogs.action} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
     );
+  }
+  for (const excludedAction of filters.excludeActions ?? []) {
+    conditions.push(ne(auditLogs.action, excludedAction));
   }
 
   const base = db.select().from(auditLogs);
