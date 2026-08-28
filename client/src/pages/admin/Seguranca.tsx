@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Shield,
@@ -17,10 +17,21 @@ import {
   ChevronDown,
   RefreshCw,
   Users,
+  Pencil,
+  Trash2,
+  Save,
+  LockKeyhole,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { motion } from "framer-motion";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/Animations";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Tab = "sessions" | "logs";
 
@@ -961,12 +972,413 @@ function AuditLogsTab() {
   );
 }
 
+// ─── Painel oculto do Super ADM ─────────────────────────────────────────────
+
+type EditableAuditLog = {
+  id: number;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+};
+
+const PROTECTED_SUPER_ADMIN_ACTIONS = new Set([
+  "Super ADM alterou log",
+  "Super ADM apagou log",
+]);
+
+function toDateTimeLocal(date: string | Date): string {
+  const value = new Date(date);
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function createEditableLog(log: AuditLogEntry): EditableAuditLog {
+  return {
+    id: log.id,
+    userId: log.userId?.toString() ?? "",
+    userName: log.userName ?? "",
+    action: log.action,
+    details: log.details ?? "",
+    ipAddress: log.ipAddress ?? "",
+    userAgent: log.userAgent ?? "",
+    createdAt: toDateTimeLocal(log.createdAt),
+  };
+}
+
+function SuperAdminLogsPanel({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const utils = trpc.useUtils();
+  const [masterPassword, setMasterPassword] = useState("");
+  const [editing, setEditing] = useState<EditableAuditLog | null>(null);
+  const {
+    data: logs = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = trpc.security.getAuditLogs.useQuery(
+    { limit: 100, offset: 0 },
+    { enabled: open, staleTime: 0 }
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setEditing(null);
+      setMasterPassword("");
+    }
+  }, [open]);
+
+  const updateMutation = trpc.security.updateAuditLog.useMutation({
+    onSuccess: async () => {
+      toast.success("Log alterado com sucesso.");
+      setEditing(null);
+      await utils.security.getAuditLogs.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const deleteMutation = trpc.security.deleteAuditLog.useMutation({
+    onSuccess: async () => {
+      toast.success("Log apagado com sucesso.");
+      await utils.security.getAuditLogs.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  const saveEdit = () => {
+    if (!editing || !editing.action.trim()) return;
+    if (!masterPassword) {
+      toast.error("Informe a senha mestre.");
+      return;
+    }
+    const createdAt = new Date(editing.createdAt);
+    if (Number.isNaN(createdAt.getTime())) {
+      toast.error("Data e hora inválidas.");
+      return;
+    }
+    const userId = editing.userId.trim() ? Number(editing.userId.trim()) : null;
+    if (userId !== null && (!Number.isInteger(userId) || userId <= 0)) {
+      toast.error("O ID do usuário deve ser um número inteiro positivo.");
+      return;
+    }
+
+    updateMutation.mutate({
+      id: editing.id,
+      userId,
+      userName: editing.userName.trim() || null,
+      action: editing.action.trim(),
+      details: editing.details || null,
+      ipAddress: editing.ipAddress.trim() || null,
+      userAgent: editing.userAgent || null,
+      createdAt,
+      masterPassword,
+    });
+  };
+
+  const deleteLog = (log: AuditLogEntry) => {
+    if (!masterPassword) {
+      toast.error("Informe a senha mestre.");
+      return;
+    }
+    if (!window.confirm(`Apagar definitivamente o log #${log.id}?`)) return;
+    deleteMutation.mutate({ id: log.id, masterPassword });
+  };
+
+  const fieldClass =
+    "w-full rounded-lg border px-3 py-2 text-sm bg-[var(--input)] text-[var(--foreground)] border-[var(--border)]";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LockKeyhole className="h-5 w-5 text-[var(--primary)]" />
+            Painel do Super ADM
+          </DialogTitle>
+          <DialogDescription>
+            Edite ou apague registros de atividade. As operações de manutenção
+            ficam protegidas para preservar a rastreabilidade.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4 overflow-hidden">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="flex-1 text-xs font-semibold text-[var(--muted-foreground)]">
+              Senha mestre
+              <input
+                type="password"
+                value={masterPassword}
+                onChange={event => setMasterPassword(event.target.value)}
+                className={`${fieldClass} mt-1`}
+                autoComplete="current-password"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold disabled:opacity-50"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+              Atualizar
+            </button>
+          </div>
+
+          <div className="overflow-y-auto pr-1">
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--primary)]" />
+              </div>
+            ) : logs.length === 0 ? (
+              <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">
+                Nenhum log encontrado.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {(logs as AuditLogEntry[]).map(log => {
+                  const isProtected = PROTECTED_SUPER_ADMIN_ACTIONS.has(
+                    log.action
+                  );
+                  const isEditing = editing?.id === log.id;
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="rounded-xl border p-4"
+                      style={{ borderColor: "var(--border)" }}
+                    >
+                      {isEditing && editing ? (
+                        <div className="space-y-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="text-xs font-semibold text-[var(--muted-foreground)]">
+                              ID do usuário
+                              <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={editing.userId}
+                                onChange={event =>
+                                  setEditing({
+                                    ...editing,
+                                    userId: event.target.value,
+                                  })
+                                }
+                                className={`${fieldClass} mt-1`}
+                              />
+                            </label>
+                            <label className="text-xs font-semibold text-[var(--muted-foreground)]">
+                              Usuário
+                              <input
+                                value={editing.userName}
+                                onChange={event =>
+                                  setEditing({
+                                    ...editing,
+                                    userName: event.target.value,
+                                  })
+                                }
+                                className={`${fieldClass} mt-1`}
+                                maxLength={256}
+                              />
+                            </label>
+                            <label className="text-xs font-semibold text-[var(--muted-foreground)]">
+                              Ação
+                              <input
+                                value={editing.action}
+                                onChange={event =>
+                                  setEditing({
+                                    ...editing,
+                                    action: event.target.value,
+                                  })
+                                }
+                                className={`${fieldClass} mt-1`}
+                                maxLength={128}
+                              />
+                            </label>
+                            <label className="text-xs font-semibold text-[var(--muted-foreground)]">
+                              Data e hora
+                              <input
+                                type="datetime-local"
+                                value={editing.createdAt}
+                                onChange={event =>
+                                  setEditing({
+                                    ...editing,
+                                    createdAt: event.target.value,
+                                  })
+                                }
+                                className={`${fieldClass} mt-1`}
+                              />
+                            </label>
+                            <label className="text-xs font-semibold text-[var(--muted-foreground)]">
+                              Endereço IP
+                              <input
+                                value={editing.ipAddress}
+                                onChange={event =>
+                                  setEditing({
+                                    ...editing,
+                                    ipAddress: event.target.value,
+                                  })
+                                }
+                                className={`${fieldClass} mt-1`}
+                                maxLength={64}
+                              />
+                            </label>
+                          </div>
+                          <label className="block text-xs font-semibold text-[var(--muted-foreground)]">
+                            Detalhes
+                            <textarea
+                              value={editing.details}
+                              onChange={event =>
+                                setEditing({
+                                  ...editing,
+                                  details: event.target.value,
+                                })
+                              }
+                              className={`${fieldClass} mt-1 min-h-24 resize-y font-mono`}
+                              maxLength={50_000}
+                            />
+                          </label>
+                          <label className="block text-xs font-semibold text-[var(--muted-foreground)]">
+                            User-Agent
+                            <textarea
+                              value={editing.userAgent}
+                              onChange={event =>
+                                setEditing({
+                                  ...editing,
+                                  userAgent: event.target.value,
+                                })
+                              }
+                              className={`${fieldClass} mt-1 min-h-16 resize-y`}
+                              maxLength={2_000}
+                            />
+                          </label>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditing(null)}
+                              className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                              style={{ borderColor: "var(--border)" }}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveEdit}
+                              disabled={updateMutation.isPending}
+                              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                              style={{ background: "var(--primary)" }}
+                            >
+                              {updateMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4" />
+                              )}
+                              Salvar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs text-[var(--muted-foreground)]">
+                                #{log.id}
+                              </span>
+                              <strong className="text-sm text-[var(--foreground)]">
+                                {log.action}
+                              </strong>
+                              {isProtected && (
+                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600">
+                                  Protegido
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
+                              {log.userName || "Sistema"} ·{" "}
+                              {formatDateTime(log.createdAt)}
+                              {log.ipAddress ? ` · ${log.ipAddress}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditing(createEditableLog(log))}
+                              disabled={isProtected}
+                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                              style={{ borderColor: "var(--border)" }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteLog(log)}
+                              disabled={isProtected || deleteMutation.isPending}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> Apagar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Página Principal ────────────────────────────────────────────────────────
 
 export default function AdminSeguranca() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const [tab, setTab] = useState<Tab>("sessions");
+  const [superAdminOpen, setSuperAdminOpen] = useState(false);
+  const { refetch: checkSuperAdminAccess } =
+    trpc.security.getSuperAdminAccess.useQuery(undefined, {
+      enabled: false,
+      retry: false,
+    });
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (
+        event.repeat ||
+        !event.ctrlKey ||
+        !event.shiftKey ||
+        event.key.toLowerCase() !== "k"
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      void checkSuperAdminAccess().then(result => {
+        if (result.data?.granted) {
+          setSuperAdminOpen(true);
+        } else {
+          toast.error("Acesso restrito ao Super ADM.");
+        }
+      });
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [checkSuperAdminAccess]);
 
   const tabs: { id: Tab; label: string; icon: typeof Shield }[] = [
     { id: "sessions", label: "Sessões", icon: Monitor },
@@ -1040,6 +1452,10 @@ export default function AdminSeguranca() {
           {tab === "sessions" ? <SessionsTab /> : <AuditLogsTab />}
         </div>
       </FadeIn>
+      <SuperAdminLogsPanel
+        open={superAdminOpen}
+        onOpenChange={setSuperAdminOpen}
+      />
     </DashboardLayout>
   );
 }
