@@ -1370,8 +1370,6 @@ export default function AdminSeguranca() {
       void checkSuperAdminAccess().then(result => {
         if (result.data?.granted) {
           setSuperAdminOpen(true);
-        } else {
-          toast.error("Acesso restrito ao Super ADM.");
         }
       });
     };
