@@ -322,3 +322,11 @@ Categoria definida no momento da venda, não no cadastro do produto.
 - [x] Revisão somente leitura de possíveis duplicidades por telefone ou nome + nascimento
 - [x] Autocomplete de Nova Venda disponível também no campo de telefone, mantendo as permissões existentes
 - [x] APIs administrativas protegidas por `adminProcedure` e cobertas por testes de permissão
+
+---
+
+## Nova Venda para o Mesmo Cliente (v2.18.0)
+
+- [x] Ação **Nova venda para este cliente** na confirmação da venda, preservando os dados do cliente, vínculo canônico, DDI e máscaras sem nova busca
+- [x] Produto, valor, observações, comprovante, fotos e horário são limpos; data da venda retorna ao dia atual e sugestões anteriores são descartadas
+- [x] **Registrar Nova Venda** mantém o reset completo, com as duas ações empilhadas para uso no celular

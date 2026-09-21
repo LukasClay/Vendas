@@ -687,34 +687,46 @@ export default function NovaVenda() {
     setPhoto2Preview(null);
   }, [canUploadClientPhotos]);
 
-  const resetForm = () => {
-    setForm({
-      clientId: null,
-      selectedClientSnapshot: null,
-      clientName: "",
-      clientBirthDate: "",
-      clientPhone: "",
+  const resetForm = (preserveClient = false) => {
+    setForm(current => ({
+      clientId: preserveClient ? current.clientId : null,
+      selectedClientSnapshot: preserveClient
+        ? current.selectedClientSnapshot
+        : null,
+      clientName: preserveClient ? current.clientName : "",
+      clientBirthDate: preserveClient ? current.clientBirthDate : "",
+      clientPhone: preserveClient ? current.clientPhone : "",
       productName: "",
       productId: null,
       productCategory: "individual",
       saleDate: getLocalToday(),
       amountFormatted: "",
       notes: "",
-    });
-    setBirthDateMasked("");
-    setSelectedCountry(COUNTRIES[0]);
-    setClientSearch("");
-    setDebouncedClientSearch("");
+    }));
+    if (!preserveClient) {
+      setBirthDateMasked("");
+      setSelectedCountry(COUNTRIES[0]);
+    }
+    setDdiSearch("");
+    setShowDdiDropdown(false);
+    // Descarta respostas pendentes sem pesquisar novamente o cliente preservado.
+    clientSearchRequestId.current += 1;
+    setClientSearch(preserveClient ? form.clientName : "");
+    setDebouncedClientSearch(preserveClient ? form.clientName.trim() : "");
     setClientSearchSource("name");
     setClientDropdownOpen(false);
     setDebouncedClientSearchSource("name");
     setClientSuggestions([]);
     setClientSuggestionsTerm("");
     setClientSuggestionsSource(null);
+    setLoadingClientSuggestions(false);
+    setClientSearchError(false);
     setActiveClientIndex(-1);
     clientInputRef.current?.blur();
     setProductQuery("");
     setProductDropdownOpen(false);
+    setActiveProductIndex(-1);
+    setIsDragging(false);
     setFile(null);
     setFilePreview(null);
     setPhoto1(null);
@@ -722,6 +734,7 @@ export default function NovaVenda() {
     setPhoto2(null);
     setPhoto2Preview(null);
     setConsultationSlotId(null);
+    createSale.reset();
     setSuccess(false);
   };
 
@@ -760,15 +773,31 @@ export default function NovaVenda() {
             >
               O administrador poderá visualizá-la no painel.
             </p>
-            <button
-              onClick={resetForm}
-              className="w-full py-5 px-8 rounded-2xl text-white font-semibold text-lg transition-all active:scale-[0.98] shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #c17f24, #d4932a)",
-              }}
-            >
-              Registrar Nova Venda
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => resetForm()}
+                className="w-full py-5 px-8 rounded-2xl text-white font-semibold text-lg transition-all active:scale-[0.98] shadow-lg"
+                style={{
+                  background: "linear-gradient(135deg, #c17f24, #d4932a)",
+                }}
+              >
+                Registrar Nova Venda
+              </button>
+              <button
+                type="button"
+                onClick={() => resetForm(true)}
+                className="w-full py-4 px-4 rounded-2xl font-semibold text-base"
+                style={{
+                  color: isDark ? "var(--foreground)" : "#1a1a2e",
+                  border: isDark
+                    ? "1.5px solid var(--border)"
+                    : "1.5px solid #ddd5c4",
+                }}
+              >
+                Nova venda para este cliente
+              </button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
