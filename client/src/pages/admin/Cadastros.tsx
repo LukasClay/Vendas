@@ -216,7 +216,7 @@ function ClientEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Editar cadastro canônico</DialogTitle>
             <DialogDescription>
@@ -261,7 +261,7 @@ function ClientEditDialog({
                   type="date"
                   value={birthDate}
                   onChange={event => setBirthDate(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                  className="h-11 w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--ring)]"
                 />
               </div>
               <div className="space-y-2">
@@ -301,7 +301,7 @@ function ClientEditDialog({
       </Dialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>
               Confirmar atualização do cadastro?
@@ -315,7 +315,7 @@ function ClientEditDialog({
               <dt className="text-xs font-medium text-[var(--muted-foreground)]">
                 Nome
               </dt>
-              <dd className="font-semibold text-[var(--foreground)]">
+              <dd className="break-words font-semibold text-[var(--foreground)]">
                 {fullName.trim()}
               </dd>
             </div>
@@ -388,8 +388,8 @@ function ClientDetailsDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
-        <DialogHeader className="border-b border-[var(--border)] px-5 py-5 pr-12 sm:px-7">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 py-4 pr-12 text-left sm:px-7 sm:py-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <DialogTitle
@@ -407,7 +407,7 @@ function ClientDetailsDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="mr-0 w-fit shrink-0 sm:mr-7"
+                className="w-full shrink-0 sm:mr-7 sm:w-auto"
                 onClick={() => onEdit(data.client)}
               >
                 <Pencil className="h-4 w-4" />
@@ -417,7 +417,7 @@ function ClientDetailsDialog({
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-5 py-6 sm:px-7">
+        <div className="min-h-0 overflow-y-auto px-5 py-6 sm:px-7">
           {detailQuery.isLoading ? (
             <div className="space-y-6" aria-label="Carregando ficha da cliente">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -501,7 +501,7 @@ function ClientDetailsDialog({
                     <dt className="text-xs text-[var(--muted-foreground)]">
                       Nome completo
                     </dt>
-                    <dd className="mt-1 font-semibold text-[var(--foreground)]">
+                    <dd className="mt-1 break-words font-semibold text-[var(--foreground)]">
                       {data.client.fullName}
                     </dd>
                   </div>
@@ -659,8 +659,8 @@ function ClientDetailsDialog({
                           className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold text-[var(--foreground)]">
+                            <div className="min-w-0">
+                              <p className="break-words font-semibold text-[var(--foreground)]">
                                 {sale.productName}
                               </p>
                               <p className="mt-1 text-xs text-[var(--muted-foreground)]">
@@ -788,7 +788,10 @@ export default function AdminCadastros() {
           className="gap-5"
         >
           <TabsList className="h-11 w-full border border-[var(--border)] bg-[var(--secondary)] p-1 sm:w-fit">
-            <TabsTrigger value="clientes" className="h-9 px-4">
+            <TabsTrigger
+              value="clientes"
+              className="h-9 px-2 text-xs sm:px-4 sm:text-sm"
+            >
               <UsersRound className="h-4 w-4" />
               Clientes
               {clientListQuery.data && (
@@ -797,7 +800,10 @@ export default function AdminCadastros() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="duplicidades" className="h-9 px-4">
+            <TabsTrigger
+              value="duplicidades"
+              className="h-9 px-2 text-xs sm:px-4 sm:text-sm"
+            >
               <AlertCircle className="h-4 w-4" />
               Duplicidades
               {duplicateGroupsQuery.data && (
@@ -1017,8 +1023,8 @@ export default function AdminCadastros() {
                               {formatDate(client.lastSaleDate)}
                             </dd>
                           </div>
-                          <div className="col-span-2 flex items-end justify-between gap-3 border-t border-[var(--border)] pt-3">
-                            <div>
+                          <div className="col-span-2 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--border)] pt-3">
+                            <div className="min-w-0">
                               <dt className="text-xs text-[var(--muted-foreground)]">
                                 Total registrado
                               </dt>
@@ -1146,7 +1152,7 @@ export default function AdminCadastros() {
                         {group.candidates.map(candidate => (
                           <div
                             key={candidate.id}
-                            className="rounded-2xl border border-[var(--border)] bg-[var(--secondary)]/25 p-4"
+                            className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--secondary)]/25 p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
