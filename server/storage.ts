@@ -8,6 +8,7 @@
  */
 
 import { ENV } from "./_core/env";
+import { assertSandboxStorage, isSandboxMode } from "./_core/sandbox";
 
 export class StorageObjectNotFoundError extends Error {
   constructor(key: string) {
@@ -26,6 +27,7 @@ export type StorageDownloadResult = {
 // ─── Manus Proxy ─────────────────────────────────────────────────────────────
 
 function getManusConfig() {
+  if (isSandboxMode()) return null;
   const baseUrl = ENV.forgeApiUrl;
   const apiKey = ENV.forgeApiKey;
   if (!baseUrl || !apiKey) return null;
@@ -152,6 +154,7 @@ function getS3Config() {
   const publicUrl = process.env.S3_PUBLIC_URL; // URL pública do bucket (ex: https://bucket.r2.dev)
   const region = process.env.S3_REGION || "auto";
   if (!endpoint || !bucket || !accessKey || !secretKey) return null;
+  assertSandboxStorage(bucket);
   return { endpoint, bucket, accessKey, secretKey, publicUrl, region };
 }
 

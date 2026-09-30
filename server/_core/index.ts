@@ -20,6 +20,7 @@ import { sseEmitter } from "./sse";
 import { sdk } from "./sdk";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
+import { isSandboxMode } from "./sandbox";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -156,6 +157,12 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    if (isSandboxMode()) {
+      console.log(
+        "[Sandbox] Jobs e envios externos desabilitados no ambiente de teste."
+      );
+      return;
+    }
     // Somente a réplica líder executa os jobs de alertas e relatórios.
     const jobLeadership = startJobLeadership();
     server.once("close", () => {

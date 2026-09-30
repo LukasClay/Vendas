@@ -2,12 +2,13 @@ import webpush from "web-push";
 import { getDb } from "./db";
 import { pushSubscriptions, users } from "../drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
+import { isSandboxMode } from "./_core/sandbox";
 
 // Configurar VAPID
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
 
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && !isSandboxMode()) {
   webpush.setVapidDetails(
     "mailto:admin@vendas.app",
     VAPID_PUBLIC_KEY,
@@ -66,6 +67,7 @@ export async function sendPushToUser(
   userId: number,
   payload: { title: string; body: string; url?: string }
 ) {
+  if (isSandboxMode()) return;
   const db = await getDb();
   if (!db) return;
 
@@ -106,6 +108,7 @@ export async function sendPushToRoles(
   roles: ("admin" | "consultora")[],
   payload: { title: string; body: string; url?: string }
 ) {
+  if (isSandboxMode()) return;
   const db = await getDb();
   if (!db) return;
 

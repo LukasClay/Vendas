@@ -30,6 +30,7 @@ import {
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { assertSandboxDatabase } from "./_core/sandbox";
 import {
   getLocalLoginHealth,
   type LocalLoginHealthResult,
@@ -81,6 +82,7 @@ export async function getDb() {
   // Prefere RAILWAY_DATABASE_URL (PostgreSQL real) sobre DATABASE_URL (TiDB do Manus)
   const connStr = process.env.RAILWAY_DATABASE_URL || process.env.DATABASE_URL;
   if (!connStr) return null;
+  assertSandboxDatabase(connStr);
   _pool = new Pool({
     connectionString: connStr,
     max: 20,

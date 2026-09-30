@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { isSandboxMode } from "./sandbox";
 
 export type NotificationPayload = {
   title: string;
@@ -18,6 +19,7 @@ export type NotificationPayload = {
 export async function notifyOwner(
   payload: NotificationPayload
 ): Promise<boolean> {
+  if (isSandboxMode()) return false;
   const title = (payload.title ?? "").trim();
   const content = (payload.content ?? "").trim();
 

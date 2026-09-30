@@ -3,14 +3,17 @@
  * Configuração: variável de ambiente RESEND_API_KEY
  */
 import { Resend } from "resend";
+import { isSandboxMode } from "./_core/sandbox";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 let resend: Resend | null = null;
 
-if (RESEND_API_KEY) {
+if (RESEND_API_KEY && !isSandboxMode()) {
   resend = new Resend(RESEND_API_KEY);
   console.log("[Email] Resend configurado com sucesso");
+} else if (isSandboxMode()) {
+  console.log("[Sandbox] Envio de email desabilitado.");
 } else {
   console.warn(
     "[Email] RESEND_API_KEY não configurada — envio de email desabilitado"
@@ -25,6 +28,7 @@ export interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  if (isSandboxMode()) return false;
   if (!resend) {
     console.warn(
       "[Email] Tentativa de envio ignorada — Resend não configurado"
