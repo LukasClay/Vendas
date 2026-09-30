@@ -56,7 +56,7 @@ ou dados pessoais neste documento nem no Git.
    ausência de envios/jobs e comportamento inicial dos três perfis.
 8. Registrar testes e limitações antes de iniciar os lotes de UI/UX.
 
-## Estado verificado da execução em 30/09/2026
+## Primeiro deployment e baseline em 30/09/2026
 
 - Branch local criada a partir do commit publicado, preservando o arquivo
   não rastreado `Qualidade de vida plugin gpt.md`.
@@ -96,7 +96,7 @@ ou dados pessoais neste documento nem no Git.
   continua em `main`, no deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`.
 - Nenhuma melhoria de UI/UX implementada nesta preparação.
 
-## Storage privado do clone, preparação em andamento
+## Storage privado do clone, concluído em 30/09/2026
 
 A inspeção encontrou o mesmo bucket, a mesma chave S3 e o mesmo JWT nos serviços
 de produção e teste anteriores. O banco era separado, mas o storage não.
@@ -107,10 +107,11 @@ restrito a esse bucket e validade até 30/10/2026. A chave foi configurada somen
 no serviço de teste, sem iniciar deployment intermediário. Uma tentativa de
 acessar o bucket de produção com essa chave retornou HTTP 403.
 
-Inventário congelado da origem: 2.823 objetos, 626.543.119 bytes (aproximadamente
-598 MiB). A transferência usa somente leitura na origem, cria objetos novos no
-destino e verifica tamanho, checksum e inventário. Dois downloads excederam o
-tempo limite na primeira passagem e estão sendo retomados separadamente.
+Inventário congelado da origem copiado integralmente: 2.823 objetos, 626.543.119
+bytes (aproximadamente 598 MiB). A transferência usou somente leitura na origem,
+criou objetos novos no destino e verificou tamanho, checksum e inventário. Os
+dois downloads que excederam o tempo limite foram retomados; o último foi lido
+por intervalos de bytes com o mesmo ETag. Nenhuma pendência de cópia permanece.
 
 O usuário escolheu anexos privados, acessíveis após login. A rota
 `/api/sandbox/media/*` só é registrada quando `VENDAS_SANDBOX_MODE=1`; ADM pode
@@ -118,15 +119,41 @@ ler os arquivos referenciados, vendedora somente os arquivos das próprias venda
 ativas, e consultora somente fotos de vendas ativas. Os arquivos são servidos
 sem cache público, com tipo de conteúdo limitado e sem revelar chaves S3.
 
-Há 2.779 referências de mídia nas vendas e todas têm chave no inventário. O
-ajuste de URLs é restrito ao banco novo do clone, com backup prévio e comparação
-dos demais campos. Não altera os timestamps nem os dados comerciais das vendas.
-O incremento de patch preparado para esta etapa é `2.18.2`.
+As 2.779 referências de mídia das 2.732 vendas foram ajustadas no banco novo do
+clone, com backup prévio. A comparação confirmou preservação dos timestamps,
+dados comerciais, chaves e metadados dos anexos. Todos os links de mídia do
+clone usam a rota privada. A versão publicada nesta etapa é `2.18.2`.
 
 Validação local da rota privada: typecheck, build e 226 testes de backend
 aprovados, incluindo permissões HTTP e desativação da rota fora do sandbox.
-A publicação desse código e os testes de upload/download/exclusão no deploy
-ainda estão pendentes neste checkpoint.
+Formatação dos arquivos alterados e `git diff --check` aprovados.
+
+O código foi publicado no commit histórico
+`ecad6b3de01e5256d7c802b09565326ffb02a4a4`, com deployment de teste `SUCCESS`
+`94dd7f05-2e33-420c-b41e-8d8d340c8314`. A atualização posterior deste documento
+pode gerar outro deployment do mesmo código; conferir o estado atual no Railway.
+
+No deploy passaram novamente as 22 verificações de API dos três perfis e mais
+37 verificações de storage/workflow. Foram conferidos: login obrigatório,
+leitura de arquivos históricos com checksum, vendedora limitada às próprias
+vendas, consultora limitada às fotos, download existente da consultora, uploads
+principais e extras, substituição do comprovante, remoção de fotos/extras,
+soft delete/restauração e transições `para_escrever → pendente → feito`.
+
+As operações de escrita usaram somente uma venda fictícia descartável por
+rodada, com limpeza da venda, cliente, logs e arquivos criados pelo teste.
+A primeira checagem de remoção presumiu um comando que o endpoint não oferece
+para o comprovante principal; foi corrigida para testar sua substituição. Não
+houve alteração desse comportamento no código da aplicação. As sequências
+podem apresentar lacunas decorrentes dos dados fictícios, sem reutilizar IDs.
+
+A conferência final confirmou os dados de clientes, produtos e horários iguais
+ao snapshot. As vendas também coincidem após normalizar exclusivamente as URLs
+de mídia para os valores originais; os demais metadados foram comparados à parte.
+O bucket contém novamente apenas os 2.823 objetos copiados, sem arquivos de
+teste. Logs confirmam jobs bloqueados. Configuração e deployment de produção
+permaneceram inalterados, e a chave de teste continua sem acesso ao bucket de
+produção. O banco antigo de teste permanece preservado.
 
 O clone é um snapshot, com jobs e envios bloqueados. A entrega de mídia pelo
 servidor privado difere da URL pública/CDN de produção e não permite afirmar
@@ -147,15 +174,17 @@ para preparar o clone permanece válida; esta é uma limitação da ferramenta.
   ignorado pelo Git. Contêm informação privada e não devem ser publicados.
 - `ACESSO_TESTE_PRIVADO.md` contém os acessos exclusivos do clone.
 - `source-manifest.json` e `restore-verification.json` registram a integridade
-  antes dos ajustes; `final-verification.json` e `smoke-api-result.json`
-  registram as verificações após o deployment.
+  antes dos ajustes; `smoke-api-result.json`, `smoke-storage-result.json`,
+  `storage-copy-verification.json`, `media-rewrite-verification.json` e
+  `final-isolation-verification.json` registram as verificações finais.
+  `final-verification.json` é o checkpoint anterior à cópia dos anexos.
 - A conexão e configuração anteriores do teste foram preservadas localmente
   em `variables.private.json`. Não restaurar esse arquivo integralmente: a
   configuração antiga reutilizava credenciais de produção.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Concluir a cópia, ajustar os links, publicar e verificar a rota privada. Depois,
-  resolver o bloqueio do navegador e registrar a baseline visual antes dos lotes
-  de UI/UX. O token expira em 30/10/2026 e precisará de renovação autorizada se
-  o ambiente de teste continuar em uso após essa data.
+- Próxima etapa: resolver o bloqueio do navegador e registrar a baseline visual
+  dos três perfis antes dos lotes de UI/UX. A preparação técnica do clone e os
+  testes de API/storage estão concluídos. O token expira em 30/10/2026 e
+  precisará de renovação autorizada se o ambiente continuar em uso após essa data.
