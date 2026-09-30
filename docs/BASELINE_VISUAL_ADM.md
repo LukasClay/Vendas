@@ -191,9 +191,75 @@ Evidências privadas: `lote2-relatorios-before.jpg`,
 `lote2-visual-result.json`. Mudanças documentais posteriores podem gerar outro
 deployment do mesmo código; verificar o Railway antes de novas operações.
 
+## Terceiro lote: legibilidade da tabela de vendas no desktop
+
+O usuário autorizou prosseguir após a consolidação do roadmap e do guia de
+continuidade. Versão `2.19.2`, commit de código histórico
+`5a30805512368eb7158534300633e8565f3c73b3`, deployment Copy
+`a6e739e2-ab71-408f-9f4d-0bb8c3b5e4cf` com `SUCCESS`.
+
+Mudanças restritas a `Vendas.tsx` e ao número da versão em `Configuracoes.tsx`:
+conteúdo utiliza a largura disponível, tabela com colunas estáveis, padding
+lateral de 16 px, cliente/trabalho com texto integral e quebra, vendedor com
+quebra quando necessário. Coluna de ações permanece fixa à direita. Região de
+rolagem acessível ao teclado, headers associados por `scope` e nomes acessíveis
+nos botões de editar/excluir. Paleta, cards móveis, filtros, queries, geradores
+de exportação e componentes compartilhados não foram alterados.
+
+Medições da primeira página com 50 vendas, no mesmo clone:
+
+| Viewport | Largura útil da tabela | Largura da tabela     | Maior linha antes → depois                               |
+| -------- | ---------------------- | --------------------- | -------------------------------------------------------- |
+| 2560 px  | 1598 → 2248 px         | 1598 → 2248 px        | 89 → 75 px                                               |
+| 1920 px  | 1598 → 1608 px         | 1598 → 1608 px        | 89 → 93 px                                               |
+| 1600 px  | 1288 px após o ajuste  | 1288 px após o ajuste | 113 px após o ajuste; sem medição anterior nesta largura |
+| 1440 px  | 1128 px                | 1205 → 1200 px        | 189 → 133 px                                             |
+| 1366 px  | 1054 px                | 1205 → 1200 px        | 189 → 133 px                                             |
+| 1280 px  | 968 px                 | 1205 → 1200 px        | 189 → 133 px                                             |
+| 1024 px  | 712 px                 | 1205 → 1200 px        | 189 → 133 px                                             |
+| 768 px   | 456 px                 | 1205 → 1200 px        | 189 → 133 px                                             |
+
+Em 1440 px, cliente passou de aproximadamente 133 para 178 px de coluna,
+com largura útil de texto de 85 para 146 px. Trabalho passou de 144 para 178 px.
+As linhas não ficaram menores em todas as larguras: em 1920 px, a maior linha
+passou de 89 para 93 px devido à nova distribuição/quebra. A melhoria principal
+é a previsibilidade e a leitura nas larguras comprimidas.
+
+- Nenhum overflow horizontal da página em 320, 390, 768, 1024, 1280, 1366,
+  1440, 1600, 1920 e 2560 px. Em 320/390 px, cards móveis e paginação
+  permanecem acessíveis. Mesmos cards, sem redesign.
+- Rolagem interna permanece abaixo da largura necessária: 72 px em 1440 px,
+  por exemplo. Teclado alcançou o final da rolagem, com foco visível. As quatro
+  ações da primeira linha ficaram dentro da região nas larguras de tabela.
+- Comparação privada dos 50 registros antes/depois confirmou mesmas células,
+  links de anexos e quantidade de ações. Nenhuma informação do cliente/trabalho
+  foi truncada pela nova tabela.
+- Página 2 exibiu 51–100 de 2702, com registros diferentes; total filtrado
+  R$ 457.299,23 e soma da segunda página R$ 8.048,31. Categoria Individual
+  reiniciou em página 1 de 6, com 300 registros e R$ 158.151,25. Limpar retornou
+  à primeira página completa. Avançar/voltar conferido também no celular.
+- Filtro por data futura, aplicado pelo teclado nativo, mostrou zero registros,
+  somas zeradas e “Nenhuma venda encontrada”. Detalhes abriram; edição abriu e
+  foi cancelada, sem salvar. Excel/PDF permaneceram habilitados com filtro.
+  Não foram gerados ou reinspecionados arquivos neste lote: seleção e geração
+  não mudaram, e a validação de conteúdo de L01 continua sendo a evidência.
+- Typecheck, build, 239 testes de backend, formatação dos arquivos do lote e
+  diffcheck aprovados. Nenhuma query, alteração de banco, dependência ou arquivo
+  dos painéis de vendedora/consultora neste lote; não houve novo fluxo completo
+  de escrita desses perfis.
+- Conferência posterior confirmou integridade comercial do snapshot,
+  2.823 objetos privados, bloqueio de acesso ao bucket de produção com a chave
+  de teste, jobs desabilitados e configuração/deployment de produção inalterados.
+
+Evidências privadas em `.cache/vendas-copy/`: `lote3-before-metrics.json`,
+`lote3-content-before.private.json`, `lote3-visual-result.json`,
+`lote3-before-desktop.jpg`, `lote3-after-desktop.jpg` e `lote3-after-wide.jpg`.
+Atualização documental posterior pode gerar novo deployment do mesmo código;
+conferir o Railway antes de operações importantes.
+
 ## Medida de progresso
 
-Dois lotes concluídos no Copy, em Vendas e Relatórios. Das 13 telas ADM do escopo,
+Três lotes concluídos no Copy, em Vendas e Relatórios. Das 13 telas ADM do escopo,
 2 receberam correções, aproximadamente 15% por essa contagem de telas. Isso não
 mede a porcentagem total de implementação: uma tela pode ter outros achados e
 os lotes têm esforços diferentes. Não há backlog completo com pesos que

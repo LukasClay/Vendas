@@ -215,8 +215,15 @@ baseline. Teste em aparelho físico e viradas de dia/semana não foram realizado
 O usuário pediu prosseguir após a criação do roadmap e do guia de continuidade.
 Escopo: largura disponível e organização das colunas de Todas as Vendas,
 preservando dados, ações, filtros, consultas e os outros perfis. Implementação
-local em preparação na versão 2.19.2; publicação e validação visual ainda
-pendentes. Planejamento e estado em [roadmap.md](../roadmap.md).
+concluída na versão 2.19.2, commit histórico `5a30805`, deployment Copy
+`a6e739e2-ab71-408f-9f4d-0bb8c3b5e4cf` com `SUCCESS`. Typecheck, build, 239 testes
+e formatação aprovados. Visual em dez larguras, de 320 a 2560 px, sem overflow
+da página; rolagem interna preservada quando necessária. Paginação, categoria,
+resultado vazio, detalhes e abertura/cancelamento de edição conferidos.
+Conteúdo, links e quantidade de ações das 50 linhas comparados antes/depois.
+Integridade e isolamento posteriores aprovados. Sem alteração de consultas,
+geradores de exportação ou dados comerciais neste lote. Resultados e limites
+na baseline; planejamento e estado em [roadmap.md](../roadmap.md).
 
 ## Continuidade e retorno
 
@@ -234,7 +241,8 @@ pendentes. Planejamento e estado em [roadmap.md](../roadmap.md).
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: finalizar e validar L03 somente no Copy. Os demais achados da auditoria
+- Próxima etapa: avaliação dos três lotes no Copy e consolidação/definição de
+  escopo do lote seguinte, antes de nova implementação. Os demais achados da auditoria
   ampla continuam pendentes; porcentagem por telas não mede esforço total.
   nenhuma autorização de publicação em produção ou de merge em `main` foi dada.
   Usar somente os acessos privados do clone. Preparação técnica, testes de

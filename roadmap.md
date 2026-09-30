@@ -29,7 +29,7 @@ clone continuam no documento de ambiente; não repetir sua preparação.
 | BASE | Baseline dos fluxos essenciais e telas representativas        | Concluída                       | Registro/arquivos da vendedora, conclusão pela consultora e verificações ADM; não cobre todos os estados das 13 telas. |
 | L01  | Histórico completo, totais, categoria e exportações           | Implementado e validado no Copy | Versão 2.19.0; acesso após os primeiros 200 registros e exportações completas conferidos.                              |
 | L02  | Datas dos relatórios no celular                               | Implementado e validado no Copy | Versão 2.19.1; controles conferidos em 320, 390, 768 e 1440 px.                                                        |
-| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Aprovado; em implementação      | Typecheck, build e 239 testes aprovados; validação visual no Copy pendente.                                            |
+| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Implementado e validado no Copy | Versão 2.19.2; dez larguras, conteúdo preservado e fluxos de consulta conferidos.                                      |
 | CONS | Consolidar demais achados e cobertura das 13 telas            | Pendente de planejamento        | Os dois MDs de origem registram uma baseline representativa; não constituem o backlog completo da auditoria ampla.     |
 | PROD | Entrega em produção                                           | Não autorizada                  | Exige avaliação específica do diff, das diferenças entre ambientes e aprovação do usuário.                             |
 
@@ -76,7 +76,7 @@ calendário/teclado de iPhone ou viradas de dia e semana.
 Detalhes:
 [segundo lote na baseline](docs/BASELINE_VISUAL_ADM.md#segundo-lote-campos-de-data-dos-relatórios).
 
-### L03 — aprovado para implementar e testar no Copy
+### L03 — implementado e validado no Copy
 
 Em 30/09/2026, após a consolidação destes documentos, o usuário pediu
 “perfeito, prossiga”. A continuidade autoriza o lote sugerido na conversa:
@@ -115,20 +115,31 @@ página. Em 2560 px, o conteúdo fica limitado a 1.600 px apesar de haver cerca 
 2.248 px úteis. Essas são medidas desta rodada, não substituições dos registros
 históricos da baseline.
 
-Ajuste em implementação: largura disponível somente nesta página, padding
+Ajuste implementado: largura disponível somente nesta página, padding
 lateral de 16 px nas células, tabela com colunas estáveis e cliente/trabalho
 usando o espaço restante, texto integral com quebra e ações fixas à direita.
-Largura mínima de 1.200 px é uma hipótese de implementação a validar no Copy,
-com rolagem interna nas larguras menores. Nenhuma navegação, paleta, query ou
-componente compartilhado será reorganizado.
+Largura mínima de 1.200 px validada nas larguras conferidas no Copy, com rolagem
+interna nas larguras menores. Navegação, paleta, queries e componentes
+compartilhados preservados.
 
-Versão local em preparação: 2.19.2. Validação publicada ainda pendente.
+Versão publicada: 2.19.2, commit histórico `5a30805`, deployment Copy
+`a6e739e2-ab71-408f-9f4d-0bb8c3b5e4cf` com `SUCCESS`. Typecheck, build e 239 testes
+aprovados; visual em 320, 390, 768, 1024, 1280, 1366, 1440, 1600, 1920 e 2560 px,
+sem overflow da página. Em 1440 px, maior linha da primeira página de 189 para
+133 px; em ultrawide, largura útil de 1598 para 2248 px. Conteúdo/links/quantidade
+de ações das 50 linhas preservados. Paginação, filtro de categoria, resultado
+vazio, detalhes e abertura/cancelamento da edição conferidos. Isolamento e
+integridade aprovados. Arquivos exportados não foram reinspecionados, pois seleção
+e geração não mudaram. Rolagem interna permanece: 72 px em 1440 px.
+
+Detalhes e limites:
+[terceiro lote na baseline](docs/BASELINE_VISUAL_ADM.md#terceiro-lote-legibilidade-da-tabela-de-vendas-no-desktop).
 
 ## Pendências recuperáveis dos documentos de origem
 
 | Item                                          | Evidência disponível                             | Próxima decisão ou validação                                                                                                |
 | --------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Rolagem/legibilidade de Todas as Vendas       | Medição da baseline e resultado de L01           | L03 aprovado, em execução.                                                                                                  |
+| Rolagem/legibilidade de Todas as Vendas       | Medição da baseline e resultado de L01           | L03 concluído; rolagem interna residual é uma condição documentada, não um defeito automaticamente pendente.                |
 | Atalhos de período com UTC nos relatórios     | Registrados como achado separado em L02          | Conferir comportamento e critério de fuso nas viradas de dia/semana antes de propor correção; L02 não corrigiu essa lógica. |
 | Auditoria completa das demais superfícies ADM | Escopo amplo permanece pendente de consolidação  | Recuperar achados já existentes e suas evidências; investigar apenas o que estiver ausente ou contraditório.                |
 | Validação em aparelhos físicos e rede móvel   | Limitação explícita da baseline                  | Planejar quando relevante ao lote, sem afirmar que emulação de viewport cobre esses cenários.                               |
@@ -144,7 +155,7 @@ passagem anterior. Faltam resultados detalhados dessas telas nesses documentos.
 | --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Dashboard                   | Sem resultado detalhado nos MDs de origem                                                | Nenhum lote registrado.                                       |
 | Relatórios                  | Métricas, filtros, gráficos e responsividade representativos                             | L02 concluído; outras pendências continuam.                   |
-| Todas as Vendas             | Lista, filtros, detalhes, paginação, exportações e responsividade                        | L01 concluído; L03 em execução.                               |
+| Todas as Vendas             | Lista, filtros, detalhes, paginação, exportações e responsividade                        | L01 e L03 concluídos.                                         |
 | Nova Venda no ADM           | Sem resultado detalhado específico do ADM                                                | Nenhum lote registrado; formulário pode afetar outros perfis. |
 | Trabalhos                   | Sem resultado detalhado nos MDs de origem                                                | Nenhum lote registrado.                                       |
 | Painel Trabalhos            | Sem resultado detalhado nos MDs de origem                                                | Nenhum lote registrado.                                       |
@@ -162,7 +173,7 @@ as verificações concretas, sem concluir qualidade apenas porque uma tela abriu
 
 ## Progresso e próximos lotes
 
-- Duas entregas de UI/UX validadas, em duas das 13 telas: aproximadamente 15%
+- Três lotes de UI/UX validados, em duas das 13 telas: aproximadamente 15%
   por contagem de telas que receberam alguma correção.
 - Isso não mede o esforço total nem significa que essas duas telas estão
   inteiramente concluídas. Preparação do clone não entra nessa porcentagem.

@@ -26,20 +26,26 @@ testes já válidos ou a auditoria inteira para recuperar contexto.
 - Workspace: `C:\Users\Luketes\Documents\ChatGPT\Vendas`.
 - Branch de implementação: `codex/adm-ui-ux`.
 - Destino de testes: `https://vendas-copy-production.up.railway.app`.
-- Versão validada no Copy: **2.19.1**.
+- Versão validada no Copy: **2.19.2**.
 - L01 concluído: consulta completa do histórico, totais, categoria no servidor e
   exportações completas com limite explícito.
 - L02 concluído: campos de data dos relatórios cabem no celular e têm labels.
-- L03, leitura da tabela de Todas as Vendas no desktop, foi autorizado pelo
-  “perfeito, prossiga” após a consolidação dos documentos. Implementação e
-  validação no Copy em andamento; produção continua fora da autorização.
+- L03 concluído: leitura da tabela de Todas as Vendas no desktop, autorizado
+  pelo “perfeito, prossiga” após a consolidação dos documentos. Publicado e
+  validado no Copy; produção continua fora da autorização.
+- L03 passou em dez larguras de 320 a 2560 px, sem overflow da página; rolagem
+  interna continua quando necessária. Em 1440 px, a maior linha da primeira
+  página caiu de 189 para 133 px. Filtros, paginação, detalhes e abertura/
+  cancelamento da edição foram conferidos, sem alterações de dados comerciais.
+- Próxima etapa: avaliação das entregas e consolidação/definição do próximo
+  lote. Não iniciar outro lote automaticamente.
 - A lógica UTC dos atalhos dos relatórios permaneceu fora de L02.
 - Auditoria ampla das 13 telas ainda precisa de consolidação de achados e
   critérios; baseline representativa não equivale a cobertura completa.
 - Produção permaneceu inalterada nas conferências realizadas. Não houve
   autorização de merge em `main` ou publicação em produção.
 
-Checkpoints históricos de código: L01 `d9a0065`, L02 `a20b16e`. Não registrá-los
+Checkpoints históricos de código: L01 `d9a0065`, L02 `a20b16e`, L03 `5a30805`. Não registrá-los
 como “HEAD atual/final”. Conferir `git rev-parse HEAD` ao retomar e consultar o
 Railway antes de uma operação externa importante. Alterações documentais na
 branch também podem provocar deployment automático se forem publicadas.
