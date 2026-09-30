@@ -38,6 +38,10 @@ function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "");
 }
 
+function sandboxMediaUrl(key: string): string {
+  return `/api/sandbox/media/${key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 async function manusPut(
   relKey: string,
   data: Buffer | Uint8Array | string,
@@ -225,7 +229,9 @@ async function s3Put(
 
   // URL pública do arquivo
   const publicBase = config.publicUrl || `${config.endpoint}/${config.bucket}`;
-  const url = `${publicBase.replace(/\/+$/, "")}/${key}`;
+  const url = isSandboxMode()
+    ? sandboxMediaUrl(key)
+    : `${publicBase.replace(/\/+$/, "")}/${key}`;
 
   return { key, url };
 }
@@ -234,7 +240,12 @@ async function s3Get(relKey: string): Promise<{ key: string; url: string }> {
   const config = getS3Config()!;
   const key = normalizeKey(relKey);
   const publicBase = config.publicUrl || `${config.endpoint}/${config.bucket}`;
-  return { key, url: `${publicBase.replace(/\/+$/, "")}/${key}` };
+  return {
+    key,
+    url: isSandboxMode()
+      ? sandboxMediaUrl(key)
+      : `${publicBase.replace(/\/+$/, "")}/${key}`,
+  };
 }
 
 async function s3Download(relKey: string): Promise<StorageDownloadResult> {

@@ -96,28 +96,42 @@ ou dados pessoais neste documento nem no Git.
   continua em `main`, no deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`.
 - Nenhuma melhoria de UI/UX implementada nesta preparação.
 
-## Pendência: anexos e validação visual
+## Storage privado do clone, preparação em andamento
 
 A inspeção encontrou o mesmo bucket, a mesma chave S3 e o mesmo JWT nos serviços
 de produção e teste anteriores. O banco era separado, mas o storage não.
 
-As credenciais S3 de produção foram removidas do serviço de teste, sem disparar
-deploy intermediário. O sandbox espera o bucket `vendas-magia-auditoria-adm`,
-ainda não provisionado. Uploads e operações de storage autenticadas ficam
-indisponíveis até o isolamento; os links copiados ainda apontam aos anexos
-originais e não representam uma cópia de arquivos independente.
+O bucket `vendas-magia-auditoria-adm` foi criado com acesso público desabilitado.
+O usuário aprovou o token `Vendas Copy Auditoria ADM`, com Object Read & Write
+restrito a esse bucket e validade até 30/10/2026. A chave foi configurada somente
+no serviço de teste, sem iniciar deployment intermediário. Uma tentativa de
+acessar o bucket de produção com essa chave retornou HTTP 403.
 
-Inventário somente leitura do bucket de origem: 2.823 objetos, 626.543.119 bytes
-(aproximadamente 598 MiB). Nenhum arquivo foi copiado nem alterado no bucket.
-O token atual permite ler objetos, mas a tentativa de listar buckets retornou
-`AccessDenied`. Foi solicitado acesso ao painel Cloudflare R2 para preparar um
-bucket e credenciais de teste. Não reutilizar a chave de produção no clone.
+Inventário congelado da origem: 2.823 objetos, 626.543.119 bytes (aproximadamente
+598 MiB). A transferência usa somente leitura na origem, cria objetos novos no
+destino e verifica tamanho, checksum e inventário. Dois downloads excederam o
+tempo limite na primeira passagem e estão sendo retomados separadamente.
 
-Faltam copiar os anexos necessários, ajustar suas URLs somente no clone,
-validar upload/download/exclusão no storage separado e conferir visualmente os
-três perfis. Os testes de API não comprovam layout, responsividade ou uma
-regressão completa. Não tratar o ambiente atual como clone completo nem iniciar
-testes de anexos antes desta etapa.
+O usuário escolheu anexos privados, acessíveis após login. A rota
+`/api/sandbox/media/*` só é registrada quando `VENDAS_SANDBOX_MODE=1`; ADM pode
+ler os arquivos referenciados, vendedora somente os arquivos das próprias vendas
+ativas, e consultora somente fotos de vendas ativas. Os arquivos são servidos
+sem cache público, com tipo de conteúdo limitado e sem revelar chaves S3.
+
+Há 2.779 referências de mídia nas vendas e todas têm chave no inventário. O
+ajuste de URLs é restrito ao banco novo do clone, com backup prévio e comparação
+dos demais campos. Não altera os timestamps nem os dados comerciais das vendas.
+O incremento de patch preparado para esta etapa é `2.18.2`.
+
+Validação local da rota privada: typecheck, build e 226 testes de backend
+aprovados, incluindo permissões HTTP e desativação da rota fora do sandbox.
+A publicação desse código e os testes de upload/download/exclusão no deploy
+ainda estão pendentes neste checkpoint.
+
+O clone é um snapshot, com jobs e envios bloqueados. A entrega de mídia pelo
+servidor privado difere da URL pública/CDN de produção e não permite afirmar
+paridade exata de performance de anexos. Os testes de API não comprovam layout,
+responsividade nem uma regressão visual completa.
 
 Na retomada, a abertura do Vendas Copy no navegador foi bloqueada pela revisão
 automática da ferramenta. A primeira falha informou limite de uso; a tentativa
@@ -141,5 +155,7 @@ para preparar o clone permanece válida; esta é uma limitação da ferramenta.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- A preparação dos anexos é a próxima etapa. Depois, registrar os testes visuais
-  e a baseline antes de executar os lotes de UI/UX.
+- Concluir a cópia, ajustar os links, publicar e verificar a rota privada. Depois,
+  resolver o bloqueio do navegador e registrar a baseline visual antes dos lotes
+  de UI/UX. O token expira em 30/10/2026 e precisará de renovação autorizada se
+  o ambiente de teste continuar em uso após essa data.

@@ -21,6 +21,7 @@ import { sdk } from "./sdk";
 import { sql } from "drizzle-orm";
 import { logKnownHttpError } from "./httpRequestErrors";
 import { isSandboxMode } from "./sandbox";
+import { registerSandboxMediaRoute } from "./sandboxMedia";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -114,6 +115,7 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   registerConsultoraPhotoDownloadRoute(app);
+  registerSandboxMediaRoute(app);
   // tRPC API
   app.use(
     "/api/trpc",
