@@ -11,7 +11,8 @@ nenhuma operação de escrita ou deployment de produção foi realizada.
 Chrome do usuário, com viewport de 390 × 844 para os fluxos móveis; verificação
 adicional da consultora em 360 × 800, e do ADM em 768 × 1024 e 1440 × 900.
 Dark Reader desativado pelo usuário no Copy. Tema nativo escuro do ADM e paleta
-própria dos outros perfis preservados. Nenhum código de UI/UX foi alterado.
+própria dos outros perfis preservados. Durante a baseline, nenhum código de
+UI/UX foi alterado; a implementação posterior do primeiro lote está abaixo.
 
 Não equivale a testes em aparelho físico, câmera, conexão móvel lenta, todos
 os navegadores, todos os estados de todas as telas ou auditoria completa de
@@ -75,8 +76,8 @@ do uso do espaço e da legibilidade no lote visual; não demonstra perda de dado
 
 ## Primeiro lote aprovado: consulta completa do histórico ADM
 
-O usuário autorizou implementar e testar este lote somente no Copy. Código
-implementado localmente, versão `2.19.0`; validação no deployment ainda pendente.
+O usuário autorizou implementar e testar este lote somente no Copy. Versão
+`2.19.0` publicada e validada no deployment de teste.
 
 1. Consultar 50 vendas por página no servidor, com ordem determinística,
    avanço/retorno e reset da página ao alterar filtros.
@@ -113,6 +114,49 @@ exportação coincidir com todos os resultados do filtro; perfis não ADM
 continuarem sem acesso às consultas administrativas. Testar typecheck, build,
 testes pontuais de autorização/consulta e validar visualmente a versão no Copy
 nas três larguras do ADM, com nova conferência dos fluxos prioritários.
+
+### Resultado da implementação e validação publicada
+
+Commit de código histórico `d9a0065c00acc46a55246c5a761980f05626341c`;
+deployment Copy `2aeb2e7d-33f9-4af3-b642-5f36837a24d1`, `SUCCESS`.
+Atualizações documentais posteriores podem gerar outro deployment do mesmo
+código; consultar o Railway antes de operações importantes.
+
+- A API publicada passou 137 verificações contra SQL independente, incluindo
+  três categorias, páginas inicial/intermediária/final/vazia, soma, exportação
+  completa, filtros compostos, limites de entrada e bloqueio dos outros perfis.
+  Categorias: 300 Individual, 924 Promoção e 1.478 Coletivo. Mais 22 verificações
+  de login, consultas e autorização dos três perfis passaram após o deploy.
+- Pela interface: 50 linhas, 2.702 registros, 55 páginas, total filtrado de
+  R$ 457.299,23; primeira e segunda páginas têm registros diferentes. Página 6
+  acessa registros 251–300, ultrapassando o antigo limite. Categoria Individual
+  reinicia em página 1, termina em página 6 com Próxima desabilitada; limpar
+  filtros reinicia o histórico completo. Data futura produz 0 registros,
+  somas zeradas e navegação desabilitada. Avançar/voltar funciona no celular.
+- Resumo e navegação conferidos em 390, 768 e 1440 px, sem overflow horizontal
+  da página. Rolagem interna da tabela permanece; o lote não redesenhou colunas.
+- Excel/PDF da interface confirmaram 2.702 vendas. A ferramenta não capturou o
+  evento de download e bloqueou `chrome://downloads`; não houve contorno desse
+  bloqueio. O usuário informou a pasta dos arquivos, permitindo analisar
+  diretamente as exportações locais disponibilizadas por ele.
+- Dois arquivos Excel completos têm 2.702 linhas e 10 colunas, com todos os
+  campos e ordem coincidentes com SQL independente. PDF tem 197 páginas e
+  2.702 linhas; datas e valores ordenados, soma e contagem coincidem com o banco.
+  Renderização conferida nas páginas 1, 99 e 197. Arquivos da baseline com
+  apenas uma venda foram distinguidos das exportações novas; não foram alterados.
+- Regressão móvel posterior: formulário da vendedora e filas/detalhes da
+  consultora, incluindo carregamento de foto privada, conferidos sem alteração
+  de vendas históricas. O fluxo completo
+  com registro e conclusão fictícios é a baseline anterior a este lote; não
+  afirmar uma segunda venda completa após o deploy.
+- Integridade comercial do clone, 2.823 objetos privados e 403 da chave de
+  teste no bucket de produção reconfirmados. Jobs bloqueados. Deployment,
+  commit e configuração de produção permaneceram iguais à baseline.
+
+Evidências adicionais privadas: `pagination-db-result.json`,
+`pagination-api-result.json`, `export-files-result.json`,
+`lote1-adm-desktop.jpg`, `lote1-adm-tablet.jpg`, `lote1-adm-mobile.jpg` e
+renders `lote1-export-pdf-*`. Nenhuma evidência com dados de clientes vai ao Git.
 
 Produção continua dependendo de aprovação separada. A existência de uma branch
 e do clone reduz o risco dos testes e não garante funcionamento perfeito em

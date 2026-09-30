@@ -184,8 +184,13 @@ O usuário aprovou implementar e testar no Copy o primeiro lote: histórico ADM
 em páginas de 50, total e soma reais, categoria no servidor, Excel/PDF com todos
 os resultados filtrados e limite explícito de 5.000 vendas. Código local na
 branch `codex/adm-ui-ux`, versão `2.19.0`; typecheck, build, 239 testes e 65
-comparações SQL passaram. Publicação e validação visual desta versão ainda
-pendentes. Produção e arquivos dos painéis de vendedora/consultora ficam fora
+comparações SQL passaram. Código publicado no commit histórico `d9a0065`,
+deployment `2aeb2e7d-33f9-4af3-b642-5f36837a24d1` com `SUCCESS`.
+Mais 137 verificações da API publicada e 22 de regressão dos três perfis
+passaram. Interface conferida em 390, 768 e 1440 px. Excel/PDF completos
+baixados pela interface foram comparados aos 2.702 registros ativos do banco,
+total R$ 457.299,23; conferência de isolamento posterior aprovada.
+Produção e arquivos dos painéis de vendedora/consultora ficam fora
 das alterações. O campo de data cortado nos relatórios móveis fica para outro
 lote, sujeito à aprovação.
 
@@ -205,9 +210,10 @@ lote, sujeito à aprovação.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: publicar somente no Copy e conferir paginação, filtros, totais
-  e exportações pela interface e API, com nova verificação de isolamento.
-  Usar somente os acessos privados do clone. A preparação técnica, os testes
-  de API/storage e a baseline representativa estão concluídos.
+- Próxima etapa: avaliação do primeiro lote pelo usuário e aprovação específica
+  de eventual lote seguinte. Primeiro lote implementado e validado no Copy;
+  nenhuma autorização de publicação em produção ou de merge em `main` foi dada.
+  Usar somente os acessos privados do clone. Preparação técnica, testes de
+  API/storage e baseline representativa estão concluídos.
   O token expira em 30/10/2026 e
   precisará de renovação autorizada se o ambiente continuar em uso após essa data.
