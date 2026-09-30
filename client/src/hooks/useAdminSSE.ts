@@ -18,6 +18,8 @@ export function useAdminSSE() {
       for (const ch of channels) {
         if (ch === "sales") {
           utils.sales.list.invalidate();
+          utils.sales.pagedList.invalidate();
+          utils.sales.exportRows.invalidate();
           utils.sales.listDeleted.invalidate();
           utils.reports.summary.invalidate();
           utils.reports.salesByPeriod.invalidate();
@@ -27,6 +29,8 @@ export function useAdminSSE() {
           utils.consultora.worksSummary.invalidate();
           utils.consultora.statusCounts.invalidate();
         } else if (ch === "consultora") {
+          utils.sales.pagedList.invalidate();
+          utils.sales.exportRows.invalidate();
           utils.consultora.worksSummary.invalidate();
           utils.consultora.statusCounts.invalidate();
           utils.consultora.alerts.invalidate();

@@ -7,6 +7,7 @@ import {
   deleteSale,
   getSaleById,
   getSales,
+  getSalesPage,
   getSalesBySeller,
   updateSale,
   getDb,
@@ -74,6 +75,22 @@ type StoredMediaRecord = {
 };
 
 const CONSULTA_CARTAS_PRODUCT_NAME = "consulta cartas";
+
+const adminSaleFilters = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  sellerId: z.number().int().positive().optional(),
+  productName: z.string().optional(),
+  category: z.enum(["individual", "promocao", "coletivo"]).optional(),
+});
+
+function toSaleFilters(input: z.infer<typeof adminSaleFilters>) {
+  return {
+    ...input,
+    startDate: input.startDate ? new Date(input.startDate) : undefined,
+    endDate: input.endDate ? new Date(input.endDate) : undefined,
+  };
+}
 
 function normalizeProductName(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ");
@@ -540,6 +557,46 @@ export const salesRouter = router({
   }),
 
   // Admin vê todas as vendas com filtros
+  pagedList: adminProcedure
+    .input(
+      adminSaleFilters.extend({
+        limit: z.number().int().min(1).max(200).default(50),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      const page = await getSalesPage({
+        ...toSaleFilters(input),
+        limit: input.limit,
+        offset: input.offset,
+      });
+      return {
+        ...page,
+        items: page.items.map(row => ({
+          ...row,
+          sale: toPublicSale(row.sale),
+        })),
+      };
+    }),
+
+  exportRows: adminProcedure
+    .input(adminSaleFilters)
+    .query(async ({ input }) => {
+      const rows = await getSales({
+        ...toSaleFilters(input),
+        limit: 5001,
+        offset: 0,
+      });
+      if (rows.length > 5000) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "A exportação excede 5.000 vendas. Refine os filtros para exportar todos os resultados, sem cortes.",
+        });
+      }
+      return rows.map(row => ({ ...row, sale: toPublicSale(row.sale) }));
+    }),
+
   list: adminProcedure
     .input(
       z

@@ -875,6 +875,7 @@ export interface SaleFilters {
   endDate?: Date;
   sellerId?: number;
   productName?: string;
+  category?: "individual" | "promocao" | "coletivo";
   limit?: number;
   offset?: number;
 }
@@ -1012,9 +1013,7 @@ export async function createSaleWithResolvedClientWithDb(
   });
 }
 
-export async function getSales(filters: SaleFilters = {}) {
-  const db = await getDb();
-  if (!db) return [];
+function getSaleConditions(filters: SaleFilters) {
   const conditions: SQL[] = [isNull(sales.deletedAt)]; // M1: filtra vendas ativas
   if (filters.startDate)
     conditions.push(
@@ -1031,27 +1030,65 @@ export async function getSales(filters: SaleFilters = {}) {
       sql`${sales.productName} LIKE ${"%" + escaped + "%"} ESCAPE '\\'`
     );
   }
+  if (filters.category) {
+    conditions.push(
+      sql`COALESCE(${sales.productCategory}, 'individual') = ${filters.category}`
+    );
+  }
+  return and(...conditions);
+}
+
+const saleListSelection = {
+  sale: sales,
+  seller: {
+    id: users.id,
+    name: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
+    displayName: users.displayName,
+  },
+};
+
+export async function getSales(filters: SaleFilters = {}) {
+  const db = await getDb();
+  if (!db) return [];
 
   const base = db
-    .select({
-      sale: sales,
-      // Usa snapshot sellerName se disponível (vendedor excluído), senão busca do JOIN
-      seller: {
-        id: users.id,
-        name: sql<string>`COALESCE(${sales.sellerName}, ${users.name})`,
-        displayName: users.displayName,
-      },
-    })
+    .select(saleListSelection)
     .from(sales)
     .leftJoin(users, eq(sales.sellerId, users.id));
 
-  const filtered =
-    conditions.length > 0 ? base.where(and(...conditions)) : base;
+  const filtered = base.where(getSaleConditions(filters));
 
   return filtered
-    .orderBy(desc(sales.saleDate), desc(sales.createdAt))
+    .orderBy(desc(sales.saleDate), desc(sales.createdAt), desc(sales.id))
     .limit(filters.limit ?? 100)
     .offset(filters.offset ?? 0);
+}
+
+export async function getSalesPage(filters: SaleFilters = {}) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados indisponível.");
+  const condition = getSaleConditions(filters);
+  return db.transaction(
+    async tx => {
+      const [summary] = await tx
+        .select({
+          total: sql<number>`count(*)::int`,
+          totalAmount: sql<string>`COALESCE(sum(${sales.amount}), 0)::text`,
+        })
+        .from(sales)
+        .where(condition);
+      const items = await tx
+        .select(saleListSelection)
+        .from(sales)
+        .leftJoin(users, eq(sales.sellerId, users.id))
+        .where(condition)
+        .orderBy(desc(sales.saleDate), desc(sales.createdAt), desc(sales.id))
+        .limit(filters.limit ?? 50)
+        .offset(filters.offset ?? 0);
+      return { items, total: summary.total, totalAmount: summary.totalAmount };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" }
+  );
 }
 
 export async function getSaleById(id: number) {

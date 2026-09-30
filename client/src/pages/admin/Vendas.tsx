@@ -423,6 +423,8 @@ function EditSaleModal({
       utils.consultationSlots.listCancelled.invalidate();
       utils.consultationSlots.listRefunds.invalidate();
       utils.sales.list.invalidate();
+      utils.sales.pagedList.invalidate();
+      utils.sales.exportRows.invalidate();
     },
     onError: err => toast.error(err.message),
   });
@@ -583,6 +585,8 @@ function EditSaleModal({
       }
       toast.success("Venda atualizada com sucesso!");
       utils.sales.list.invalidate();
+      utils.sales.pagedList.invalidate();
+      utils.sales.exportRows.invalidate();
       utils.consultora.toWrite.invalidate();
       utils.consultora.pending.invalidate();
       utils.consultora.done.invalidate();
@@ -1720,13 +1724,19 @@ export default function AdminVendas() {
   const { data: sellers = [] } = trpc.users.listAll.useQuery();
   const { data: products = [] } = trpc.products.listAll.useQuery();
 
-  const [filters, setFilters] = useState({
+  const [filters, updateFilters] = useState({
     startDate: "",
     endDate: "",
     sellerId: "",
     productName: "",
     category: "",
   });
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const setFilters = (next: Parameters<typeof updateFilters>[0]) => {
+    updateFilters(next);
+    setPage(0);
+  };
   const [showFilters, setShowFilters] = useState(false);
 
   const queryFilters = useMemo(
@@ -1735,34 +1745,56 @@ export default function AdminVendas() {
       endDate: filters.endDate || undefined,
       sellerId: filters.sellerId ? Number(filters.sellerId) : undefined,
       productName: filters.productName || undefined,
-      limit: 200,
+      category: filters.category
+        ? (filters.category as ProductCategory)
+        : undefined,
     }),
-    [filters.startDate, filters.endDate, filters.sellerId, filters.productName]
+    [
+      filters.startDate,
+      filters.endDate,
+      filters.sellerId,
+      filters.productName,
+      filters.category,
+    ]
   );
 
-  const { data: rawSalesData = [], isLoading } =
-    trpc.sales.list.useQuery(queryFilters);
+  const {
+    data: salesPage,
+    isLoading,
+    isFetching,
+    error: salesError,
+  } = trpc.sales.pagedList.useQuery({
+    ...queryFilters,
+    limit: pageSize,
+    offset: page * pageSize,
+  });
+  const salesData = salesPage?.items ?? [];
+  const total = salesPage?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pageAmount = salesData.reduce(
+    (sum, item) => sum + Number(item.sale.amount),
+    0
+  );
 
-  const salesData = useMemo(() => {
-    if (!filters.category) return rawSalesData;
-    return rawSalesData.filter((item: SalesListItem) => {
-      const sale = item.sale ?? item;
-      return (sale.productCategory ?? "individual") === filters.category;
-    });
-  }, [rawSalesData, filters.category]);
+  useEffect(() => {
+    if (salesPage && page >= pageCount) setPage(pageCount - 1);
+  }, [salesPage, page, pageCount]);
 
   // Exportar Excel e PDF
   const [exportLoading, setExportLoading] = useState(false);
 
   async function handleExportExcel() {
-    if (salesData.length === 0) {
-      toast.error("Nenhuma venda para exportar.");
-      return;
-    }
     setExportLoading(true);
     try {
+      const exportSales = await utils.sales.exportRows.fetch(queryFilters, {
+        staleTime: 0,
+      });
+      if (exportSales.length === 0) {
+        toast.error("Nenhuma venda para exportar.");
+        return;
+      }
       const XLSX = await import("xlsx");
-      const rows = salesData.map((item: SalesListItem) => {
+      const rows = exportSales.map((item: SalesListItem) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return {
@@ -1794,20 +1826,25 @@ export default function AdminVendas() {
         `vendas_${new Date().toISOString().slice(0, 10)}.xlsx`
       );
       toast.success(`${rows.length} vendas exportadas para Excel!`);
-    } catch {
-      toast.error("Erro ao exportar Excel.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao exportar Excel."
+      );
     } finally {
       setExportLoading(false);
     }
   }
 
   async function handleExportPDF() {
-    if (salesData.length === 0) {
-      toast.error("Nenhuma venda para exportar.");
-      return;
-    }
     setExportLoading(true);
     try {
+      const exportSales = await utils.sales.exportRows.fetch(queryFilters, {
+        staleTime: 0,
+      });
+      if (exportSales.length === 0) {
+        toast.error("Nenhuma venda para exportar.");
+        return;
+      }
       const { default: jsPDF } = await import("jspdf");
       const { default: autoTable } = await import("jspdf-autotable");
       const doc = new jsPDF({ orientation: "landscape" });
@@ -1822,19 +1859,19 @@ export default function AdminVendas() {
         doc.text(`Período: ${period}`, 14, 23);
       }
 
-      const total = salesData.reduce(
+      const total = exportSales.reduce(
         (acc: number, item: SalesListItem) =>
           acc + Number((item.sale ?? item).amount),
         0
       );
       doc.setFontSize(11);
       doc.text(
-        `Total: ${formatCurrency(total)}   |   Vendas: ${salesData.length}`,
+        `Total: ${formatCurrency(total)}   |   Vendas: ${exportSales.length}`,
         14,
         period ? 30 : 23
       );
 
-      const rows = salesData.map((item: SalesListItem) => {
+      const rows = exportSales.map((item: SalesListItem) => {
         const sale = item.sale ?? item;
         const seller = item.seller;
         return [
@@ -1869,8 +1906,10 @@ export default function AdminVendas() {
 
       doc.save(`vendas_${new Date().toISOString().slice(0, 10)}.pdf`);
       toast.success(`${rows.length} vendas exportadas para PDF!`);
-    } catch {
-      toast.error("Erro ao exportar PDF.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao exportar PDF."
+      );
     } finally {
       setExportLoading(false);
     }
@@ -1893,6 +1932,8 @@ export default function AdminVendas() {
     onSuccess: () => {
       toast.success("Venda excluída");
       utils.sales.list.invalidate();
+      utils.sales.pagedList.invalidate();
+      utils.sales.exportRows.invalidate();
       setDeleteConfirmId(null);
     },
     onError: err => toast.error(err.message),
@@ -1902,11 +1943,6 @@ export default function AdminVendas() {
     const sale = item.sale ?? item;
     setEditSale(sale);
   };
-
-  const totalAmount = salesData.reduce((acc: number, item: SalesListItem) => {
-    const sale = item.sale ?? item;
-    return acc + Number(sale.amount);
-  }, 0);
 
   const hasFilters =
     filters.startDate ||
@@ -1952,7 +1988,7 @@ export default function AdminVendas() {
               </button>
               <button
                 onClick={handleExportExcel}
-                disabled={exportLoading}
+                disabled={exportLoading || isFetching || !!salesError}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-green-600 text-white shadow-lg shadow-green-500/20 active:scale-95 disabled:opacity-50"
               >
                 {exportLoading ? (
@@ -1964,7 +2000,7 @@ export default function AdminVendas() {
               </button>
               <button
                 onClick={handleExportPDF}
-                disabled={exportLoading}
+                disabled={exportLoading || isFetching || !!salesError}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-red-600 text-white shadow-lg shadow-red-500/20 active:scale-95 disabled:opacity-50"
               >
                 {exportLoading ? (
@@ -2061,6 +2097,75 @@ export default function AdminVendas() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {salesError ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-500/30 p-4 text-sm"
+          >
+            <p>Não foi possível carregar as vendas. {salesError.message}</p>
+            <button
+              onClick={() => utils.sales.pagedList.invalidate()}
+              className="mt-2 font-bold text-[var(--primary)]"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
+          <section
+            aria-label="Resumo e paginação das vendas"
+            aria-busy={isFetching}
+            className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4"
+          >
+            <div aria-live="polite" className="text-sm space-y-1">
+              {isFetching ? (
+                <p>Carregando vendas...</p>
+              ) : (
+                <>
+                  <p className="font-bold">
+                    Exibindo {salesData.length ? page * pageSize + 1 : 0}–
+                    {salesData.length ? page * pageSize + salesData.length : 0}{" "}
+                    de {total} registros
+                  </p>
+                  <p className="text-[var(--muted-foreground)]">
+                    Total filtrado:{" "}
+                    <strong className="text-[var(--foreground)]">
+                      {formatCurrency(salesPage?.totalAmount ?? "0")}
+                    </strong>{" "}
+                    · Soma da página:{" "}
+                    <strong className="text-[var(--foreground)]">
+                      {formatCurrency(pageAmount)}
+                    </strong>
+                  </p>
+                </>
+              )}
+            </div>
+            <nav
+              aria-label="Paginação de vendas"
+              className="flex flex-wrap items-center gap-3 text-sm"
+            >
+              <button
+                disabled={isFetching || page === 0}
+                onClick={() => setPage(p => p - 1)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] font-bold disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span>
+                {isFetching
+                  ? "Atualizando..."
+                  : `Página ${page + 1} de ${pageCount}`}
+              </span>
+              <button
+                disabled={isFetching || page + 1 >= pageCount}
+                onClick={() => setPage(p => p + 1)}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] font-bold disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </nav>
+          </section>
+        )}
 
         {/* Desktop Table */}
         <div className="hidden md:block rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden">
@@ -2237,25 +2342,6 @@ export default function AdminVendas() {
               </tbody>
             </table>
           </div>
-          <div className="px-6 py-4 bg-[var(--secondary)]/10 border-t border-[var(--border)] flex items-center justify-between">
-            <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">
-              Total de registros: {salesData.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">
-                Soma:{" "}
-              </span>
-              <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                {formatCurrency(
-                  salesData.reduce(
-                    (acc: number, item: SalesListItem) =>
-                      acc + Number((item.sale ?? item).amount),
-                    0
-                  )
-                )}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Mobile Cards */}
@@ -2406,25 +2492,6 @@ export default function AdminVendas() {
                   </motion.div>
                 );
               })}
-              <div className="rounded-2xl p-4 border border-[var(--border)] bg-[var(--secondary)]/10">
-                <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest mb-3">
-                  Total de registros: {salesData.length}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest">
-                    Soma:{" "}
-                  </span>
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(
-                      salesData.reduce(
-                        (acc: number, item: SalesListItem) =>
-                          acc + Number((item.sale ?? item).amount),
-                        0
-                      )
-                    )}
-                  </span>
-                </div>
-              </div>
             </>
           )}
         </div>

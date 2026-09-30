@@ -160,13 +160,34 @@ servidor privado difere da URL pública/CDN de produção e não permite afirmar
 paridade exata de performance de anexos. Os testes de API não comprovam layout,
 responsividade nem uma regressão visual completa.
 
-Na retomada, a abertura do Vendas Copy no navegador foi bloqueada pela revisão
-automática da ferramenta. A primeira falha informou limite de uso; a tentativa
-de retomada foi rejeitada por repetir a abertura antes de resolver esse bloqueio.
-Nenhuma ação foi executada no navegador do clone. Não contornar por outra aba,
-browser, automação alternativa ou comandos de navegador. Resolver o bloqueio
-da ferramenta antes de continuar a validação visual. A autorização do usuário
-para preparar o clone permanece válida; esta é uma limitação da ferramenta.
+Uma tentativa anterior de abrir o clone no navegador integrado foi bloqueada
+pela revisão automática da ferramenta. Posteriormente, o usuário solicitou
+explicitamente usar o Chrome do computador e conectou a extensão. O Chrome
+respondeu e a autenticação no clone foi concluída. O bloqueio anterior não deve
+ser tratado como estado atual do Chrome.
+
+A diferença aparente de cores vinha do Dark Reader, ativo junto ao tema nativo.
+O usuário desativou a extensão no clone e confirmou a correção. Produção e clone
+serviam o mesmo CSS; nenhuma alteração de paleta foi necessária.
+
+## Baseline visual concluída e primeiro lote aprovado, 30/09/2026
+
+Resultados e limites em [BASELINE_VISUAL_ADM.md](BASELINE_VISUAL_ADM.md).
+No Chrome foram conferidos o registro fictício pela vendedora, anexos privados,
+conclusão pela consultora e telas ADM em 390, 768 e 1440 px. A permissão da
+extensão foi habilitada pelo usuário e o upload funcionou. A venda fictícia,
+cliente, logs e três arquivos foram removidos; integridade comercial e
+isolamento foram conferidos novamente. Não equivale a aparelho físico ou rede
+móvel limitada.
+
+O usuário aprovou implementar e testar no Copy o primeiro lote: histórico ADM
+em páginas de 50, total e soma reais, categoria no servidor, Excel/PDF com todos
+os resultados filtrados e limite explícito de 5.000 vendas. Código local na
+branch `codex/adm-ui-ux`, versão `2.19.0`; typecheck, build, 239 testes e 65
+comparações SQL passaram. Publicação e validação visual desta versão ainda
+pendentes. Produção e arquivos dos painéis de vendedora/consultora ficam fora
+das alterações. O campo de data cortado nos relatórios móveis fica para outro
+lote, sujeito à aprovação.
 
 ## Continuidade e retorno
 
@@ -184,7 +205,9 @@ para preparar o clone permanece válida; esta é uma limitação da ferramenta.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: resolver o bloqueio do navegador e registrar a baseline visual
-  dos três perfis antes dos lotes de UI/UX. A preparação técnica do clone e os
-  testes de API/storage estão concluídos. O token expira em 30/10/2026 e
+- Próxima etapa: publicar somente no Copy e conferir paginação, filtros, totais
+  e exportações pela interface e API, com nova verificação de isolamento.
+  Usar somente os acessos privados do clone. A preparação técnica, os testes
+  de API/storage e a baseline representativa estão concluídos.
+  O token expira em 30/10/2026 e
   precisará de renovação autorizada se o ambiente continuar em uso após essa data.
