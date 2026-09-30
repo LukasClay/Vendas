@@ -320,36 +320,51 @@ export default function AdminRelatorios() {
             </h2>
           </div>
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              <input
-                type="date"
-                value={dateFilter.startDate}
-                onChange={e =>
-                  setDateFilter(f => ({ ...f, startDate: e.target.value }))
-                }
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
-                style={{
-                  border: "1.5px solid var(--border)",
-                  background: "var(--secondary)",
-                  color: "var(--foreground)",
-                }}
-              />
-              <span className="text-xs font-bold uppercase text-[var(--muted-foreground)]">
-                até
-              </span>
-              <input
-                type="date"
-                value={dateFilter.endDate}
-                onChange={e =>
-                  setDateFilter(f => ({ ...f, endDate: e.target.value }))
-                }
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
-                style={{
-                  border: "1.5px solid var(--border)",
-                  background: "var(--secondary)",
-                  color: "var(--foreground)",
-                }}
-              />
+            <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
+                <label
+                  htmlFor="report-start-date"
+                  className="block text-xs font-bold uppercase text-[var(--muted-foreground)]"
+                >
+                  Início
+                </label>
+                <input
+                  id="report-start-date"
+                  type="date"
+                  value={dateFilter.startDate}
+                  onChange={e =>
+                    setDateFilter(f => ({ ...f, startDate: e.target.value }))
+                  }
+                  className="w-full min-w-0 max-w-full px-4 py-3 rounded-xl text-base sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                  style={{
+                    border: "1.5px solid var(--border)",
+                    background: "var(--secondary)",
+                    color: "var(--foreground)",
+                  }}
+                />
+              </div>
+              <div className="min-w-0 space-y-2">
+                <label
+                  htmlFor="report-end-date"
+                  className="block text-xs font-bold uppercase text-[var(--muted-foreground)]"
+                >
+                  Fim
+                </label>
+                <input
+                  id="report-end-date"
+                  type="date"
+                  value={dateFilter.endDate}
+                  onChange={e =>
+                    setDateFilter(f => ({ ...f, endDate: e.target.value }))
+                  }
+                  className="w-full min-w-0 max-w-full px-4 py-3 rounded-xl text-base sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                  style={{
+                    border: "1.5px solid var(--border)",
+                    background: "var(--secondary)",
+                    color: "var(--foreground)",
+                  }}
+                />
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(dateFilter.startDate || dateFilter.endDate) && (

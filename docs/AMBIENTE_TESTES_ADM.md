@@ -191,8 +191,20 @@ passaram. Interface conferida em 390, 768 e 1440 px. Excel/PDF completos
 baixados pela interface foram comparados aos 2.702 registros ativos do banco,
 total R$ 457.299,23; conferência de isolamento posterior aprovada.
 Produção e arquivos dos painéis de vendedora/consultora ficam fora
-das alterações. O campo de data cortado nos relatórios móveis fica para outro
-lote, sujeito à aprovação.
+das alterações.
+
+## Segundo lote aprovado: datas dos relatórios, 30/09/2026
+
+O usuário autorizou prosseguir com a correção dos campos cortados no celular.
+Escopo restrito ao filtro de período do ADM: datas em coluna no celular e em
+duas colunas nas telas maiores, largura limitada ao contêiner, labels Início/Fim
+associados e fonte de 16 px nos inputs móveis. Handlers, queries e atalhos de
+período preservados. A lógica dos atalhos com UTC é um achado separado e não
+foi corrigida neste lote visual.
+
+Versão local `2.19.1`. Typecheck, build, 239 testes e formatação dos dois arquivos
+de código passaram. Publicação e validação no Copy ainda pendentes. A baseline
+foi reproduzida: segundo campo termina em 418 px na viewport de 390 px.
 
 ## Continuidade e retorno
 
@@ -210,8 +222,8 @@ lote, sujeito à aprovação.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: avaliação do primeiro lote pelo usuário e aprovação específica
-  de eventual lote seguinte. Primeiro lote implementado e validado no Copy;
+- Próxima etapa: publicar e validar o segundo lote no Copy, incluindo larguras
+  móveis, tablet/desktop e funcionamento dos filtros. Primeiro lote concluído;
   nenhuma autorização de publicação em produção ou de merge em `main` foi dada.
   Usar somente os acessos privados do clone. Preparação técnica, testes de
   API/storage e baseline representativa estão concluídos.
