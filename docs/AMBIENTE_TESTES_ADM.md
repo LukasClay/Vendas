@@ -210,6 +210,14 @@ Período manual de setembro, Hoje e limpar filtros conferidos. Integridade e
 isolamento posteriores aprovados. Resultados detalhados no documento de
 baseline. Teste em aparelho físico e viradas de dia/semana não foram realizados.
 
+## Terceiro lote autorizado: legibilidade da tabela ADM, 30/09/2026
+
+O usuário pediu prosseguir após a criação do roadmap e do guia de continuidade.
+Escopo: largura disponível e organização das colunas de Todas as Vendas,
+preservando dados, ações, filtros, consultas e os outros perfis. Implementação
+local em preparação na versão 2.19.2; publicação e validação visual ainda
+pendentes. Planejamento e estado em [roadmap.md](../roadmap.md).
+
 ## Continuidade e retorno
 
 - Evidências, dump, conexões e acessos de teste estão em `.cache/vendas-copy/`,
@@ -226,8 +234,7 @@ baseline. Teste em aparelho físico e viradas de dia/semana não foram realizado
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: avaliação dos dois lotes concluídos no Copy e definição de
-  escopo/aprovação de eventual lote seguinte. Os demais achados da auditoria
+- Próxima etapa: finalizar e validar L03 somente no Copy. Os demais achados da auditoria
   ampla continuam pendentes; porcentagem por telas não mede esforço total.
   nenhuma autorização de publicação em produção ou de merge em `main` foi dada.
   Usar somente os acessos privados do clone. Preparação técnica, testes de

@@ -1961,7 +1961,7 @@ export default function AdminVendas() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-6 pb-20">
+      <div className="w-full min-w-0 space-y-6 pb-20">
         <FadeIn>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -2169,32 +2169,71 @@ export default function AdminVendas() {
 
         {/* Desktop Table */}
         <div className="hidden md:block rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div
+            className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]"
+            role="region"
+            aria-label="Tabela de vendas"
+            tabIndex={0}
+          >
+            <table className="w-full min-w-[1200px] table-fixed text-left border-collapse">
+              <colgroup>
+                <col className="w-[120px]" />
+                <col />
+                <col />
+                <col className="w-[124px]" />
+                <col className="w-[120px]" />
+                <col className="w-[168px]" />
+                <col className="w-[120px]" />
+                <col className="w-[192px]" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--secondary)]/30">
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Data
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Cliente
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Trabalho
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Valor
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Vendedor
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Empresa
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
+                  <th
+                    scope="col"
+                    className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
+                  >
                     Comprovante
                   </th>
-                  <th className="sticky right-0 z-20 min-w-[190px] border-l border-[var(--border)] bg-[var(--secondary)] px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)]">
+                  <th
+                    scope="col"
+                    className="sticky right-0 z-20 border-l border-[var(--border)] bg-[var(--secondary)] px-4 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)] shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)]"
+                  >
                     Ações
                   </th>
                 </tr>
@@ -2230,7 +2269,7 @@ export default function AdminVendas() {
                         key={sale.id}
                         className="hover:bg-[var(--secondary)]/20 transition-colors group"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-[var(--foreground)]">
                               {formatDate(sale.saleDate)}
@@ -2240,8 +2279,8 @@ export default function AdminVendas() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
+                        <td className="px-4 py-4 align-top">
+                          <div className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere]">
                             <button
                               onClick={() =>
                                 setHistoryClientName(sale.clientName)
@@ -2256,8 +2295,8 @@ export default function AdminVendas() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
+                        <td className="px-4 py-4 align-top">
+                          <div className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere]">
                             <span className="text-sm font-bold text-[var(--primary)]">
                               {sale.productName}
                             </span>
@@ -2266,20 +2305,20 @@ export default function AdminVendas() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <span className="text-sm font-bold text-green-600 dark:text-green-400">
                             {formatCurrency(sale.amount)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)] whitespace-nowrap">
+                        <td className="px-4 py-4">
+                          <span className="inline-block max-w-full text-xs font-bold text-[var(--foreground)] bg-[var(--secondary)] px-2.5 py-1 rounded-lg border border-[var(--border)] [overflow-wrap:anywhere]">
                             {sale.sellerName || "—"}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
                           <CompanyBadge company={sale.company} />
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
                           {sale.attachmentUrl ? (
                             <a
                               href={sale.attachmentUrl}
@@ -2301,7 +2340,7 @@ export default function AdminVendas() {
                             </span>
                           )}
                         </td>
-                        <td className="sticky right-0 z-10 min-w-[190px] border-l border-[var(--border)] bg-[var(--card)] px-6 py-4 text-right shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)] transition-colors group-hover:bg-[var(--secondary)]">
+                        <td className="sticky right-0 z-10 border-l border-[var(--border)] bg-[var(--card)] px-4 py-4 text-right shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.75)] transition-colors group-hover:bg-[var(--secondary)]">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setViewSale(sale)}
@@ -2312,6 +2351,8 @@ export default function AdminVendas() {
                             </button>
                             <button
                               onClick={() => setEditSale(sale)}
+                              aria-label="Editar venda"
+                              title="Editar venda"
                               className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 border border-[var(--border)]"
                             >
                               <Pencil className="w-4 h-4" />
@@ -2329,6 +2370,8 @@ export default function AdminVendas() {
                             )}
                             <button
                               onClick={() => setDeleteConfirmId(sale.id)}
+                              aria-label="Excluir venda"
+                              title="Excluir venda"
                               className="p-2 rounded-xl bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95 border border-[var(--border)]"
                             >
                               <Trash2 className="w-4 h-4" />
