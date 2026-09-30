@@ -202,9 +202,13 @@ associados e fonte de 16 px nos inputs móveis. Handlers, queries e atalhos de
 período preservados. A lógica dos atalhos com UTC é um achado separado e não
 foi corrigida neste lote visual.
 
-Versão local `2.19.1`. Typecheck, build, 239 testes e formatação dos dois arquivos
-de código passaram. Publicação e validação no Copy ainda pendentes. A baseline
-foi reproduzida: segundo campo termina em 418 px na viewport de 390 px.
+Versão `2.19.1` publicada no commit histórico `a20b16e`, deployment Copy
+`d1a01c13-9512-41c4-80c5-6babc00c0363` com `SUCCESS`. Typecheck, build, 239 testes
+e formatação dos arquivos de código passaram. Corte reproduzido antes e
+corrigido na interface em 320, 390, 768 e 1440 px, sem overflow da página.
+Período manual de setembro, Hoje e limpar filtros conferidos. Integridade e
+isolamento posteriores aprovados. Resultados detalhados no documento de
+baseline. Teste em aparelho físico e viradas de dia/semana não foram realizados.
 
 ## Continuidade e retorno
 
@@ -222,8 +226,9 @@ foi reproduzida: segundo campo termina em 418 px na viewport de 390 px.
 - Se for necessário retornar ao banco antigo do teste, manter código com as
   proteções de sandbox, os envios bloqueados e as credenciais de storage de
   produção ausentes. O banco antigo não foi apagado.
-- Próxima etapa: publicar e validar o segundo lote no Copy, incluindo larguras
-  móveis, tablet/desktop e funcionamento dos filtros. Primeiro lote concluído;
+- Próxima etapa: avaliação dos dois lotes concluídos no Copy e definição de
+  escopo/aprovação de eventual lote seguinte. Os demais achados da auditoria
+  ampla continuam pendentes; porcentagem por telas não mede esforço total.
   nenhuma autorização de publicação em produção ou de merge em `main` foi dada.
   Usar somente os acessos privados do clone. Preparação técnica, testes de
   API/storage e baseline representativa estão concluídos.

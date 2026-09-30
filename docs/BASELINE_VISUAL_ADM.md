@@ -158,6 +158,48 @@ Evidências adicionais privadas: `pagination-db-result.json`,
 `lote1-adm-desktop.jpg`, `lote1-adm-tablet.jpg`, `lote1-adm-mobile.jpg` e
 renders `lote1-export-pdf-*`. Nenhuma evidência com dados de clientes vai ao Git.
 
+## Segundo lote: campos de data dos relatórios
+
+O usuário autorizou prosseguir com o próximo lote sugerido. Versão `2.19.1`,
+commit de código histórico `a20b16eb3b26a185d3e10694eb599ba57ea8149d`, publicada
+somente no Copy, deployment `d1a01c13-9512-41c4-80c5-6babc00c0363` com `SUCCESS`.
+
+Correção limitada a `Relatorios.tsx` e ao número da versão em `Configuracoes.tsx`.
+Campos Início/Fim com labels associados, uma coluna abaixo de 640 px e duas
+colunas nas telas maiores. Inputs respeitam a largura disponível, com fonte de
+16 px no celular. Paleta e seletor nativo preservados. Handlers, queries,
+exportações e componentes dos outros perfis não foram alterados.
+
+- Reproduzido o corte anterior: segundo input terminava em 418 px em 390 px.
+- Validação no Chrome em 320, 390, 768 e 1440 px: ambos os campos ficam dentro
+  da viewport, sem overflow horizontal da página. Fonte calculada de 16 px no
+  celular e 14 px em telas maiores; coluna no celular e mesma linha no tablet
+  e desktop. Labels Início/Fim localizados pela árvore de acessibilidade.
+- Preenchimento pelo teclado de 01/09/2026 a 30/09/2026 retornou 427 vendas /
+  R$ 66.138,57. Hoje retornou zero no snapshot sem a venda fictícia; limpar os
+  filtros retornou 2.702 vendas / R$ 457.299,23.
+- Typecheck, build, 239 testes, formatação dos arquivos alterados e diffcheck
+  aprovados. Integridade comercial, arquivos privados, jobs bloqueados e
+  configuração/deployment de produção reconfirmados após a publicação.
+- Sem novo registro de venda ou alteração de dados comerciais nesta rodada.
+  Teste em viewport de desktop não confirma seletor/calendário, zoom ou teclado
+  de iPhone físico. A lógica UTC dos atalhos permanece um achado separado;
+  esta conferência não testou a virada de dia ou semana.
+
+Evidências privadas: `lote2-relatorios-before.jpg`,
+`lote2-relatorios-mobile.jpg`, `lote2-relatorios-desktop.jpg` e
+`lote2-visual-result.json`. Mudanças documentais posteriores podem gerar outro
+deployment do mesmo código; verificar o Railway antes de novas operações.
+
+## Medida de progresso
+
+Dois lotes concluídos no Copy, em Vendas e Relatórios. Das 13 telas ADM do escopo,
+2 receberam correções, aproximadamente 15% por essa contagem de telas. Isso não
+mede a porcentagem total de implementação: uma tela pode ter outros achados e
+os lotes têm esforços diferentes. Não há backlog completo com pesos que
+permita afirmar um percentual global confiável. Infraestrutura do clone e
+baseline representativa são etapas preparatórias, separadas dessa contagem.
+
 Produção continua dependendo de aprovação separada. A existência de uma branch
 e do clone reduz o risco dos testes e não garante funcionamento perfeito em
 produção, que mantém diferenças de jobs, réplicas, sessões e entrega de mídia.
