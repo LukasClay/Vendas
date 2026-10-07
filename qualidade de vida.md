@@ -1,10 +1,14 @@
 # Qualidade de vida — continuidade da auditoria ADM
 
-> Checkpoint: 30/09/2026. Guia de retomada baseado nos documentos criados nesta
+> Checkpoint: 06/10/2026. Guia de retomada baseado nos documentos criados nesta
 > conversa. Aplicável à auditoria UI/UX do ADM e aos lotes no Vendas Copy.
 > Não substitui as regras do TODO nem concede autorização para novos lotes.
 
 ## Comece por aqui
+
+**Instrução definitiva do usuário, registrada em 30/09/2026:** após toda
+compactação de contexto, reler `roadmap.md` e `qualidade de vida.md` antes de
+retomar o trabalho. Não substituir essa leitura pelo resumo compactado.
 
 1. Ler as regras do [TODO.md](TODO.md), preservando alterações locais de outras
    tarefas. Este é o guia permanente do projeto.
@@ -32,18 +36,42 @@ testes já válidos ou a auditoria inteira para recuperar contexto.
 - L02 concluído: campos de data dos relatórios cabem no celular e têm labels.
 - L03 concluído: leitura da tabela de Todas as Vendas no desktop, autorizado
   pelo “perfeito, prossiga” após a consolidação dos documentos. Publicado e
-  validado no Copy; produção continua fora da autorização.
+  validado no Copy; publicação em produção autorizada em 06/10, em andamento.
 - L03 passou em dez larguras de 320 a 2560 px, sem overflow da página; rolagem
   interna continua quando necessária. Em 1440 px, a maior linha da primeira
   página caiu de 189 para 133 px. Filtros, paginação, detalhes e abertura/
   cancelamento da edição foram conferidos, sem alterações de dados comerciais.
-- Próxima etapa: avaliação das entregas e consolidação/definição do próximo
-  lote. Não iniciar outro lote automaticamente.
+- L04 preparado: diagnóstico do Dashboard em nove larguras, filas com 29
+  trabalhos para escrever e 69 pendentes. Em 1440 px, card de pendentes com
+  2706 px de altura; em 768 px, dois cards estreitos e página com 10948 px.
+- Proposta registrada no [L04 do roadmap](roadmap.md#l04--dashboard-proposto-aguardando-aprovação):
+  espaço útil, texto legível, contagens, prévia de seis itens com expansão
+  integral no próprio Dashboard, atalho para a aba correta do Painel Trabalhos
+  e estados próprios de loading/erro. **Ainda não aprovada nem implementada.**
+- Para L04, falta obter a decisão sobre prévia/expansão ou fila inteira com
+  rolagem interna e autorização para implementar/publicar somente no Copy.
+  O “Prossiga” desta preparação não autorizou automaticamente o código do L04.
+- Em 06/10/2026, foi autorizada e concluída a revisão final para uma possível
+  entrega de L01–L03 em produção. Nenhum bloqueador funcional encontrado:
+  typecheck/build, 239 testes, cinco regressões simuladas de modo de produção,
+  formatação dos 21 arquivos candidatos e diffcheck passaram.
+- Pendência da entrega: formatação global falha em 175 arquivos fora do diff;
+  o CI depende dessa checagem e o Railway não espera checks do GitHub.
+  Usuário aceitou essa condição para a entrega de 06/10; corrigir em outro lote.
+  Deployment anterior está disponível para rollback na conferência, a revalidar.
+- Resultado detalhado: [revisão final na baseline](docs/BASELINE_VISUAL_ADM.md#revisão-final-antes-de-main--06102026).
+  A revisão não publicou nada nem autorizou L04. Depois de uma entrega
+  especificamente aprovada, continuar a auditoria na branch e no Copy.
+- Autorização posterior em 06/10/2026: “perfeito, faça” aprovou a publicação
+  de L01–L03 em `main` e o deploy de produção, com aceite da pendência de
+  formatação global fora do diff para outro lote. Publicação em andamento;
+  não afirmar sucesso até conferir deployment e funcionamento publicado.
+  Conferências de produção continuam em leitura, sem novas vendas/alterações.
 - A lógica UTC dos atalhos dos relatórios permaneceu fora de L02.
 - Auditoria ampla das 13 telas ainda precisa de consolidação de achados e
   critérios; baseline representativa não equivale a cobertura completa.
-- Produção permaneceu inalterada nas conferências realizadas. Não houve
-  autorização de merge em `main` ou publicação em produção.
+- Produção permaneceu inalterada até a revisão final. A autorização posterior
+  de 06/10 permite esta entrega de L01–L03; não aprova lotes futuros.
 
 Checkpoints históricos de código: L01 `d9a0065`, L02 `a20b16e`, L03 `5a30805`. Não registrá-los
 como “HEAD atual/final”. Conferir `git rev-parse HEAD` ao retomar e consultar o

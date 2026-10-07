@@ -257,6 +257,166 @@ Evidências privadas em `.cache/vendas-copy/`: `lote3-before-metrics.json`,
 Atualização documental posterior pode gerar novo deployment do mesmo código;
 conferir o Railway antes de operações importantes.
 
+## Preparação do L04: Dashboard com filas extensas
+
+Diagnóstico em 30/09/2026, no Chrome autenticado do Copy, versão `2.19.2`.
+O usuário autorizou preparar a proposta após L03; esta rodada não implementou
+código, não criou dados comerciais e não publicou commit ou deployment.
+O registro detalhado da antiga auditoria do Dashboard não foi recuperado nos
+MDs desta conversa. Os achados abaixo vêm desta reprodução e do código atual,
+sem tratar avaliações anteriores como decisões aprovadas.
+
+O período inicial de setembro apresentou 427 vendas / R$ 66.138,57. O filtro
+Total apresentou 2.702 vendas / R$ 457.299,23. Nos dois períodos, as filas
+operacionais mantiveram 29 trabalhos para escrever e 69 pendentes. Elas são
+filas atuais, independentes do período financeiro. A comparação foi feita
+após o carregamento e a animação dos números, sem interpretar valores
+intermediários como resultados finais.
+
+Medições com o período de setembro e essas mesmas filas:
+
+| Viewport | Conteúdo útil | Altura da página | Card para escrever: largura / altura | Card pendentes: largura / altura |
+| -------- | ------------- | ---------------- | ------------------------------------ | -------------------------------- |
+| 2560 px  | 1152 px       | 4422 px          | 568 / 1246 px                        | 568 / 2646 px                    |
+| 1920 px  | 1152 px       | 4422 px          | 568 / 1246 px                        | 568 / 2646 px                    |
+| 1600 px  | 1152 px       | 4422 px          | 568 / 1246 px                        | 568 / 2646 px                    |
+| 1440 px  | 1130 px       | 4482 px          | 557 / 1266 px                        | 557 / 2706 px                    |
+| 1366 px  | 1056 px       | 4762 px          | 520 / 1306 px                        | 520 / 2986 px                    |
+| 1280 px  | 970 px        | 5114 px          | 477 / 1366 px                        | 477 / 3306 px                    |
+| 1024 px  | 714 px        | 6012 px          | 349 / 1706 px                        | 349 / 3986 px                    |
+| 768 px   | 458 px        | 10948 px         | 221 / 2730 px                        | 221 / 8086 px                    |
+| 390 px   | 352 px        | 8901 px          | 352 / 1706 px                        | 352 / 3986 px                    |
+
+Não houve overflow horizontal da página nessas nove larguras. Isso não torna
+a leitura adequada: em 768 px, as duas colunas estreitas produziram linhas de
+até 120/180 px. Em 1440 px, o SLA começou aproximadamente em 3684 px, e a
+diferença entre os dois cards deixou cerca de 1440 px vazios sob o menor.
+Em 2560 px, o conteúdo permanece limitado a 1152 px apesar de haver cerca de
+2250 px disponíveis após sidebar e padding.
+
+Achados confirmados e prioridades propostas para planejamento:
+
+- **Alta: filas inteiras no resumo.** `Dashboard.tsx` renderiza todos os itens
+  de `consultora.worksSummary`, sem limite visual; os cards não têm links ou
+  botões de acesso à operação. O crescimento empurra SLA, metas, melhores
+  clientes e vendas recentes para baixo. Não houve perda de dados nesta rodada.
+- **Alta: duas colunas comprimidas no tablet.** A grade passa a duas colunas
+  a partir de 768 px, enquanto a sidebar continua ocupando parte da largura.
+- **Média: largura e leitura dos itens.** Limite `max-w-6xl`, cliente e trabalho
+  unidos em um parágrafo e prazo disputando largura agravam a quebra de texto.
+- **Média: contexto do período.** As filas não informam que independem dos
+  filtros de vendas. A independência foi confirmada, não é um erro de cálculo.
+- **Média: feedback da consulta de trabalhos.** Pelo código, os cards usam
+  `isLoading` da consulta financeira; o estado próprio de loading/erro de
+  `worksSummary` não é tratado. Um erro pode resultar em mensagem de fila
+  vazia. Esse cenário de falha não foi provocado no navegador.
+
+Dependência importante: `worksSummary` pertence ao router da consultora e
+autoriza ADM/consultora, mas seu único consumidor atual encontrado é o
+Dashboard. Retorna as filas sem corte; preservá-lo neste lote visual.
+O destino operacional correto é **Painel Trabalhos**, `/admin/trabalhos`;
+**Trabalhos** no menu é o catálogo, `/admin/produtos`.
+O painel abriu com 29/69 itens nas abas correspondentes, sem executar ações.
+Ele inicia sempre em Para Escrever e suas queries `toWrite`/`pending`, usadas
+também pela consultora, têm limite de 500. Esse corte foi confirmado no código, não reproduzido com o
+volume atual. Portanto, um atalho para esse painel não pode ser a única forma
+de acessar itens ocultados pela prévia nem prometer acesso ilimitado.
+
+Proposta e decisão de produto pendente estão no
+[L04 do roadmap](../roadmap.md#l04--dashboard-proposto-aguardando-aprovação).
+Melhores Clientes e Vendas Recentes já exibem seis itens; Top Vendedores teve
+quatro em setembro e sete no histórico completo. Não há evidência nesta rodada
+para aplicar o mesmo corte indiscriminadamente a todos os widgets.
+
+Evidências privadas em `.cache/vendas-copy/`:
+`dashboard-baseline-measures.json` e `dashboard-baseline-1440.jpg`.
+Captura e dados pessoais permanecem fora do Git. Diagnóstico representativo,
+sem teste de aparelho físico, rede lenta, falha de API ou auditoria completa
+de todas as métricas do Dashboard. Override de viewport restaurado ao final.
+
+## Revisão final antes de main — 06/10/2026
+
+O usuário autorizou a revisão final para avaliar uma entrega dos lotes L01–L03.
+Esta autorização não inclui merge, push, deploy, alterações de configuração ou
+escrita em produção. Nenhuma dessas ações foi realizada.
+
+Candidato revisado: commit histórico `0df2d5fb0b82b1d8ec3fb055f2ac1a9e9657a9ed`
+da branch `codex/adm-ui-ux`, contra `origin/main` atualizado por fetch,
+`e409a3c4d5e197243aabba139c0bc8741413cc60`. São dez commits e 21 arquivos;
+`main` não tem commits exclusivos nessa comparação. O código da aplicação no
+workspace coincide com o candidato; alterações locais pendentes são documentais.
+L04 permanece somente proposto. `TODO.md`, `docs/historico.md` e o arquivo
+`Qualidade de vida plugin gpt.md` continuam pertencendo a outro trabalho.
+
+Conclusão: **nenhum bloqueador funcional encontrado no diff revisado, com
+pendência na validação global do repositório**. Os lotes concluídos podem compor
+uma entrega controlada, sujeita à aprovação de produção e ao tratamento explícito
+da pendência de CI abaixo. Isso não equivale a garantia de ausência de regressões.
+
+| Área                    | Resultado da revisão                                                                                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vendedora/consultora    | Sem alteração direta nas telas, rotas ou formulário compartilhado. `getSalesBySeller` permanece igual. Consultas normais da consultora não foram modificadas.                       |
+| Histórico ADM           | Novos endpoints restritos a ADM; paginação e totais usam transação somente leitura. O contrato anterior de `sales.list` permanece, com desempate por ID na ordenação compartilhada. |
+| Backend compartilhado   | Banco/storage/jobs/envios entram no comportamento de sandbox somente com `VENDAS_SANDBOX_MODE=1`. A rota de mídia privada fica desativada sem opt-in.                               |
+| Schema e infraestrutura | Nenhuma migração, mudança de schema, dependência, credencial ou configuração de deploy no diff. Banco/bucket do Copy não acompanham um merge de código.                             |
+| UI ADM                  | Datas dos relatórios e tabela de vendas revisadas; sem mudança adicional no Dashboard ou componentes visuais compartilhados.                                                        |
+
+Verificações locais novas, em 06/10/2026:
+
+- typecheck e build aprovados; 239 testes em 31 arquivos aprovados;
+- cinco verificações adicionais aprovadas com `NODE_ENV=production` e variáveis
+  de sandbox ausentes: uploads de fotos/comprovantes com URLs públicas, download,
+  push individual, push para consultora e fallback de notificação sem Manus;
+  provedores externos e banco simulados, sem upload/envio/consulta reais;
+- formatação dos 21 arquivos candidatos e diffcheck aprovados;
+- `pnpm run format:check` global falhou em **175 arquivos fora do diff candidato**.
+  Inclui arquivos sem alteração frente à base, como `package.json`,
+  `tsconfig.json` e `.prettierrc`. Não foram formatados arquivos fora do escopo.
+
+Limite de CI: `.github/workflows/verify.yml` executa `pnpm verify`, que inclui
+a formatação global. Portanto, não afirmar CI completo aprovado. O serviço
+Railway de produção está com `source.checkSuites=false`; não espera os checks
+do GitHub antes de publicar uma atualização de `main`. A pendência de formatação
+precisa ser tratada em escopo próprio ou aceita explicitamente na decisão de
+entrega com as verificações específicas documentadas. Não alterar o CI ou a
+configuração do Railway silenciosamente para contornar isso.
+
+Railway conferido somente em leitura: produção segue em `main`, com duas
+réplicas, healthcheck `/api/health`, sem mudanças staged e sem variáveis
+`VENDAS_SANDBOX_*`. Deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`,
+commit `e409a3c`, está `SUCCESS`; o Railway informou `canRollback=true` e
+`canRedeploy=true` nesta conferência. Revalidar essa disponibilidade antes da
+entrega; não executar rollback nesta revisão.
+
+Plano para uma entrega autorizada: separar documentos de outras tarefas,
+preservar o deployment de retorno, publicar o candidato aprovado sem copiar
+configurações do Copy e conferir healthcheck, login/consultas dos três perfis,
+paginação/totais do ADM e abertura dos anexos. Produção continua somente leitura
+nas verificações; eventual escrita exige autorização própria. Sem migração nesta
+entrega, retorno ao código anterior não exige restauração de banco. Depois,
+retomar L04 na branch de auditoria e no Copy, respeitando sua aprovação pendente.
+
+Esta rodada não repetiu a baseline visual nem registrou nova venda no Copy.
+As validações visuais de L01–L03 continuam datadas de 30/09/2026, sobre o mesmo
+código. Testes simulados não comprovam uma implantação do candidato em produção.
+Evidências adicionais e fixture privada de regressão ficam em `.cache/vendas-copy/`:
+`final-review-production.test.ts`, `final-review.vitest.config.ts` e
+`final-review-format-global.log`. Esses arquivos permanecem fora do Git.
+
+## Publicação autorizada de L01–L03 — 06/10/2026
+
+Após a revisão e o resumo da entrega, o usuário respondeu “perfeito, faça”.
+Autorizou publicar os lotes L01–L03 em `main`, acompanhar o deploy e conferir
+o funcionamento em produção em leitura, aceitando a falha preexistente de
+formatação fora do diff para tratamento separado. L04 permanece proposto.
+
+Antes da publicação: candidato de aplicação permanece o código revisado de
+`0df2d5f`; somente os três documentos desta conversa recebem atualização.
+Alterações de outras tarefas preservadas e excluídas. Produção reconfirmada
+em `e409a3c`, deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`, com retorno
+disponível (`canRollback=true`), duas réplicas e nenhum opt-in de sandbox.
+Publicação e validações posteriores ainda em andamento neste registro.
+
 ## Medida de progresso
 
 Três lotes concluídos no Copy, em Vendas e Relatórios. Das 13 telas ADM do escopo,
@@ -266,7 +426,7 @@ os lotes têm esforços diferentes. Não há backlog completo com pesos que
 permita afirmar um percentual global confiável. Infraestrutura do clone e
 baseline representativa são etapas preparatórias, separadas dessa contagem.
 
-Produção continua dependendo de aprovação separada. A existência de uma branch
+Novos lotes em produção continuam dependendo de aprovação separada. A existência de uma branch
 e do clone reduz o risco dos testes e não garante funcionamento perfeito em
 produção, que mantém diferenças de jobs, réplicas, sessões e entrega de mídia.
 
