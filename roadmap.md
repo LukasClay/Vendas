@@ -23,16 +23,16 @@ clone continuam no documento de ambiente; não repetir sua preparação.
 
 ## Estado das etapas
 
-| ID   | Etapa                                                         | Situação                            | Evidência e limite                                                                                                     |
-| ---- | ------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| PREP | Branch, banco copiado, storage privado e proteções do sandbox | Concluída no checkpoint             | Ambiente independente verificado; não equivale a paridade completa com produção.                                       |
-| BASE | Baseline dos fluxos essenciais e telas representativas        | Concluída                           | Registro/arquivos da vendedora, conclusão pela consultora e verificações ADM; não cobre todos os estados das 13 telas. |
-| L01  | Histórico completo, totais, categoria e exportações           | Implementado e validado no Copy     | Versão 2.19.0; acesso após os primeiros 200 registros e exportações completas conferidos.                              |
-| L02  | Datas dos relatórios no celular                               | Implementado e validado no Copy     | Versão 2.19.1; controles conferidos em 320, 390, 768 e 1440 px.                                                        |
-| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Implementado e validado no Copy     | Versão 2.19.2; dez larguras, conteúdo preservado e fluxos de consulta conferidos.                                      |
-| L04  | Dashboard: espaço útil, leitura e apresentação das filas      | Proposto; aguarda aprovação         | Diagnóstico em nove larguras; decisão sobre prévia de seis itens e expansão ainda pendente.                            |
-| CONS | Consolidar demais achados e cobertura das 13 telas            | Pendente de planejamento            | Os dois MDs de origem registram uma baseline representativa; não constituem o backlog completo da auditoria ampla.     |
-| PROD | Entrega em produção                                           | Autorizada; publicação em andamento | Em 06/10, usuário aprovou L01–L03 e aceitou a pendência de formatação fora do diff nesta entrega.                      |
+| ID   | Etapa                                                         | Situação                    | Evidência e limite                                                                                                     |
+| ---- | ------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| PREP | Branch, banco copiado, storage privado e proteções do sandbox | Concluída no checkpoint     | Ambiente independente verificado; não equivale a paridade completa com produção.                                       |
+| BASE | Baseline dos fluxos essenciais e telas representativas        | Concluída                   | Registro/arquivos da vendedora, conclusão pela consultora e verificações ADM; não cobre todos os estados das 13 telas. |
+| L01  | Histórico completo, totais, categoria e exportações           | Publicado em produção       | Versão 2.19.0; Copy validado integralmente, consultas de produção conferidas em 06/10.                                 |
+| L02  | Datas dos relatórios no celular                               | Publicado em produção       | Versão 2.19.1; matriz no Copy e 390 px efetivos de produção conferidos em 06/10.                                       |
+| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Publicado em produção       | Versão 2.19.2; matriz no Copy e 1440 px efetivos de produção conferidos em 06/10.                                      |
+| L04  | Dashboard: espaço útil, leitura e apresentação das filas      | Proposto; aguarda aprovação | Diagnóstico em nove larguras; decisão sobre prévia de seis itens e expansão ainda pendente.                            |
+| CONS | Consolidar demais achados e cobertura das 13 telas            | Pendente de planejamento    | Os dois MDs de origem registram uma baseline representativa; não constituem o backlog completo da auditoria ampla.     |
+| PROD | Entrega em produção                                           | Concluída em 06/10/2026     | Main `019da5e`, deployment `1fbdf1dd` SUCCESS, 2/2 réplicas, healthcheck e consultas aprovados; CI completo aprovado.  |
 
 ### L01 — consulta completa do histórico ADM
 
@@ -224,10 +224,12 @@ Typecheck, build, 239 testes, cinco verificações adicionais de modo de produç
 formatação dos arquivos candidatos e diffcheck aprovados. Nenhum bloqueador
 funcional encontrado; não houve mudança no código da aplicação nesta rodada.
 
-Pendência: formatação global falha em 175 arquivos fora do candidato. O CI usa
-essa checagem, e o Railway de produção não aguarda os checks do GitHub.
-Tratar essa condição explicitamente antes da decisão de entrega. Deployment
-anterior disponível para rollback na conferência, sem alterações em produção.
+Na revisão local, formatação global falhou em 175 arquivos fora do candidato.
+A publicação esclareceu a causa: todos tinham CRLF no Windows e passam após
+normalização LF em memória, sem alteração de arquivo. O CI completo do commit
+publicado passou, incluindo formatação global. O Railway continua sem aguardar
+checks do GitHub; sua configuração não foi alterada. Deployment anterior
+disponível para retorno na conferência.
 
 Conclusão, evidências, limites e sequência de publicação/retorno:
 [revisão final na baseline](docs/BASELINE_VISUAL_ADM.md#revisão-final-antes-de-main--06102026).
@@ -239,6 +241,15 @@ Em 06/10/2026, após receber o resumo do caminho de entrega, o usuário responde
 aceitando explicitamente a pendência de formatação fora do diff para outro lote.
 Verificações posteriores em produção ficam restritas a leitura. Documentos de
 outras tarefas continuam excluídos. L04 não faz parte desta publicação.
+
+Entrega concluída: `main` em `019da5e8ca1cacee677e08d7d7b4173b1128df29`, versão
+2.19.2, deployment `1fbdf1dd-741c-414c-9e6b-3251c9428372` SUCCESS. Healthcheck 200,
+duas réplicas online, liderança dos jobs iniciada e conferências visuais em leitura
+aprovadas. Histórico e relatórios coincidem em 2.816 vendas / R$ 470.763,23 no
+checkpoint. Formulário, catálogo, histórico pessoal e filas/foto da consultora
+conferidos com a sessão ADM autorizada; não houve login separado desses perfis
+nem envio de venda, upload ou alteração de status. Detalhes e limites na baseline.
+Continuar futuros lotes na branch/Copy; L04 segue aguardando aprovação.
 
 ## Pendências recuperáveis dos documentos de origem
 

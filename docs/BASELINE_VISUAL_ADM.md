@@ -415,7 +415,69 @@ Antes da publicação: candidato de aplicação permanece o código revisado de
 Alterações de outras tarefas preservadas e excluídas. Produção reconfirmada
 em `e409a3c`, deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`, com retorno
 disponível (`canRollback=true`), duas réplicas e nenhum opt-in de sandbox.
-Publicação e validações posteriores ainda em andamento neste registro.
+Nesse primeiro registro, publicação e validações ainda estavam em andamento;
+o resultado consolidado aparece abaixo.
+
+**Resultado concluído:** `main` recebeu, por fast-forward, o commit
+`019da5e8ca1cacee677e08d7d7b4173b1128df29`, preservando a branch de auditoria e
+os documentos de outras tarefas. Deployment de produção
+`1fbdf1dd-741c-414c-9e6b-3251c9428372` SUCCESS, versão 2.19.2 confirmada em Minha
+Conta. Publicação em 06/10/2026, aproximadamente 21h17 no horário de Brasília.
+Nenhuma variável, conexão, bucket, configuração Railway ou migração foi alterada.
+
+**Correção da conclusão sobre formatação:** o CI completo deste commit passou
+em [Verify](https://github.com/LukasClay/Vendas/actions/runs/37551000457):
+typecheck, formatação global, 239 testes em 31 arquivos e build. A falha local
+registrada na revisão tinha 175 arquivos com CRLF no Windows. Todos os 175
+passam após normalização LF em memória, sem modificar os arquivos. A configuração
+Prettier exige LF e o Git armazena LF; a divergência era do checkout local,
+não um bloqueio de CI do candidato. Nenhum workflow ou gate foi desativado.
+As afirmações anteriores de possível falha do CI devem ser lidas com esta
+correção; não há lote de formatação global obrigatório para esta entrega.
+
+Conferências posteriores de produção, estritamente em leitura:
+
+- `/api/health`: HTTP 200, `status=ok`, com consulta real `SELECT 1` ao banco;
+- Railway: 2/2 réplicas online, nenhuma falha ou alerta no checkpoint, nenhum
+  staged change e nenhum `VENDAS_SANDBOX_*`; logs confirmam aquisição da liderança
+  e início dos jobs pela líder;
+- sessão ADM já autenticada preservada, versão 2.19.2 confirmada em Minha Conta;
+- histórico: 50 linhas, página 1/57 e página 2/57; 2.816 registros e
+  R$ 470.763,23 de total filtrado, coincidentes com o relatório independente;
+- filtro Individual reinicia na página 1, 307 registros, R$ 160.878,25 e
+  50 linhas individuais; detalhes e comprovante público carregados;
+- tabela com 1440 px CSS efetivos: nenhuma rolagem da página, rolagem interna
+  residual de 72 px, conforme resultado previamente documentado do L03;
+- relatórios com 390 px CSS efetivos: labels Início/Fim, fonte 16 px, ambos os
+  campos dentro da viewport e sem overflow da página. Respeitado o zoom existente
+  do Chrome; override de viewport restaurado ao finalizar;
+- formulário Nova Venda, catálogo de trabalhos e histórico pessoal carregados
+  em 390 px, sem overflow ou alerta visível;
+- painel consultora em 390 px: filas Para Escrever/Pendentes/Feitos, filtro
+  Individual, detalhes e foto de um trabalho concluído carregados. Nenhuma ação
+  de marcar/desfazer foi executada;
+- nenhum erro de console capturado na aba de conferência. A amostra de logs
+  HTTP retornada contém respostas 200/304, sem erro upstream; não equivale a
+  garantia de ausência de erro em todas as requisições do serviço.
+
+Limites: formulário, histórico pessoal e consultora foram conferidos pela sessão
+ADM, cujo acesso é permitido nessas rotas. Não houve login separado de vendedora
+ou consultora, nem envio de venda, upload ou mudança de status em produção.
+Os testes completos de escrita e conteúdo das exportações permanecem os
+documentados no Copy, sobre o mesmo código; não foram repetidos em produção.
+Sem regressão observada nas conferências, sem prometer ausência absoluta de risco.
+
+Retorno ao código anterior: deployment `84e980d8-fb0e-4f06-bfd7-26dcd40519a7`,
+commit `e409a3c`, com `canRollback=true` e `canRedeploy=true` reconfirmados após
+as verificações finais, mesmo com status REMOVED. Reconsultar
+disponibilidade no Railway se necessário; nenhuma restauração de banco foi feita
+ou é exigida por esta entrega sem alteração de schema.
+
+Evidências privadas: `production-release-version-2.19.2.png` e
+`production-release-reports-mobile.png` em `.cache/vendas-copy/`, fora do Git.
+Este resultado documental é consolidado na branch de auditoria após a entrega,
+sem provocar um segundo deploy de produção somente para atualizar o checkpoint.
+L04 segue apenas proposto e depende de aprovação própria.
 
 ## Medida de progresso
 

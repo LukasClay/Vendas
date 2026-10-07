@@ -31,12 +31,15 @@ testes já válidos ou a auditoria inteira para recuperar contexto.
 - Branch de implementação: `codex/adm-ui-ux`.
 - Destino de testes: `https://vendas-copy-production.up.railway.app`.
 - Versão validada no Copy: **2.19.2**.
+- Entrega em produção concluída em 06/10/2026: **2.19.2**, `main` em `019da5e`,
+  deployment `1fbdf1dd-741c-414c-9e6b-3251c9428372` SUCCESS. Healthcheck 200,
+  duas réplicas online e liderança dos jobs iniciada. CI completo aprovado.
 - L01 concluído: consulta completa do histórico, totais, categoria no servidor e
   exportações completas com limite explícito.
 - L02 concluído: campos de data dos relatórios cabem no celular e têm labels.
 - L03 concluído: leitura da tabela de Todas as Vendas no desktop, autorizado
   pelo “perfeito, prossiga” após a consolidação dos documentos. Publicado e
-  validado no Copy; publicação em produção autorizada em 06/10, em andamento.
+  validado no Copy e publicado em produção em 06/10.
 - L03 passou em dez larguras de 320 a 2560 px, sem overflow da página; rolagem
   interna continua quando necessária. Em 1440 px, a maior linha da primeira
   página caiu de 189 para 133 px. Filtros, paginação, detalhes e abertura/
@@ -55,18 +58,24 @@ testes já válidos ou a auditoria inteira para recuperar contexto.
   entrega de L01–L03 em produção. Nenhum bloqueador funcional encontrado:
   typecheck/build, 239 testes, cinco regressões simuladas de modo de produção,
   formatação dos 21 arquivos candidatos e diffcheck passaram.
-- Pendência da entrega: formatação global falha em 175 arquivos fora do diff;
-  o CI depende dessa checagem e o Railway não espera checks do GitHub.
-  Usuário aceitou essa condição para a entrega de 06/10; corrigir em outro lote.
+- A falha local de formatação em 175 arquivos foi esclarecida na publicação:
+  CRLF no Windows; todos passam com LF em memória. O CI do código publicado
+  passou, incluindo a checagem global. Não há falha de CI pendente nesta entrega.
+  Railway continua sem esperar checks; nenhuma configuração foi alterada.
   Deployment anterior está disponível para rollback na conferência, a revalidar.
 - Resultado detalhado: [revisão final na baseline](docs/BASELINE_VISUAL_ADM.md#revisão-final-antes-de-main--06102026).
   A revisão não publicou nada nem autorizou L04. Depois de uma entrega
   especificamente aprovada, continuar a auditoria na branch e no Copy.
 - Autorização posterior em 06/10/2026: “perfeito, faça” aprovou a publicação
   de L01–L03 em `main` e o deploy de produção, com aceite da pendência de
-  formatação global fora do diff para outro lote. Publicação em andamento;
-  não afirmar sucesso até conferir deployment e funcionamento publicado.
+  formatação global fora do diff para outro lote. Publicação e conferências
+  concluídas; a condição local foi esclarecida, conforme registro acima.
   Conferências de produção continuam em leitura, sem novas vendas/alterações.
+- Conferências de produção: paginação/filtro/detalhes/comprovante ADM, totais
+  iguais aos relatórios, datas em 390 px, tabela em 1440 px, formulário/catálogo,
+  histórico pessoal e filas/foto da consultora. Usada a sessão ADM com acesso
+  permitido a essas páginas; login específico dos outros perfis e escrita real
+  não foram repetidos. Exportações completas mantêm a validação no Copy.
 - A lógica UTC dos atalhos dos relatórios permaneceu fora de L02.
 - Auditoria ampla das 13 telas ainda precisa de consolidação de achados e
   critérios; baseline representativa não equivale a cobertura completa.
