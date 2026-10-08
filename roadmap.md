@@ -1,6 +1,6 @@
 # Roadmap — UI/UX do painel ADM
 
-> Checkpoint documental: 06/10/2026. Base principal:
+> Checkpoint documental: 08/10/2026. Base principal:
 > [baseline visual](docs/BASELINE_VISUAL_ADM.md) e
 > [ambiente de testes](docs/AMBIENTE_TESTES_ADM.md), produzidos nesta conversa.
 > Este roteiro registra entregas e propostas; não autoriza novos lotes,
@@ -23,16 +23,16 @@ clone continuam no documento de ambiente; não repetir sua preparação.
 
 ## Estado das etapas
 
-| ID   | Etapa                                                         | Situação                    | Evidência e limite                                                                                                     |
-| ---- | ------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| PREP | Branch, banco copiado, storage privado e proteções do sandbox | Concluída no checkpoint     | Ambiente independente verificado; não equivale a paridade completa com produção.                                       |
-| BASE | Baseline dos fluxos essenciais e telas representativas        | Concluída                   | Registro/arquivos da vendedora, conclusão pela consultora e verificações ADM; não cobre todos os estados das 13 telas. |
-| L01  | Histórico completo, totais, categoria e exportações           | Publicado em produção       | Versão 2.19.0; Copy validado integralmente, consultas de produção conferidas em 06/10.                                 |
-| L02  | Datas dos relatórios no celular                               | Publicado em produção       | Versão 2.19.1; matriz no Copy e 390 px efetivos de produção conferidos em 06/10.                                       |
-| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Publicado em produção       | Versão 2.19.2; matriz no Copy e 1440 px efetivos de produção conferidos em 06/10.                                      |
-| L04  | Dashboard: espaço útil, leitura e apresentação das filas      | Proposto; aguarda aprovação | Diagnóstico em nove larguras; decisão sobre prévia de seis itens e expansão ainda pendente.                            |
-| CONS | Consolidar demais achados e cobertura das 13 telas            | Pendente de planejamento    | Os dois MDs de origem registram uma baseline representativa; não constituem o backlog completo da auditoria ampla.     |
-| PROD | Entrega em produção                                           | Concluída em 06/10/2026     | Main `019da5e`, deployment `1fbdf1dd` SUCCESS, 2/2 réplicas, healthcheck e consultas aprovados; CI completo aprovado.  |
+| ID   | Etapa                                                         | Situação                      | Evidência e limite                                                                                                     |
+| ---- | ------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| PREP | Branch, banco copiado, storage privado e proteções do sandbox | Concluída no checkpoint       | Ambiente independente verificado; não equivale a paridade completa com produção.                                       |
+| BASE | Baseline dos fluxos essenciais e telas representativas        | Concluída                     | Registro/arquivos da vendedora, conclusão pela consultora e verificações ADM; não cobre todos os estados das 13 telas. |
+| L01  | Histórico completo, totais, categoria e exportações           | Publicado em produção         | Versão 2.19.0; Copy validado integralmente, consultas de produção conferidas em 06/10.                                 |
+| L02  | Datas dos relatórios no celular                               | Publicado em produção         | Versão 2.19.1; matriz no Copy e 390 px efetivos de produção conferidos em 06/10.                                       |
+| L03  | Legibilidade da tabela de Todas as Vendas no desktop          | Publicado em produção         | Versão 2.19.2; matriz no Copy e 1440 px efetivos de produção conferidos em 06/10.                                      |
+| L04  | Dashboard: espaço útil, leitura e apresentação das filas      | Implementado; visual pendente | Prévia de seis itens com expansão integral; verificações técnicas aprovadas. Candidato somente na branch/Copy.         |
+| CONS | Consolidar demais achados e cobertura das 13 telas            | Pendente de planejamento      | Os dois MDs de origem registram uma baseline representativa; não constituem o backlog completo da auditoria ampla.     |
+| PROD | Entrega em produção                                           | Concluída em 06/10/2026       | Main `019da5e`, deployment `1fbdf1dd` SUCCESS, 2/2 réplicas, healthcheck e consultas aprovados; CI completo aprovado.  |
 
 ### L01 — consulta completa do histórico ADM
 
@@ -136,7 +136,7 @@ e geração não mudaram. Rolagem interna permanece: 72 px em 1440 px.
 Detalhes e limites:
 [terceiro lote na baseline](docs/BASELINE_VISUAL_ADM.md#terceiro-lote-legibilidade-da-tabela-de-vendas-no-desktop).
 
-### L04 — Dashboard: proposto, aguardando aprovação
+### L04 — Dashboard: implementado, validação visual pendente
 
 O “Prossiga” após L03 autorizou recuperar os achados, conferir o Copy e preparar
 o lote antes de implementar. Diagnóstico concluído em 30/09/2026 na versão
@@ -151,7 +151,13 @@ do período financeiro, mas essa distinção não é explicitada na interface.
 Evidências, matriz de larguras e limites do diagnóstico:
 [preparação do L04 na baseline](docs/BASELINE_VISUAL_ADM.md#preparação-do-l04-dashboard-com-filas-extensas).
 
-**Proposta recomendada, ainda não aprovada:**
+Em 08/10/2026, o usuário pediu “Pode continuar com o que estava faltando!”.
+A continuidade foi aplicada ao próximo lote na branch/Copy, com a proposta
+recomendada de seis itens e expansão anunciada antes da implementação. Essa
+autorização não abrange `main`, produção ou alterações nos outros perfis.
+O checkpoint de 30/09 acima registra somente a preparação anterior.
+
+**Proposta adotada nesta implementação:**
 
 1. Ampliar a largura útil exclusivamente no Dashboard, mantendo hierarquia,
    identidade e paleta. Definir o limite final com medidas do protótipo,
@@ -172,11 +178,9 @@ Evidências, matriz de larguras e limites do diagnóstico:
 6. Tratar loading, vazio real e erro da consulta de trabalhos separadamente
    das métricas financeiras, com opção de tentar novamente em caso de falha.
 
-**Decisão de produto pendente:** aprovar a prévia de seis itens com expansão
-ou preferir a fila inteira dentro de uma área de rolagem de altura limitada.
-A prévia é recomendada para leitura rápida do resumo; a rolagem mantém a fila
-inteira aberta, mas introduz uma região de rolagem adicional. Nenhum desses
-comportamentos foi escolhido pelo usuário até este checkpoint.
+Foi adotada a prévia recomendada com expansão integral no Dashboard. A avaliação
+visual ainda precisa confirmar sua usabilidade, o limite de largura e o breakpoint;
+não considerar o lote aceito apenas por passar nos testes técnicos.
 
 Limite conhecido: o Painel Trabalhos retorna até 500 itens por fila. O atalho
 será adicional, sem ser apresentado como acesso ilimitado. A expansão no
@@ -211,10 +215,25 @@ Critérios de aceite propostos:
 - typecheck, testes, build, formatação, diff e validação visual no Copy;
   isolamento reconferido antes da publicação, sem alterações em produção.
 
-Próximo passo: apresentar este escopo para aprovação; depois implementar por
-etapas na mesma branch e publicar somente no Copy se autorizado. Produção
-continua exigindo aprovação específica. L04 preparado não conta como lote
-implementado ou tela corrigida na medida de progresso.
+Implementação candidata 2.19.3: largura máxima de 1600 px exclusivamente no
+Dashboard, uma coluna abaixo de 1280 px, filas com estados próprios, texto
+integral, contagem e expansão. `Trabalhos.tsx` usa `?status=` para selecionar a
+aba e acompanhar a navegação; a rota sem parâmetro mantém Para Escrever.
+Queries, backend, métricas financeiras e componentes compartilhados não mudaram.
+
+Typecheck, build, 239 testes de backend, formatação e diffcheck passaram. Treze
+verificações de renderização React conferiram 0, 1, 6, 7, 29, 69 e 501 itens,
+expansão integral, ordem, textos, prazos e estados de erro/carregamento. São
+verificações SSR com estado simulado; não provam cliques, teclado, histórico do
+navegador ou layout. Isolamento de banco, bucket, chaves e JWT foi reconfirmado,
+com sandbox ativo somente no Copy e sem escrita de dados nesta rodada.
+
+Próximo passo: publicar o candidato somente no Copy e conferir deployment/CI;
+depois concluir a matriz visual e os comportamentos no navegador. A ferramenta
+do navegador encerrou seu processo Node antes de abrir as abas; validação visual
+pendente por falha da ferramenta, sem evidência de defeito do aplicativo.
+L04 não entra na contagem de lotes concluídos até essa validação. Produção
+continua exigindo aprovação específica.
 
 ### Revisão para entrega de L01–L03 em produção
 
@@ -249,7 +268,7 @@ aprovadas. Histórico e relatórios coincidem em 2.816 vendas / R$ 470.763,23 no
 checkpoint. Formulário, catálogo, histórico pessoal e filas/foto da consultora
 conferidos com a sessão ADM autorizada; não houve login separado desses perfis
 nem envio de venda, upload ou alteração de status. Detalhes e limites na baseline.
-Continuar futuros lotes na branch/Copy; L04 segue aguardando aprovação.
+Continuar futuros lotes na branch/Copy; L04 foi retomado em 08/10, conforme sua seção.
 
 ## Pendências recuperáveis dos documentos de origem
 
@@ -268,21 +287,21 @@ Esta tabela reúne os registros recuperáveis dos dois MDs de origem e a
 preparação atual de L04. Não afirma que as outras telas nunca foram analisadas
 em uma passagem anterior. Há telas sem resultado detalhado nesses documentos.
 
-| Tela ADM                    | Registro recuperável da validação no Copy                                                   | Implementação desta sequência                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Dashboard                   | L04 preparado: nove larguras, filas 29/69, períodos e dependências confirmados              | L04 proposto; nenhuma implementação.                              |
-| Relatórios                  | Métricas, filtros, gráficos e responsividade representativos                                | L02 concluído; outras pendências continuam.                       |
-| Todas as Vendas             | Lista, filtros, detalhes, paginação, exportações e responsividade                           | L01 e L03 concluídos.                                             |
-| Nova Venda no ADM           | Sem resultado detalhado específico do ADM                                                   | Nenhum lote registrado; formulário pode afetar outros perfis.     |
-| Trabalhos                   | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                           |
-| Painel Trabalhos            | Abertura e abas 29/69 conferidas como destino do Dashboard; limite 500 confirmado no código | Atalho de status proposto em L04; sem auditoria completa da tela. |
-| Consultas administrativas   | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                           |
-| Alertas                     | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                           |
-| Cadastros                   | Busca, segunda página/retorno, ficha e histórico vinculado                                  | Nenhum lote registrado.                                           |
-| Funcionários                | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                           |
-| Lixeira                     | Sem validação visual detalhada; teste técnico de soft delete/restauração não a substitui    | Nenhum lote registrado.                                           |
-| Segurança                   | Sem resultado detalhado de UI nos MDs de origem                                             | Nenhum lote registrado.                                           |
-| Minha Conta / Configurações | Atualização do número da versão; não é uma auditoria da tela                                | Nenhum lote de UI registrado.                                     |
+| Tela ADM                    | Registro recuperável da validação no Copy                                                   | Implementação desta sequência                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Dashboard                   | Diagnóstico em nove larguras; candidato L04 com testes técnicos, visual pendente            | L04 implementado na branch/Copy; não publicado em produção.      |
+| Relatórios                  | Métricas, filtros, gráficos e responsividade representativos                                | L02 concluído; outras pendências continuam.                      |
+| Todas as Vendas             | Lista, filtros, detalhes, paginação, exportações e responsividade                           | L01 e L03 concluídos.                                            |
+| Nova Venda no ADM           | Sem resultado detalhado específico do ADM                                                   | Nenhum lote registrado; formulário pode afetar outros perfis.    |
+| Trabalhos                   | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                          |
+| Painel Trabalhos            | Abertura e abas 29/69 conferidas como destino do Dashboard; limite 500 confirmado no código | Atalho de status implementado em L04; navegação visual pendente. |
+| Consultas administrativas   | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                          |
+| Alertas                     | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                          |
+| Cadastros                   | Busca, segunda página/retorno, ficha e histórico vinculado                                  | Nenhum lote registrado.                                          |
+| Funcionários                | Sem resultado detalhado nos MDs de origem                                                   | Nenhum lote registrado.                                          |
+| Lixeira                     | Sem validação visual detalhada; teste técnico de soft delete/restauração não a substitui    | Nenhum lote registrado.                                          |
+| Segurança                   | Sem resultado detalhado de UI nos MDs de origem                                             | Nenhum lote registrado.                                          |
+| Minha Conta / Configurações | Atualização do número da versão; não é uma auditoria da tela                                | Nenhum lote de UI registrado.                                    |
 
 Sidebar, componentes compartilhados, modais, formulários e estados de
 loading/vazio/erro também pertencem ao escopo amplo. A cobertura deve registrar

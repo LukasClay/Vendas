@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useSearchParams } from "wouter";
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1360,7 +1361,12 @@ export default function Trabalhos() {
   const isDark = resolvedTheme === "dark";
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [activeTab, setActiveTab] = useState<Tab>("para_escrever");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("status");
+  const activeTab: Tab =
+    requestedTab === "pendente" || requestedTab === "feito"
+      ? requestedTab
+      : "para_escrever";
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -1373,6 +1379,18 @@ export default function Trabalhos() {
   const topRef = useRef<HTMLDivElement>(null);
   // Debounce simples
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetWorkFilters = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSearch("");
+    setDebouncedSearch("");
+    setSelectedType(null);
+    setSelectedCategory(null);
+    if (activeTab !== "feito") {
+      const n = new Date();
+      setSelectedDoneMonth({ month: n.getMonth() + 1, year: n.getFullYear() });
+    }
+  }, [activeTab]);
+  useEffect(resetWorkFilters, [resetWorkFilters]);
   const handleSearch = (v: string) => {
     setSearch(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -1498,15 +1516,16 @@ export default function Trabalhos() {
   const filteredPending = applyFilters(pending);
   const filteredDone = applyFilters(done);
   function handleTabChange(tab: Tab) {
-    setActiveTab(tab);
-    setSearch("");
-    setDebouncedSearch("");
-    setSelectedType(null);
-    setSelectedCategory(null);
-    if (tab !== "feito") {
-      const n = new Date();
-      setSelectedDoneMonth({ month: n.getMonth() + 1, year: n.getFullYear() });
+    if (tab === activeTab) {
+      resetWorkFilters();
+      return;
     }
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      if (tab === "para_escrever") next.delete("status");
+      else next.set("status", tab);
+      return next;
+    });
   }
 
   return (

@@ -479,6 +479,62 @@ Este resultado documental é consolidado na branch de auditoria após a entrega,
 sem provocar um segundo deploy de produção somente para atualizar o checkpoint.
 L04 segue apenas proposto e depende de aprovação própria.
 
+## Implementação do L04 — 08/10/2026
+
+Após “Pode continuar com o que estava faltando!”, foi retomado o próximo lote
+ADM na branch `codex/adm-ui-ux`, somente para testes no Copy. A prévia recomendada
+de seis itens com expansão integral foi anunciada antes da implementação.
+O diagnóstico de 30/09 continua sendo a evidência visual anterior; esta rodada
+não produziu novas medidas nem capturas do layout.
+
+Candidato 2.19.3, restrito a `Dashboard.tsx`, `Trabalhos.tsx` e ao número da versão
+em `Configuracoes.tsx`:
+
+- Dashboard com limite de 1600 px; filas em uma coluna abaixo de 1280 px e duas
+  acima. Essas medidas precisam de conferência visual com a sidebar efetiva.
+- Contagem integral e indicação “Fila atual · todos os períodos”; seis itens
+  iniciais, “Mostrar todos os N” e “Mostrar menos”, preservando todos os dados
+  recebidos e sua ordem, inclusive acima de 500 itens.
+- Cliente e trabalho separados, texto integral com quebra, prazos e urgência
+  preservados, ícones sem compressão e controles com foco/estado acessível.
+- Loading, vazio e erro das filas separados das métricas financeiras, com retry.
+- “Abrir painel” com `?status=para_escrever` ou `?status=pendente` na rota ADM;
+  seleção de abas passa a acompanhar a URL. Sem parâmetro permanece Para Escrever.
+  Não foram alteradas queries, backend, regras de prazo ou os outros perfis.
+
+Verificações locais concluídas: typecheck, build, 239 testes de backend em 31
+arquivos, formatação dos três arquivos e diffcheck. O build preserva o aviso
+conhecido de chunk grande das exportações; não foi introduzida dependência.
+
+Treze verificações privadas de renderização React passaram: filas com 0, 1, 6,
+7, 29, 69 e 501 itens; contagem completa e seis linhas iniciais; expansão com
+todos os itens, ordem, último registro, texto integral, prazos e urgência;
+loading e erro sem representação falsa de zero/vazio, retry e atributos ARIA.
+O estado expandido é simulado em SSR. Isso não testa clique real, teclado,
+foco, histórico do navegador ou layout. Fixtures fictícias em memória, sem
+inserção no banco. Arquivos ignorados em `.cache/vendas-copy/lote4-render.test.tsx`
+e `lote4.vitest.config.ts`.
+
+Isolamento efetivo reconfirmado via Railway CLI em leitura, sem exibir segredos:
+sandbox e guardas ativos no Copy, todos os hosts de banco exclusivos, bucket
+esperado, URLs de banco/chaves de storage/JWT distintos da produção e sandbox
+desativado em produção. Resultado agregado em `lote4-isolation.json` privado.
+Antes desta publicação, produção continuava em `019da5e`, deployment `1fbdf1dd`
+SUCCESS; Copy em `0df2d5f`, deployment `0fc4e13d` SUCCESS. Nenhuma infraestrutura
+ou dado comercial foi modificado nesta rodada.
+
+**Validação visual pendente:** a ferramenta do Chrome encerra seu processo Node
+durante a inicialização, antes de inspecionar abas. Essa falha impede confirmar
+o comportamento visível; não é evidência de falha do aplicativo. Publicação de
+teste/CI/healthcheck são a próxima conferência técnica e não substituem o navegador.
+
+Ao recuperar a ferramenta, conferir 390, 768, 1024, 1280, 1366, 1440, 1600, 1920 e
+2560 px, temas claro/escuro nativos, largura útil, overflow, nomes e acesso aos
+demais cards. Conferir expansão/recolhimento reais, teclado/foco, destino dos
+atalhos, rota padrão, voltar/avançar, independência do período financeiro e erro/
+retry. Não afirmar o lote concluído nem entregá-lo em produção antes disso e de
+aprovação específica para produção.
+
 ## Medida de progresso
 
 Três lotes concluídos no Copy, em Vendas e Relatórios. Das 13 telas ADM do escopo,

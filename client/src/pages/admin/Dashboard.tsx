@@ -1,6 +1,7 @@
 import { trpc, type RouterOutputs } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useState, useMemo } from "react";
+import { Link } from "wouter";
 import {
   ComposedChart,
   Area,
@@ -51,6 +52,175 @@ function formatDeadline(deadline: string | Date | null | undefined): string {
   if (!deadline) return "—";
   const d = deadline instanceof Date ? deadline : new Date(deadline);
   return d.toLocaleDateString("pt-BR");
+}
+
+export function DashboardWorkQueue({
+  kind,
+  items,
+  loading,
+  failed,
+  retrying,
+  onRetry,
+}: {
+  kind: "para_escrever" | "pendente";
+  items: WorksSummaryItem[];
+  loading: boolean;
+  failed: boolean;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const title =
+    kind === "para_escrever"
+      ? "Trabalhos Para Escrever"
+      : "Trabalhos Pendentes";
+  const listId = `dashboard-fila-${kind}`;
+  const visibleItems = expanded ? items : items.slice(0, 6);
+  const HeaderIcon = kind === "para_escrever" ? AlertTriangle : Clock;
+
+  return (
+    <section
+      aria-labelledby={`${listId}-title`}
+      className="min-w-0 rounded-2xl p-4 sm:p-6 shadow-xl bg-[var(--card)] border border-[var(--border)]"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
+          <h2
+            id={`${listId}-title`}
+            className="font-bold flex items-center gap-2 text-[var(--foreground)]"
+          >
+            <HeaderIcon
+              className="w-4 h-4 shrink-0 text-[var(--primary)]"
+              aria-hidden="true"
+            />
+            <span>{title}</span>
+            {!loading && !failed && (
+              <span className="shrink-0 rounded-full bg-[var(--secondary)] px-2 py-0.5 text-sm tabular-nums">
+                {items.length}
+              </span>
+            )}
+          </h2>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            Fila atual · todos os períodos
+          </p>
+        </div>
+        <Link
+          href={`/admin/trabalhos?status=${kind}`}
+          aria-label={`Abrir painel: ${title}`}
+          className="shrink-0 rounded-md text-sm text-[var(--primary)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
+        >
+          Abrir painel
+        </Link>
+      </div>
+
+      {loading ? (
+        <div role="status" className="space-y-3">
+          <span className="sr-only">Carregando {title.toLowerCase()}...</span>
+          {[1, 2].map(i => (
+            <div
+              key={i}
+              aria-hidden="true"
+              className="h-12 rounded-xl animate-pulse bg-[var(--secondary)]"
+            />
+          ))}
+        </div>
+      ) : failed ? (
+        <div role="alert" className="space-y-3">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Não foi possível carregar esta fila.
+          </p>
+          <button
+            type="button"
+            disabled={retrying}
+            onClick={onRetry}
+            className="rounded-md border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+          >
+            {retrying ? "Atualizando filas..." : "Tentar novamente"}
+          </button>
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {kind === "para_escrever"
+            ? "Nenhum trabalho para escrever."
+            : "Nenhum trabalho pendente."}
+        </p>
+      ) : (
+        <>
+          <ul id={listId} className="space-y-3">
+            {visibleItems.map(work => (
+              <li key={work.id} className="flex min-w-0 items-start gap-2">
+                {kind === "para_escrever" ? (
+                  <Star
+                    className="mt-0.5 w-4 h-4 shrink-0 text-yellow-500"
+                    aria-hidden="true"
+                  />
+                ) : work.hasDeadline ? (
+                  work.isOverdue ? (
+                    <AlertTriangle
+                      className="mt-0.5 w-4 h-4 shrink-0 text-red-500"
+                      aria-hidden="true"
+                    />
+                  ) : work.isUrgent ? (
+                    <Clock
+                      className="mt-0.5 w-4 h-4 shrink-0 text-orange-500"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <CheckCircle2
+                      className="mt-0.5 w-4 h-4 shrink-0 text-green-500"
+                      aria-hidden="true"
+                    />
+                  )
+                ) : null}
+                <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                  <p className="text-sm font-medium text-[var(--foreground)]">
+                    {work.clientName}
+                  </p>
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    {work.productName}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                    {work.hasDeadline
+                      ? `Prazo: ${formatDeadline(work.deadline)}`
+                      : "—"}
+                    {kind === "pendente" &&
+                      work.hasDeadline &&
+                      (work.isOverdue
+                        ? " · Atrasado"
+                        : work.isUrgent
+                          ? " · Urgente"
+                          : "")}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {items.length > 6 && (
+            <div className="mt-4 space-y-2">
+              <p
+                role="status"
+                className="text-xs text-[var(--muted-foreground)]"
+              >
+                Exibindo {visibleItems.length} de {items.length}
+              </p>
+              <button
+                type="button"
+                aria-controls={listId}
+                aria-expanded={expanded}
+                aria-label={`${expanded ? "Mostrar menos" : `Mostrar todos os ${items.length}`}: ${title}`}
+                onClick={() => setExpanded(value => !value)}
+                className="rounded-md border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              >
+                {expanded
+                  ? "Mostrar menos"
+                  : `Mostrar todos os ${items.length}`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
 }
 
 function formatCurrency(value: number | string) {
@@ -494,10 +664,15 @@ export default function AdminDashboard() {
   const magiaInfo = getCompanyInfo("mundo_da_magia");
   const ciganoInfo = getCompanyInfo("mundo_cigano");
 
-  const { data: worksSummary } = trpc.consultora.worksSummary.useQuery(
-    undefined,
-    { staleTime: 3 * 60 * 1000 }
-  );
+  const {
+    data: worksSummary,
+    isLoading: worksLoading,
+    isError: worksFailed,
+    isFetching: worksFetching,
+    refetch: refetchWorks,
+  } = trpc.consultora.worksSummary.useQuery(undefined, {
+    staleTime: 3 * 60 * 1000,
+  });
 
   const { data: slaData } = trpc.reports.slaMetrics.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -528,7 +703,7 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="w-full min-w-0 max-w-[1600px] mx-auto space-y-6">
         {/* Company Switch */}
         <CompanySwitch />
 
@@ -1333,132 +1508,27 @@ export default function AdminDashboard() {
           </FadeIn>
         </div>
 
-        {/* Alertas de Trabalhos */}
-        <StaggerList className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <StaggerItem>
-            <AnimatedCard
-              className="rounded-2xl p-6 shadow-xl"
-              style={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <h2
-                className="font-bold mb-4 flex items-center gap-2"
-                style={{ color: "var(--foreground)" }}
-              >
-                <AlertTriangle
-                  className="w-4 h-4"
-                  style={{ color: "var(--primary)" }}
-                />
-                Trabalhos Para Escrever
-              </h2>
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="h-12 rounded-xl animate-pulse bg-[var(--secondary)]"
-                    />
-                  ))}
-                </div>
-              ) : toWriteWorks.length === 0 ? (
-                <p className="text-sm text-[var(--muted-foreground)]">
-                  Nenhum trabalho para escrever.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {toWriteWorks.map(work => (
-                    <li
-                      key={work.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {work.clientName} - {work.productName}
-                        </p>
-                      </div>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {work.hasDeadline
-                          ? `Prazo: ${formatDeadline(work.deadline)}`
-                          : "—"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </AnimatedCard>
+        {/* Filas atuais, independentes do período financeiro */}
+        <StaggerList className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <StaggerItem className="min-w-0">
+            <DashboardWorkQueue
+              kind="para_escrever"
+              items={toWriteWorks}
+              loading={worksLoading}
+              failed={worksFailed}
+              retrying={worksFetching}
+              onRetry={() => void refetchWorks()}
+            />
           </StaggerItem>
-
-          <StaggerItem>
-            <AnimatedCard
-              className="rounded-2xl p-6 shadow-xl"
-              style={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <h2
-                className="font-bold mb-4 flex items-center gap-2"
-                style={{ color: "var(--foreground)" }}
-              >
-                <Clock
-                  className="w-4 h-4"
-                  style={{ color: "var(--primary)" }}
-                />
-                Trabalhos Pendentes
-              </h2>
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="h-12 rounded-xl animate-pulse bg-[var(--secondary)]"
-                    />
-                  ))}
-                </div>
-              ) : pendingWorks.length === 0 ? (
-                <p className="text-sm text-[var(--muted-foreground)]">
-                  Nenhum trabalho pendente.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {pendingWorks.map(work => (
-                    <li
-                      key={work.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        {work.hasDeadline ? (
-                          work.isOverdue ? (
-                            <AlertTriangle className="w-4 h-4 text-red-500" />
-                          ) : work.isUrgent ? (
-                            <Clock className="w-4 h-4 text-orange-500" />
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          )
-                        ) : null}
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {work.clientName} - {work.productName}
-                        </p>
-                      </div>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {work.hasDeadline
-                          ? `Prazo: ${formatDeadline(work.deadline)}`
-                          : "—"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </AnimatedCard>
+          <StaggerItem className="min-w-0">
+            <DashboardWorkQueue
+              kind="pendente"
+              items={pendingWorks}
+              loading={worksLoading}
+              failed={worksFailed}
+              retrying={worksFetching}
+              onRetry={() => void refetchWorks()}
+            />
           </StaggerItem>
         </StaggerList>
 

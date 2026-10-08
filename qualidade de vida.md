@@ -1,6 +1,6 @@
 # Qualidade de vida — continuidade da auditoria ADM
 
-> Checkpoint: 06/10/2026. Guia de retomada baseado nos documentos criados nesta
+> Checkpoint: 08/10/2026. Guia de retomada baseado nos documentos criados nesta
 > conversa. Aplicável à auditoria UI/UX do ADM e aos lotes no Vendas Copy.
 > Não substitui as regras do TODO nem concede autorização para novos lotes.
 
@@ -47,13 +47,23 @@ testes já válidos ou a auditoria inteira para recuperar contexto.
 - L04 preparado: diagnóstico do Dashboard em nove larguras, filas com 29
   trabalhos para escrever e 69 pendentes. Em 1440 px, card de pendentes com
   2706 px de altura; em 768 px, dois cards estreitos e página com 10948 px.
-- Proposta registrada no [L04 do roadmap](roadmap.md#l04--dashboard-proposto-aguardando-aprovação):
-  espaço útil, texto legível, contagens, prévia de seis itens com expansão
-  integral no próprio Dashboard, atalho para a aba correta do Painel Trabalhos
-  e estados próprios de loading/erro. **Ainda não aprovada nem implementada.**
-- Para L04, falta obter a decisão sobre prévia/expansão ou fila inteira com
-  rolagem interna e autorização para implementar/publicar somente no Copy.
-  O “Prossiga” desta preparação não autorizou automaticamente o código do L04.
+- L04 retomado em 08/10 pelo pedido “Pode continuar com o que estava faltando!”.
+  A proposta recomendada foi anunciada e implementada somente no ADM, branch/Copy:
+  prévia de seis itens, expansão integral, contagens, texto legível, atalho para
+  o status correto do Painel Trabalhos e estados próprios de loading/erro.
+  [L04 do roadmap](roadmap.md#l04--dashboard-implementado-validação-visual-pendente).
+- Candidato L04 **2.19.3**, com largura máxima de 1600 px e filas em uma coluna
+  abaixo de 1280 px. Typecheck, build, 239 testes de backend, formatação e diffcheck
+  aprovados. Treze testes SSR de renderização passaram, inclusive com 501 itens;
+  não comprovam interação, navegação ou responsividade no navegador.
+- **L04 ainda não validado visualmente.** A ferramenta do navegador falhou antes
+  de abrir as abas, com encerramento do processo Node. Concluir publicação/CI e
+  healthcheck somente no Copy; recuperar a ferramenta para testar expansão,
+  atalhos/retorno, foco, temas, período independente e a matriz de larguras.
+  Não publicar em `main`/produção por essa continuidade.
+- Isolamento reconfirmado em 08/10: banco, bucket, chave de storage e JWT separados;
+  guardas e sandbox ativos no Copy, sandbox desativado em produção. Nenhum dado
+  comercial foi alterado nesta rodada. Evidência agregada `lote4-isolation.json`.
 - Em 06/10/2026, foi autorizada e concluída a revisão final para uma possível
   entrega de L01–L03 em produção. Nenhum bloqueador funcional encontrado:
   typecheck/build, 239 testes, cinco regressões simuladas de modo de produção,
@@ -104,6 +114,8 @@ Este novo guia não o substitui.
   ou funcionais sem autorização própria. Mapear dependências compartilhadas.
 - Preparação do clone e L01/L02/L03 foram autorizados especificamente nesta
   conversa. Essas autorizações não aprovam automaticamente outros lotes futuros.
+- Continuidade de 08/10 autoriza o L04 anunciado na branch/Copy, inclusive seus
+  documentos e publicação de teste. Não autoriza sua entrega em produção.
 - Testes que escrevem dados comerciais ficam somente no Copy verificado.
   Produção é origem de leitura autorizada, sem inserção, edição ou exclusão.
 - Publicação na branch de testes pode atualizar o Copy. Confirmar escopo e
